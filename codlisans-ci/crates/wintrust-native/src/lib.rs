@@ -62,9 +62,43 @@ impl NativeRevocationSettings {
 }
 
 #[cfg(windows)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ChainRevocationSettings {
+    flags: u32,
+    url_retrieval_timeout_ms: u32,
+}
+
+#[cfg(windows)]
+impl ChainRevocationSettings {
+    #[must_use]
+    pub const fn flags(self) -> u32 {
+        self.flags
+    }
+
+    #[must_use]
+    pub const fn url_retrieval_timeout_ms(self) -> u32 {
+        self.url_retrieval_timeout_ms
+    }
+}
+
+#[cfg(windows)]
 #[must_use]
 pub fn production_native_revocation_settings() -> NativeRevocationSettings {
     windows::revocation_settings(RevocationPolicy::production())
+}
+
+/// Converts the release timeout budget into bounded Windows certificate-chain revocation settings.
+///
+/// # Errors
+///
+/// Returns [`NativeTrustError::InvalidRevocationTimeoutBudget`] for a zero budget and
+/// [`NativeTrustError::RevocationTimeoutBudgetTooLarge`] when the millisecond value cannot fit a
+/// Windows `DWORD`.
+#[cfg(windows)]
+pub fn production_chain_revocation_settings(
+    timeout_budget: Duration,
+) -> Result<ChainRevocationSettings, NativeTrustError> {
+    windows::chain_revocation_settings(timeout_budget)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -101,6 +135,10 @@ pub struct TrustSnapshot {
 pub enum NativeTrustError {
     #[error("WinTrust inspection is supported only on Windows")]
     UnsupportedPlatform,
+    #[error("revocation timeout budget must be greater than zero")]
+    InvalidRevocationTimeoutBudget,
+    #[error("revocation timeout budget exceeds the Windows DWORD millisecond range")]
+    RevocationTimeoutBudgetTooLarge,
     #[error("WinTrust provider state is unavailable after policy result {policy_error}")]
     ProviderStateUnavailable { policy_error: i32 },
     #[error("WinTrust provider state contains no primary signer")]
@@ -153,8 +191,8 @@ pub fn inspect_authenticode(
 #[cfg(windows)]
 mod windows {
     use super::{
-        CertificateRecord, NativeRevocationSettings, NativeTrustError, RevocationPolicy,
-        RevocationScope, TimestampRecord, TrustSnapshot,
+        CertificateRecord, ChainRevocationSettings, NativeRevocationSettings, NativeTrustError,
+        RevocationPolicy, RevocationScope, TimestampRecord, TrustSnapshot,
     };
     use std::{
         ffi::c_void,
@@ -162,13 +200,16 @@ mod windows {
         os::windows::ffi::OsStrExt,
         path::Path,
         ptr::{null, null_mut},
+        time::Duration,
     };
     use windows_sys::Win32::{
         Foundation::FILETIME,
         Security::{
             Cryptography::{
-                CERT_CONTEXT, CERT_NAME_ISSUER_FLAG, CERT_NAME_SIMPLE_DISPLAY_TYPE,
-                CERT_SHA256_HASH_PROP_ID, CertGetCertificateContextProperty, CertGetNameStringW,
+                CERT_CHAIN_REVOCATION_ACCUMULATIVE_TIMEOUT,
+                CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT, CERT_CONTEXT,
+                CERT_NAME_ISSUER_FLAG, CERT_NAME_SIMPLE_DISPLAY_TYPE, CERT_SHA256_HASH_PROP_ID,
+                CertGetCertificateContextProperty, CertGetNameStringW,
             },
             WinTrust::{
                 CRYPT_PROVIDER_CERT, CRYPT_PROVIDER_DATA, CRYPT_PROVIDER_SGNR,
@@ -189,6 +230,21 @@ mod windows {
                 provider_flags: WTD_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT,
             },
         }
+    }
+
+    pub(super) fn chain_revocation_settings(
+        timeout_budget: Duration,
+    ) -> Result<ChainRevocationSettings, NativeTrustError> {
+        if timeout_budget.is_zero() {
+            return Err(NativeTrustError::InvalidRevocationTimeoutBudget);
+        }
+        let millis = u32::try_from(timeout_budget.as_millis())
+            .map_err(|_| NativeTrustError::RevocationTimeoutBudgetTooLarge)?;
+        Ok(ChainRevocationSettings {
+            flags: CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT
+                | CERT_CHAIN_REVOCATION_ACCUMULATIVE_TIMEOUT,
+            url_retrieval_timeout_ms: millis,
+        })
     }
 
     pub(super) fn inspect(
@@ -404,6 +460,7 @@ mod windows {
     const fn filetime_to_u64(value: FILETIME) -> u64 {
         ((value.dwHighDateTime as u64) << 32) | value.dwLowDateTime as u64
     }
+
     fn last_windows_error(operation: &'static str) -> NativeTrustError {
         NativeTrustError::WindowsApi {
             operation,
