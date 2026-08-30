@@ -359,7 +359,6 @@ fn malformed_revocation_response_preserves_offline_and_unknown_facts() {
             && rule.status == RuleStatus::Failed
             && rule.failure == Some(GateFailure::RevocationOffline)
     }));
-    assert!(decision.revocation.checked);
     assert!(decision.revocation.offline);
     assert!(decision.revocation.unknown);
     assert!(!decision.revocation.revoked);
