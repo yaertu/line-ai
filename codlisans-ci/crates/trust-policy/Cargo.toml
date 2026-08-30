@@ -1,0 +1,19 @@
+[package]
+name = "trust-policy"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+evidence-model = { path = "../evidence-model" }
+wintrust-native = { path = "../wintrust-native" }
+sha2 = "0.10.9"
+hex = "0.4.3"
+thiserror = "2.0.20"
+
+[dev-dependencies]
+authenticode-verifier = { path = "../authenticode-verifier" }
+
+[lints]
+workspace = true
