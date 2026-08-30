@@ -24,6 +24,61 @@ function Get-Sha256Hash {
     }
 }
 
+function Get-PeCertificateTableStatus {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $reader = New-Object System.IO.BinaryReader($stream)
+        try {
+            if ($stream.Length -lt 64 -or $reader.ReadUInt16() -ne 0x5A4D) {
+                return "InvalidPe"
+            }
+
+            $stream.Position = 0x3C
+            $peOffset = $reader.ReadUInt32()
+            if ($peOffset + 24 -gt $stream.Length) { return "InvalidPe" }
+
+            $stream.Position = $peOffset
+            if ($reader.ReadUInt32() -ne 0x00004550) { return "InvalidPe" }
+
+            $optionalHeaderOffset = $peOffset + 24
+            $stream.Position = $optionalHeaderOffset
+            $magic = $reader.ReadUInt16()
+            if ($magic -eq 0x10B) {
+                $dataDirectoryOffset = $optionalHeaderOffset + 96
+            }
+            elseif ($magic -eq 0x20B) {
+                $dataDirectoryOffset = $optionalHeaderOffset + 112
+            }
+            else {
+                return "InvalidPe"
+            }
+
+            $certificateEntryOffset = $dataDirectoryOffset + 32
+            if ($certificateEntryOffset + 8 -gt $stream.Length) { return "InvalidPe" }
+
+            $stream.Position = $certificateEntryOffset
+            $certificateFileOffset = $reader.ReadUInt32()
+            $certificateSize = $reader.ReadUInt32()
+            if ($certificateFileOffset -eq 0 -or $certificateSize -eq 0) {
+                return "NotSigned"
+            }
+            if ([uint64]$certificateFileOffset + [uint64]$certificateSize -gt [uint64]$stream.Length) {
+                return "InvalidCertificateTable"
+            }
+
+            return "PresentNotValidated"
+        }
+        finally {
+            $reader.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 Set-Location -LiteralPath $projectRoot
 
 $dirtyFiles = git status --porcelain
@@ -72,5 +127,5 @@ $artifacts | ForEach-Object {
     }
 } | Format-Table -AutoSize
 
-$signature = Get-AuthenticodeSignature -LiteralPath $desktopExecutable
-Write-Output "Authenticode: $($signature.Status)"
+$signatureStatus = Get-PeCertificateTableStatus -Path $desktopExecutable
+Write-Output "Authenticode: $signatureStatus"
