@@ -54,6 +54,6 @@ jobs:
       - name: Negative revocation offline contract
         if: runner.os == 'Windows'
         run: cargo test -p trust-policy --test negative_revocation_contract offline_revocation_is_a_structured_blocked_release_decision -- --ignored --nocapture --test-threads=1
-      - name: Negative revocation unknown contract
+      - name: Negative revocation unknown facts contract
         if: runner.os == 'Windows'
-        run: cargo test -p trust-policy --test negative_revocation_contract malformed_revocation_response_is_a_structured_unknown_block -- --ignored --nocapture --test-threads=1
+        run: cargo test -p trust-policy --test negative_revocation_contract malformed_revocation_response_preserves_offline_and_unknown_facts -- --ignored --nocapture --test-threads=1
