@@ -1,0 +1,36 @@
+# Dependencies and frontend output
+node_modules/
+dist/
+.vite/
+coverage/
+
+# Rust / Tauri output
+src-tauri/target/
+target/
+*.pdb
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Logs and caches
+*.log
+*.tmp
+*.cache
+.eslintcache
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local release artifacts
+*.exe
+*.msi
+*.msix
+*.zip
+
