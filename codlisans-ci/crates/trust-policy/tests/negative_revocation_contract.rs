@@ -20,7 +20,8 @@ use trust_policy::{GateFailure, ReleasePolicy, ReleaseRule, RuleStatus, verify_w
 
 const ERROR_NO_MORE_ITEMS: i32 = -2_147_024_637; // 0x80070103
 const FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_HTTP";
-const INTERNET_SETTINGS_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
+const INTERNET_SETTINGS_KEY: &str =
+    r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
 
 struct RevocationNetworkGuard;
 
@@ -88,12 +89,7 @@ impl DualProxyGuard {
 
         let proxy = format!("127.0.0.1:{port}");
         let winhttp = Command::new("netsh.exe")
-            .args([
-                "winhttp",
-                "set",
-                "proxy",
-                &format!("proxy-server={proxy}"),
-            ])
+            .args(["winhttp", "set", "proxy", &format!("proxy-server={proxy}")])
             .status()
             .expect("netsh WinHTTP proxy configuration must be launchable");
         assert!(winhttp.success(), "failed to configure the WinHTTP proxy");
@@ -355,8 +351,8 @@ fn malformed_revocation_response_is_a_structured_unknown_block() {
         "CryptNet did not reach the malformed responder; unknown qualification is invalid"
     );
 
-    let decision =
-        result.expect("malformed revocation data must normalize into a structured BLOCKED decision");
+    let decision = result
+        .expect("malformed revocation data must normalize into a structured BLOCKED decision");
     assert_eq!(decision.status, TrustStatus::Blocked);
     assert!(decision.rules.iter().any(|rule| {
         rule.rule == ReleaseRule::Revocation
