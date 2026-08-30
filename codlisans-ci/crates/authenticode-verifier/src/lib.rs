@@ -27,7 +27,7 @@ pub enum AuthenticodeError {
     Evidence(#[from] evidence_model::EvidenceError),
 }
 
-/// Verifies a physical artifact with the installed Windows SDK SignTool.
+/// Verifies a physical artifact with the installed Windows SDK `SignTool`.
 ///
 /// # Errors
 /// Returns a typed hashing, discovery, process, or evidence error.
