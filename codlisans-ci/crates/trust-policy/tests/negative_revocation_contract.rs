@@ -3,9 +3,7 @@
 use authenticode_verifier::{AuthenticodeResult, verify_authenticode};
 use evidence_model::TrustStatus;
 use std::{fmt::Write as _, path::PathBuf, process::Command, time::Duration};
-use trust_policy::{
-    GateFailure, ReleasePolicy, ReleaseRule, RuleStatus, verify_windows_release,
-};
+use trust_policy::{GateFailure, ReleasePolicy, ReleaseRule, RuleStatus, verify_windows_release};
 
 const ERROR_NO_MORE_ITEMS: i32 = -2_147_024_637; // 0x80070103
 const FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_HTTP";
