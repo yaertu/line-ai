@@ -3,7 +3,9 @@
 use authenticode_verifier::{AuthenticodeResult, verify_authenticode};
 use evidence_model::TrustStatus;
 use std::{fmt::Write as _, path::PathBuf, process::Command, time::Duration};
-use trust_policy::{ReleasePolicy, verify_windows_release};
+use trust_policy::{
+    GateFailure, ReleasePolicy, ReleaseRule, RuleStatus, verify_windows_release,
+};
 
 const ERROR_NO_MORE_ITEMS: i32 = -2_147_024_637; // 0x80070103
 const FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_HTTP";
@@ -136,4 +138,9 @@ fn offline_revocation_is_a_structured_blocked_release_decision() {
 
     assert_eq!(decision.status, TrustStatus::Blocked);
     assert_eq!(decision.evidence.status, TrustStatus::Blocked);
+    assert!(decision.rules.iter().any(|rule| {
+        rule.rule == ReleaseRule::Revocation
+            && rule.status == RuleStatus::Failed
+            && rule.failure == Some(GateFailure::RevocationOffline)
+    }));
 }
