@@ -2,39 +2,59 @@
 
 use authenticode_verifier::{AuthenticodeResult, verify_authenticode};
 use evidence_model::TrustStatus;
-use std::{fmt::Write as _, net::TcpListener, path::PathBuf, process::Command, time::Duration};
+use std::{fmt::Write as _, path::PathBuf, process::Command, time::Duration};
 use trust_policy::{ReleasePolicy, verify_windows_release};
 
 const ERROR_NO_MORE_ITEMS: i32 = -2_147_024_637; // 0x80070103
+const FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_HTTP";
 
-struct WinHttpProxyGuard;
+struct RevocationNetworkGuard;
 
-impl WinHttpProxyGuard {
-    fn point_to_closed_local_port() -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0")
-            .expect("a temporary localhost port must be reservable");
-        let port = listener
-            .local_addr()
-            .expect("temporary listener must have a local address")
-            .port();
-        drop(listener);
-
-        let proxy = format!("127.0.0.1:{port}");
+impl RevocationNetworkGuard {
+    fn block_http() -> Self {
         let status = Command::new("netsh.exe")
-            .args(["winhttp", "set", "proxy", &format!("proxy-server={proxy}")])
+            .args([
+                "advfirewall",
+                "firewall",
+                "add",
+                "rule",
+                &format!("name={FIREWALL_RULE}"),
+                "dir=out",
+                "action=block",
+                "protocol=TCP",
+                "remoteport=80",
+                "profile=any",
+            ])
             .status()
-            .expect("netsh must be launchable on the Windows qualification runner");
-        assert!(status.success(), "failed to point WinHTTP at {proxy}");
+            .expect("netsh firewall must be launchable on the Windows qualification runner");
+        assert!(status.success(), "failed to install outbound HTTP block rule");
         Self
     }
 }
 
-impl Drop for WinHttpProxyGuard {
+impl Drop for RevocationNetworkGuard {
     fn drop(&mut self) {
         let _ = Command::new("netsh.exe")
-            .args(["winhttp", "reset", "proxy"])
+            .args([
+                "advfirewall",
+                "firewall",
+                "delete",
+                "rule",
+                &format!("name={FIREWALL_RULE}"),
+            ])
             .status();
     }
+}
+
+fn force_chain_cache_resync() {
+    let status = Command::new("certutil.exe")
+        .args(["-setreg", "chain\\ChainCacheResyncFiletime", "@now"])
+        .status()
+        .expect("certutil must be launchable on the Windows qualification runner");
+    assert!(
+        status.success(),
+        "failed to force the Windows chain cache resync time"
+    );
 }
 
 fn clear_cryptnet_url_cache() {
@@ -95,10 +115,11 @@ fn verified_physical_fixture() -> (PathBuf, AuthenticodeResult) {
 }
 
 #[test]
-#[ignore = "mutates WinHTTP proxy and CryptNet URL cache for destructive negative qualification"]
+#[ignore = "mutates Windows Firewall and CryptNet cache for destructive negative qualification"]
 fn offline_revocation_is_a_structured_blocked_release_decision() {
     let (artifact, auth) = verified_physical_fixture();
-    let _proxy = WinHttpProxyGuard::point_to_closed_local_port();
+    let _network = RevocationNetworkGuard::block_http();
+    force_chain_cache_resync();
     clear_cryptnet_url_cache();
 
     let decision = verify_windows_release(
