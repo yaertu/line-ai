@@ -290,6 +290,9 @@ fn stalled_revocation_retrieval_is_bounded_and_blocks_release() {
     );
     assert_eq!(decision.status, TrustStatus::Blocked);
     assert_ne!(decision.revocation.native_status, 0);
+    assert_eq!(decision.revocation.configured_budget_ms, budget.as_millis());
+    assert!(decision.revocation.inspection_elapsed_ms >= 200);
+    assert!(decision.revocation.inspection_elapsed_ms <= elapsed.as_millis());
     assert!(
         decision.rules.iter().any(|rule| {
             rule.rule == ReleaseRule::Revocation && rule.status == RuleStatus::Failed
