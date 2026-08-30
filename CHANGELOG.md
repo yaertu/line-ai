@@ -2,7 +2,7 @@
 
 Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir. Sürümleme [SemVer](https://semver.org/lang/tr/) yaklaşımını izler.
 
-## [0.2.0] - 2026-08-30
+## [0.3.0] - 2026-08-30
 
 ### Eklendi
 
