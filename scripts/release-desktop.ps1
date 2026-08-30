@@ -6,6 +6,24 @@ $releaseExecutable = Join-Path $projectRoot "src-tauri\target\release\line-cli.e
 $desktopExecutable = Join-Path $desktop "Line CLI.exe"
 $desktopSourceZip = Join-Path $desktop "line-cli-src.zip"
 
+function Get-Sha256Hash {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $stream = [System.IO.File]::OpenRead($Path)
+    try {
+        $algorithm = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            return ([System.BitConverter]::ToString($algorithm.ComputeHash($stream))).Replace("-", "")
+        }
+        finally {
+            $algorithm.Dispose()
+        }
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
 Set-Location -LiteralPath $projectRoot
 
 $dirtyFiles = git status --porcelain
@@ -35,8 +53,8 @@ if (Test-Path -LiteralPath $desktopSourceZip) {
 & git archive --format=zip --output=$desktopSourceZip HEAD
 if ($LASTEXITCODE -ne 0) { throw "Kaynak ZIP üretilemedi." }
 
-$sourceHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $releaseExecutable).Hash
-$desktopHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $desktopExecutable).Hash
+$sourceHash = Get-Sha256Hash -Path $releaseExecutable
+$desktopHash = Get-Sha256Hash -Path $desktopExecutable
 if ($sourceHash -ne $desktopHash) {
     throw "Masaüstü EXE kopyasının SHA-256 doğrulaması başarısız."
 }
@@ -50,7 +68,7 @@ $artifacts | ForEach-Object {
     [PSCustomObject]@{
         Dosya = $_.FullName
         Boyut = $_.Length
-        SHA256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash
+        SHA256 = Get-Sha256Hash -Path $_.FullName
     }
 } | Format-Table -AutoSize
 
