@@ -123,6 +123,11 @@ pub enum NativeTrustError {
     InvalidCertificateName(#[from] std::string::FromUtf16Error),
 }
 
+/// Rejects native Authenticode inspection on non-Windows hosts.
+///
+/// # Errors
+///
+/// Always returns [`NativeTrustError::UnsupportedPlatform`] outside Windows.
 #[cfg(not(windows))]
 pub fn inspect_authenticode(
     _artifact: &Path,
@@ -131,6 +136,12 @@ pub fn inspect_authenticode(
     Err(NativeTrustError::UnsupportedPlatform)
 }
 
+/// Inspects an Authenticode artifact through native `WinTrust` using production revocation policy.
+///
+/// # Errors
+///
+/// Returns [`NativeTrustError`] when native provider state, signer, certificate-chain, certificate
+/// metadata, or Windows API inspection cannot be read safely.
 #[cfg(windows)]
 pub fn inspect_authenticode(
     artifact: &Path,
