@@ -91,7 +91,7 @@ pub enum TrustPolicyError {
     MissingAuthenticodeDigest,
 }
 
-/// Re-inspects the physical artifact with WinTrust and evaluates a fail-closed release policy.
+/// Re-inspects the physical artifact with `WinTrust` and evaluates a fail-closed release policy.
 ///
 /// # Errors
 /// Returns a typed native or evidence error when physical inspection/evidence construction fails.
@@ -124,31 +124,29 @@ fn evaluate_release_gate(
     snapshot: &TrustSnapshot,
     policy: &ReleasePolicy,
 ) -> Result<ReleaseGateDecision, TrustPolicyError> {
-    let mut rules = Vec::with_capacity(6);
-    rules.push(evaluate_envelope(
-        ReleaseRule::ArtifactHash,
-        hash_evidence,
-        EvidenceType::ArtifactHash,
-        "hash-engine",
-        artifact_digest,
-    ));
-    rules.push(evaluate_envelope(
-        ReleaseRule::Authenticode,
-        authenticode_evidence,
-        EvidenceType::AuthenticodeVerification,
-        "authenticode-verifier",
-        artifact_digest,
-    ));
-    rules.push(evaluate_certificate_chain(snapshot));
-    rules.push(evaluate_timestamp(
-        snapshot.timestamp.as_ref(),
-        policy.require_timestamp,
-    ));
-    rules.push(evaluate_publisher(
-        &snapshot.signer,
-        policy.expected_publisher_subject.as_deref(),
-    ));
-    rules.push(evaluate_lineage(hash_evidence, authenticode_evidence));
+    let rules = vec![
+        evaluate_envelope(
+            ReleaseRule::ArtifactHash,
+            hash_evidence,
+            EvidenceType::ArtifactHash,
+            "hash-engine",
+            artifact_digest,
+        ),
+        evaluate_envelope(
+            ReleaseRule::Authenticode,
+            authenticode_evidence,
+            EvidenceType::AuthenticodeVerification,
+            "authenticode-verifier",
+            artifact_digest,
+        ),
+        evaluate_certificate_chain(snapshot),
+        evaluate_timestamp(snapshot.timestamp.as_ref(), policy.require_timestamp),
+        evaluate_publisher(
+            &snapshot.signer,
+            policy.expected_publisher_subject.as_deref(),
+        ),
+        evaluate_lineage(hash_evidence, authenticode_evidence),
+    ];
 
     let passed = rules.iter().all(|rule| rule.status != RuleStatus::Failed);
     let status = if passed {
