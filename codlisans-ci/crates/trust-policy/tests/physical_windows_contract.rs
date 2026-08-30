@@ -2,7 +2,7 @@
 
 use authenticode_verifier::verify_authenticode;
 use evidence_model::TrustStatus;
-use std::{path::PathBuf, time::Duration};
+use std::{fmt::Write as _, path::PathBuf, time::Duration};
 use trust_policy::{ReleasePolicy, ReleaseRule, RuleStatus, verify_windows_release};
 
 #[test]
@@ -56,26 +56,34 @@ fn real_authenticode_evidence_flows_into_native_release_gate() {
                         assert_eq!(decision.evidence.parent_evidence_ids[1], auth.evidence.id);
                         return;
                     }
-                    Ok(decision) => diagnostics.push_str(&format!(
-                        "{} => release {:?}\n",
+                    Ok(decision) => writeln!(
+                        &mut diagnostics,
+                        "{} => release {:?}",
                         artifact.display(),
                         decision.rules
-                    )),
-                    Err(error) => diagnostics.push_str(&format!(
-                        "{} => release error {error:?}\n",
+                    )
+                    .expect("writing diagnostics into String must succeed"),
+                    Err(error) => writeln!(
+                        &mut diagnostics,
+                        "{} => release error {error:?}",
                         artifact.display()
-                    )),
+                    )
+                    .expect("writing diagnostics into String must succeed"),
                 }
             }
-            Ok(auth) => diagnostics.push_str(&format!(
-                "{} => Authenticode {:?}\n",
+            Ok(auth) => writeln!(
+                &mut diagnostics,
+                "{} => Authenticode {:?}",
                 artifact.display(),
                 auth.status
-            )),
-            Err(error) => diagnostics.push_str(&format!(
-                "{} => verifier error {error:?}\n",
+            )
+            .expect("writing diagnostics into String must succeed"),
+            Err(error) => writeln!(
+                &mut diagnostics,
+                "{} => verifier error {error:?}",
                 artifact.display()
-            )),
+            )
+            .expect("writing diagnostics into String must succeed"),
         }
     }
     panic!(
