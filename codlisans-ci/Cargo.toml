@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/evidence-model",
+  "crates/hash-engine",
+  "crates/process-runner",
+  "crates/windows-sdk-discovery",
+  "crates/authenticode-verifier",
+  "crates/wintrust-native",
+  "crates/trust-policy",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = "deny"
+pedantic = "deny"
+
+[workspace.dependencies]
+thiserror = "2.0.20"
+uuid = { version = "1.18.1", features = ["v4"] }
+sha2 = "0.10.9"
+hex = "0.4.3"
