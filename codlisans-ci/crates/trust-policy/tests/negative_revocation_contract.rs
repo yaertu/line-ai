@@ -2,13 +2,7 @@
 
 use authenticode_verifier::{AuthenticodeResult, verify_authenticode};
 use evidence_model::TrustStatus;
-use std::{
-    fmt::Write as _,
-    net::TcpListener,
-    path::PathBuf,
-    process::Command,
-    time::Duration,
-};
+use std::{fmt::Write as _, net::TcpListener, path::PathBuf, process::Command, time::Duration};
 use trust_policy::{ReleasePolicy, verify_windows_release};
 
 const ERROR_NO_MORE_ITEMS: i32 = -2_147_024_637; // 0x80070103
@@ -27,12 +21,7 @@ impl WinHttpProxyGuard {
 
         let proxy = format!("127.0.0.1:{port}");
         let status = Command::new("netsh.exe")
-            .args([
-                "winhttp",
-                "set",
-                "proxy",
-                &format!("proxy-server={proxy}"),
-            ])
+            .args(["winhttp", "set", "proxy", &format!("proxy-server={proxy}")])
             .status()
             .expect("netsh must be launchable on the Windows qualification runner");
         assert!(status.success(), "failed to point WinHTTP at {proxy}");
