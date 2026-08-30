@@ -330,7 +330,7 @@ fn offline_revocation_is_a_structured_blocked_release_decision() {
 
 #[test]
 #[ignore = "mutates WinHTTP/WinINet proxy and CryptNet cache for destructive qualification"]
-fn malformed_revocation_response_is_a_structured_unknown_block() {
+fn malformed_revocation_response_preserves_offline_and_unknown_facts() {
     let (artifact, auth) = verified_physical_fixture();
     let responder = MalformedRevocationResponder::start();
     let _proxy = DualProxyGuard::route_to_local_responder(responder.port());
@@ -353,14 +353,15 @@ fn malformed_revocation_response_is_a_structured_unknown_block() {
 
     let decision = result
         .expect("malformed revocation data must normalize into a structured BLOCKED decision");
-    eprintln!(
-        "CODLISANS malformed revocation decision rules={:?}",
-        decision.rules
-    );
     assert_eq!(decision.status, TrustStatus::Blocked);
     assert!(decision.rules.iter().any(|rule| {
         rule.rule == ReleaseRule::Revocation
             && rule.status == RuleStatus::Failed
-            && rule.failure == Some(GateFailure::RevocationUnknown)
+            && rule.failure == Some(GateFailure::RevocationOffline)
     }));
+    assert!(decision.revocation.checked);
+    assert!(decision.revocation.offline);
+    assert!(decision.revocation.unknown);
+    assert!(!decision.revocation.revoked);
+    assert_eq!(decision.revocation.native_status & 0x0100_0040, 0x0100_0040);
 }
