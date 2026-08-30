@@ -24,11 +24,33 @@ jobs:
         run: rustup override set 1.98.0
       - name: Toolchain evidence
         run: rustc --version && cargo --version
-      - name: RED contract tests
+      - name: Contract tests
         run: cargo test --workspace --all-targets -- --nocapture
-      - name: Format
+      - name: Format check
         if: success()
         run: cargo fmt --all -- --check
       - name: Clippy
         if: success()
         run: cargo clippy --workspace --all-targets -- -D warnings
+
+  format-snapshot:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: codlisans-ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install pinned rustfmt
+        run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt
+      - name: Select pinned Rust
+        run: rustup override set 1.98.0
+      - name: Apply canonical rustfmt
+        run: cargo fmt --all
+      - name: Upload formatted source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: codlisans-rustfmt-snapshot
+          path: codlisans-ci/crates
+          if-no-files-found: error
+          retention-days: 1
