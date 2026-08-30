@@ -6,12 +6,12 @@ use std::{
     fmt::Write as _,
     fs,
     io::{ErrorKind, Read as _, Write as _},
-    net::{TcpListener, TcpStream, UdpSocket},
+    net::{TcpListener, TcpStream},
     path::PathBuf,
     process::Command,
     sync::{
         Arc,
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicUsize, Ordering},
     },
     thread::{self, JoinHandle},
     time::Duration,
@@ -20,17 +20,7 @@ use trust_policy::{GateFailure, ReleasePolicy, ReleaseRule, RuleStatus, verify_w
 
 const ERROR_NO_MORE_ITEMS: i32 = -2_147_024_637; // 0x80070103
 const FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_HTTP";
-const PORTPROXY_FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_PORTPROXY";
-const PORTPROXY_LISTEN_ADDRESS: &str = "127.0.0.2";
-const REVOCATION_HOSTS: &[&str] = &[
-    "www.microsoft.com",
-    "crl.microsoft.com",
-    "oneocsp.microsoft.com",
-    "ocsp.digicert.com",
-    "ocsp.sectigo.com",
-    "ocsp2.globalsign.com",
-    "ocsp.globalsign.com",
-];
+const INTERNET_SETTINGS_KEY: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings";
 
 struct RevocationNetworkGuard;
 
@@ -73,162 +63,137 @@ impl Drop for RevocationNetworkGuard {
     }
 }
 
-struct PortProxyGuard;
+struct DualProxyGuard {
+    registry_backup: PathBuf,
+}
 
-impl PortProxyGuard {
-    fn forward_http_to(connect_address: &str, connect_port: u16) -> Self {
-        let _ = Command::new("netsh.exe")
+impl DualProxyGuard {
+    fn route_to_local_responder(port: u16) -> Self {
+        let registry_backup = std::env::temp_dir().join(format!(
+            "codlisans-internet-settings-{}.reg",
+            std::process::id()
+        ));
+        let export = Command::new("reg.exe")
             .args([
-                "interface",
-                "portproxy",
-                "delete",
-                "v4tov4",
-                "listenport=80",
-                &format!("listenaddress={PORTPROXY_LISTEN_ADDRESS}"),
-            ])
-            .status();
-        let _ = Command::new("netsh.exe")
-            .args([
-                "advfirewall",
-                "firewall",
-                "delete",
-                "rule",
-                &format!("name={PORTPROXY_FIREWALL_RULE}"),
-            ])
-            .status();
-        let firewall = Command::new("netsh.exe")
-            .args([
-                "advfirewall",
-                "firewall",
-                "add",
-                "rule",
-                &format!("name={PORTPROXY_FIREWALL_RULE}"),
-                "dir=in",
-                "action=allow",
-                "protocol=TCP",
-                &format!("localport={connect_port}"),
-                "profile=any",
+                "export",
+                INTERNET_SETTINGS_KEY,
+                registry_backup
+                    .to_str()
+                    .expect("registry backup path must be valid UTF-8"),
+                "/y",
             ])
             .status()
-            .expect("netsh firewall must be launchable for the portproxy qualification route");
-        assert!(
-            firewall.success(),
-            "failed to allow the portproxy responder port"
-        );
-        let status = Command::new("netsh.exe")
+            .expect("reg.exe export must be launchable on the Windows qualification runner");
+        assert!(export.success(), "failed to back up WinINet proxy settings");
+
+        let proxy = format!("127.0.0.1:{port}");
+        let winhttp = Command::new("netsh.exe")
             .args([
-                "interface",
-                "portproxy",
-                "add",
-                "v4tov4",
-                "listenport=80",
-                &format!("listenaddress={PORTPROXY_LISTEN_ADDRESS}"),
-                &format!("connectport={connect_port}"),
-                &format!("connectaddress={connect_address}"),
+                "winhttp",
+                "set",
+                "proxy",
+                &format!("proxy-server={proxy}"),
             ])
             .status()
-            .expect("netsh portproxy must be launchable on the Windows qualification runner");
-        assert!(
-            status.success(),
-            "failed to install the localhost revocation portproxy"
-        );
-        thread::sleep(Duration::from_millis(250));
-        Self
+            .expect("netsh WinHTTP proxy configuration must be launchable");
+        assert!(winhttp.success(), "failed to configure the WinHTTP proxy");
+
+        set_registry_value("ProxyEnable", "REG_DWORD", "1");
+        set_registry_value("ProxyServer", "REG_SZ", &proxy);
+
+        let _ = Command::new("netsh.exe")
+            .args(["winhttp", "show", "proxy"])
+            .status();
+        let _ = Command::new("reg.exe")
+            .args(["query", INTERNET_SETTINGS_KEY, "/v", "ProxyEnable"])
+            .status();
+        let _ = Command::new("reg.exe")
+            .args(["query", INTERNET_SETTINGS_KEY, "/v", "ProxyServer"])
+            .status();
+
+        Self { registry_backup }
     }
 }
 
-impl Drop for PortProxyGuard {
+impl Drop for DualProxyGuard {
     fn drop(&mut self) {
         let _ = Command::new("netsh.exe")
+            .args(["winhttp", "reset", "proxy"])
+            .status();
+        for value in ["ProxyEnable", "ProxyServer"] {
+            let _ = Command::new("reg.exe")
+                .args(["delete", INTERNET_SETTINGS_KEY, "/v", value, "/f"])
+                .status();
+        }
+        let _ = Command::new("reg.exe")
             .args([
-                "interface",
-                "portproxy",
-                "delete",
-                "v4tov4",
-                "listenport=80",
-                &format!("listenaddress={PORTPROXY_LISTEN_ADDRESS}"),
+                "import",
+                self.registry_backup
+                    .to_str()
+                    .expect("registry backup path must be valid UTF-8"),
             ])
             .status();
-        let _ = Command::new("netsh.exe")
-            .args([
-                "advfirewall",
-                "firewall",
-                "delete",
-                "rule",
-                &format!("name={PORTPROXY_FIREWALL_RULE}"),
-            ])
-            .status();
+        let _ = fs::remove_file(&self.registry_backup);
     }
 }
 
-struct HostsGuard {
-    path: PathBuf,
-    original: Vec<u8>,
-}
-
-impl HostsGuard {
-    fn redirect_revocation_hosts_to_fault_proxy() -> Self {
-        let windows = PathBuf::from(std::env::var_os("WINDIR").expect("WINDIR must exist"));
-        let path = windows
-            .join("System32")
-            .join("drivers")
-            .join("etc")
-            .join("hosts");
-        let original = fs::read(&path).expect("Windows hosts file must be readable");
-        let mut replacement = original.clone();
-        if !replacement.ends_with(b"\n") {
-            replacement.push(b'\n');
-        }
-        replacement.extend_from_slice(b"# CODLISANS negative revocation qualification\n");
-        for host in REVOCATION_HOSTS {
-            replacement
-                .extend_from_slice(format!("{PORTPROXY_LISTEN_ADDRESS} {host}\n").as_bytes());
-        }
-        fs::write(&path, replacement).expect("Windows hosts file must be writable by CI admin");
-        flush_dns_cache();
-        Self { path, original }
-    }
-}
-
-impl Drop for HostsGuard {
-    fn drop(&mut self) {
-        let _ = fs::write(&self.path, &self.original);
-        flush_dns_cache();
-    }
+fn set_registry_value(name: &str, value_type: &str, data: &str) {
+    let status = Command::new("reg.exe")
+        .args([
+            "add",
+            INTERNET_SETTINGS_KEY,
+            "/v",
+            name,
+            "/t",
+            value_type,
+            "/d",
+            data,
+            "/f",
+        ])
+        .status()
+        .expect("reg.exe add must be launchable on the Windows qualification runner");
+    assert!(status.success(), "failed to set WinINet value {name}");
 }
 
 struct MalformedRevocationResponder {
     stop: Arc<AtomicBool>,
+    requests: Arc<AtomicUsize>,
     worker: Option<JoinHandle<()>>,
     port: u16,
 }
 
 impl MalformedRevocationResponder {
     fn start() -> Self {
-        let listener = TcpListener::bind("0.0.0.0:0")
-            .expect("an ephemeral local port must be available for revocation fault injection");
+        let listener = TcpListener::bind("127.0.0.1:0")
+            .expect("an ephemeral localhost port must be available for revocation fault injection");
         let port = listener
             .local_addr()
-            .expect("fault listener must expose its bound address")
+            .expect("localhost fault listener must expose its bound address")
             .port();
         listener
             .set_nonblocking(true)
-            .expect("local fault listener must support nonblocking mode");
+            .expect("localhost fault listener must support nonblocking mode");
         let stop = Arc::new(AtomicBool::new(false));
+        let requests = Arc::new(AtomicUsize::new(0));
         let worker_stop = Arc::clone(&stop);
+        let worker_requests = Arc::clone(&requests);
         let worker = thread::spawn(move || {
             while !worker_stop.load(Ordering::Acquire) {
                 match listener.accept() {
-                    Ok((mut stream, _)) => serve_malformed_revocation(&mut stream),
+                    Ok((mut stream, _)) => {
+                        worker_requests.fetch_add(1, Ordering::AcqRel);
+                        serve_malformed_revocation(&mut stream);
+                    }
                     Err(error) if error.kind() == ErrorKind::WouldBlock => {
                         thread::sleep(Duration::from_millis(10));
                     }
-                    Err(error) => panic!("local revocation responder failed: {error}"),
+                    Err(error) => panic!("localhost revocation responder failed: {error}"),
                 }
             }
         });
         Self {
             stop,
+            requests,
             worker: Some(worker),
             port,
         }
@@ -236,6 +201,10 @@ impl MalformedRevocationResponder {
 
     const fn port(&self) -> u16 {
         self.port
+    }
+
+    fn requests_seen(&self) -> usize {
+        self.requests.load(Ordering::Acquire)
     }
 }
 
@@ -246,28 +215,13 @@ impl Drop for MalformedRevocationResponder {
         if let Some(worker) = self.worker.take() {
             worker
                 .join()
-                .expect("local revocation responder must stop cleanly");
+                .expect("localhost revocation responder must stop cleanly");
         }
     }
 }
 
-fn local_non_loopback_ipv4() -> String {
-    let socket = UdpSocket::bind("0.0.0.0:0").expect("a UDP probe socket must be bindable");
-    socket
-        .connect("8.8.8.8:80")
-        .expect("UDP route probing must resolve the runner IPv4 address");
-    let address = socket
-        .local_addr()
-        .expect("UDP route probe must expose the runner local address");
-    assert!(
-        address.ip().is_ipv4() && !address.ip().is_loopback(),
-        "qualification requires a non-loopback runner IPv4 address, got {address}"
-    );
-    address.ip().to_string()
-}
-
 fn serve_malformed_revocation(stream: &mut TcpStream) {
-    let _ = stream.set_read_timeout(Some(Duration::from_millis(100)));
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(250)));
     let mut request = [0_u8; 4096];
     let _ = stream.read(&mut request);
     let body = b"not-a-valid-crl-or-ocsp-response";
@@ -282,35 +236,6 @@ fn serve_malformed_revocation(stream: &mut TcpStream) {
         .write_all(body)
         .expect("malformed responder body must be writable");
     let _ = stream.flush();
-}
-
-fn prove_fault_proxy_route() {
-    let mut stream = TcpStream::connect((PORTPROXY_LISTEN_ADDRESS, 80))
-        .expect("portproxy route must accept the qualification probe");
-    stream
-        .set_read_timeout(Some(Duration::from_secs(2)))
-        .expect("qualification probe must support a read timeout");
-    stream
-        .write_all(b"GET /codlisans-probe HTTP/1.1\r\nHost: revocation.invalid\r\nConnection: close\r\n\r\n")
-        .expect("qualification probe request must be writable");
-    let mut response = Vec::new();
-    stream
-        .read_to_end(&mut response)
-        .expect("qualification probe response must be readable");
-    assert!(
-        response
-            .windows(b"not-a-valid-crl-or-ocsp-response".len())
-            .any(|window| window == b"not-a-valid-crl-or-ocsp-response"),
-        "portproxy probe did not reach the malformed revocation responder"
-    );
-}
-
-fn flush_dns_cache() {
-    let status = Command::new("ipconfig.exe")
-        .arg("/flushdns")
-        .status()
-        .expect("ipconfig must be launchable on the Windows qualification runner");
-    assert!(status.success(), "failed to flush the Windows DNS cache");
 }
 
 fn force_chain_cache_resync() {
@@ -408,26 +333,30 @@ fn offline_revocation_is_a_structured_blocked_release_decision() {
 }
 
 #[test]
-#[ignore = "mutates Windows hosts, portproxy, firewall, and CryptNet cache for destructive qualification"]
+#[ignore = "mutates WinHTTP/WinINet proxy and CryptNet cache for destructive qualification"]
 fn malformed_revocation_response_is_a_structured_unknown_block() {
     let (artifact, auth) = verified_physical_fixture();
     let responder = MalformedRevocationResponder::start();
-    let connect_address = local_non_loopback_ipv4();
-    let _portproxy = PortProxyGuard::forward_http_to(&connect_address, responder.port());
-    prove_fault_proxy_route();
-    let _hosts = HostsGuard::redirect_revocation_hosts_to_fault_proxy();
+    let _proxy = DualProxyGuard::route_to_local_responder(responder.port());
     force_chain_cache_resync();
     clear_cryptnet_url_cache();
 
-    let decision = verify_windows_release(
+    let result = verify_windows_release(
         &artifact,
         &auth.hash_evidence,
         &auth.evidence,
         &ReleasePolicy::default(),
         Duration::from_secs(5),
-    )
-    .expect("malformed revocation data must normalize into a structured BLOCKED decision");
+    );
+    let requests = responder.requests_seen();
+    eprintln!("CODLISANS malformed revocation responder requests={requests}");
+    assert!(
+        requests > 0,
+        "CryptNet did not reach the malformed responder; unknown qualification is invalid"
+    );
 
+    let decision =
+        result.expect("malformed revocation data must normalize into a structured BLOCKED decision");
     assert_eq!(decision.status, TrustStatus::Blocked);
     assert!(decision.rules.iter().any(|rule| {
         rule.rule == ReleaseRule::Revocation
