@@ -8,7 +8,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * The single state contract shared by every SmoothUI AI component.
+ * Line AI arayüz bileşenlerinin paylaştığı tek durum sözleşmesi.
  *
  * Passing the same value to an orb, a prompt input and a tool card makes the
  * whole surface move as one organism instead of a set of independent widgets.

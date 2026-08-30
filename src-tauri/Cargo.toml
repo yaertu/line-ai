@@ -1,13 +1,13 @@
 [package]
-name = "line-cli"
-version = "0.1.0"
-description = "SmoothUI tabanlı yerel OpenAI ve Gemini masaüstü istemcisi"
+name = "line-ai"
+version = "0.2.0"
+description = "OpenAI ve Gemini destekli yerel Windows yapay zeka çalışma alanı"
 authors = ["yaertu"]
 edition = "2021"
-default-run = "line-cli"
+default-run = "line-ai"
 
 [lib]
-name = "line_cli_lib"
+name = "line_ai_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

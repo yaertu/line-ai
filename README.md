@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="./public/line-cli-mark.svg" width="112" height="112" alt="Line CLI logosu">
+  <img src="./public/line-ai-mark.svg" width="128" height="128" alt="Line AI logosu">
 </p>
 
-<h1 align="center">Line CLI</h1>
+<h1 align="center">Line AI</h1>
 
 <p align="center">
-  <strong>Doğrudan OpenAI ve Gemini ile çalışan, yerel ve açık kaynak Windows yapay zekâ çalışma alanı.</strong>
+  <strong>Fikrini, dosyalarını ve kodunu tek bir düzenli çalışma alanında buluşturan açık kaynak Windows yapay zekâ uygulaması.</strong>
 </p>
 
 <p align="center">
@@ -17,28 +17,31 @@
   <img alt="Lisans: MIT" src="https://img.shields.io/badge/Lisans-MIT-2EA44F">
 </p>
 
-Line CLI, Windows üzerinde çalışan; OpenAI ve Gemini sağlayıcılarına doğrudan bağlanan, SmoothUI Chat Template temelli açık kaynak bir masaüstü yapay zekâ sohbet uygulamasıdır. Uygulamanın adı "CLI" olsa da dağıtılan ürün Tauri tabanlı grafik masaüstü uygulamasıdır.
+Line AI; OpenAI ve Gemini modellerini tek arayüzde kullandıran, sohbetleri cihazda düzenleyen ve dosya ya da klasör bağlamıyla çalışabilen bir Windows masaüstü uygulamasıdır. Gösterişli bir maket değil: sağlayıcı seçimi, akıl yürütme düzeyi, dosya okuma, hata durumu, geçmiş ve ayarlar gerçek uygulama akışlarına bağlıdır.
 
 ## Uygulamadan görüntüler
 
-Gerçek çalışan arayüzden, 1440 × 1000 çözünürlükte alınan ekran görüntüleri:
+![Line AI tanıtım](./docs/gorseller/line-ai-tanitim.gif)
 
 | ☀️ Açık tema | 🌙 Koyu tema |
 | --- | --- |
-| ![Line CLI açık tema](./docs/gorseller/line-cli-acik-tema.png) | ![Line CLI koyu tema](./docs/gorseller/line-cli-koyu-tema.png) |
+| ![Line AI açık tema](./docs/gorseller/line-ai-acik-tema.png) | ![Line AI koyu tema](./docs/gorseller/line-ai-koyu-tema.png) |
 
 ## Öne çıkan özellikler
 
-- 🎨 **SmoothUI arayüzü:** Açık/koyu tema, akıcı hareketler ve hareket azaltma tercihine saygı.
-- 🔐 **Anahtar güvenliği:** OpenAI ve Gemini anahtarları yalnız Windows ortam değişkenlerinden native işlemde okunur.
-- 🔀 **Sağlayıcı yönlendirme:** `Otomatik`, `OpenAI` ve `Gemini`; otomatik modda kontrollü OpenAI → Gemini geçişi.
-- 🧠 **Akıl yürütme denetimi:** Hızlı, orta ve yüksek seviyeler sohbet kutusundan seçilir.
-- 🛡️ **Truth Mode:** Varsayılan açık `/truthmode`, doğrulanmamış sonucu tamamlanmış gibi sunmayı önleyen sistem talimatı.
-- 📎 **Güvenli dosya bağlamı:** Native sürükle-bırak, uzantı/boyut/adet sınırı ve UTF-8 metin okuma.
-- 💬 **Yerel sohbet geçmişi:** Sohbetleri açma, yeniden adlandırma, arama ve silme.
-- 🖱️ **Bağlam menüleri:** Sohbet ve mesajlarda fareyle sağ tık veya klavyeyle erişilebilir işlemler.
-- 📐 **Responsive çalışma alanı:** Daraltılabilir kenar çubuğu ve küçük ekran uyarlaması.
-- 🚫 **Temiz bağımlılık sınırı:** Line CLI başka bir yerel uygulamanın çalışma zamanına veya izinsiz üçüncü taraf sağlayıcı geçidine bağımlı değildir.
+- 💬 **Düzenli sohbet çalışma alanı:** Sidebar'ın üstünde arama, yeni sohbet, zaman damgalı ve gruplandırılmış geçmiş, sabitleme, yeniden adlandırma, silme ve beş saniyelik geri alma.
+- 🧭 **Gerçek Sidebar:** 240–400 piksel arasında sürüklenerek veya klavyeyle yeniden boyutlandırılan geniş görünüm; daraltılmış ikon şeridi ve mobil çekmece.
+- 🔀 **Sağlayıcı yönlendirme:** `Otomatik`, `OpenAI` ve `Gemini`; otomatik modda kontrollü sağlayıcı geçişi.
+- 🧠 **Akıl yürütme ve durum:** Hızlı, orta ve yüksek düzeyler; bekleme, düşünme, araç ve hata durumları sohbet içinde görünür.
+- 🧩 **Yapılandırılmış yanıtlar:** Kod farkları, kaynak bağlantıları, görev adımları ve araç sonuçları uygun bileşenlerle gösterilir.
+- ⚙️ **Ayrıntılı Ayarlar:** Genel, Yapay zekâ, Görünüm, Yerel veriler ve Hakkında bölümleri; değişiklikler gerçek tercih durumuna bağlıdır.
+- 📎 **Dosya ve klasör bağlamı:** Windows sürükle-bırak, klasörleri güvenli biçimde dolaşma, tür/adet/boyut sınırı ve metin önizlemesi.
+- ⌨️ **`+` komut paneli:** Görünür bir ek düğme olmadan sağlayıcı, akıl yürütme, Truth Mode ve ek dosya komutlarına hızlı erişim.
+- 🔎 **Hızlı komut merkezi:** `Ctrl+K` ile sohbetleri, ayarları, sağlayıcıyı, akıl yürütmeyi ve temayı tek arama alanından yönetme.
+- 🛡️ **Truth Mode:** Varsayılan açık doğruluk disiplini; doğrulanmamış sonucu tamamlanmış gibi göstermeyi engelleyen sistem talimatı.
+- 🔐 **Anahtar güvenliği:** Sağlayıcı anahtarları yalnız native masaüstü sürecinde okunur; arayüze veya sohbet kaydına yazılmaz.
+- 🌗 **Açık/koyu tema:** Sistem tercihini izleme, okunaklı tipografi ve hareket azaltma ayarına saygı.
+- 📐 **Responsive yapı:** İçeriği ezmek yerine Sidebar ve panelleri ekran genişliğine uygun düzene dönüştürür.
 
 ## Gereksinimler
 
@@ -51,7 +54,7 @@ Gerçek çalışan arayüzden, 1440 × 1000 çözünürlükte alınan ekran gör
 
 ## Sağlayıcı yapılandırması
 
-Anahtarları kaynak dosyasına veya `.env` dosyasına eklemeyin. Windows kullanıcı ortam değişkeni olarak tanımlayın ve ardından Line CLI'yi yeniden başlatın:
+Anahtarları kaynak dosyasına veya `.env` dosyasına eklemeyin. Windows kullanıcı ortam değişkeni olarak tanımlayın ve ardından Line AI'ı yeniden başlatın:
 
 ```powershell
 [Environment]::SetEnvironmentVariable('OPENAI_API_KEY', 'ANAHTARINIZ', 'User')
@@ -67,11 +70,11 @@ Anahtarları kaynak dosyasına veya `.env` dosyasına eklemeyin. Windows kullan�
 Varsayılan modeller isteğe bağlı olarak değiştirilebilir:
 
 ```powershell
-[Environment]::SetEnvironmentVariable('LINE_CLI_OPENAI_MODEL', 'gpt-5.6-terra', 'User')
-[Environment]::SetEnvironmentVariable('LINE_CLI_GEMINI_MODEL', 'gemini-3.7-flash', 'User')
+[Environment]::SetEnvironmentVariable('LINE_AI_OPENAI_MODEL', 'gpt-5.6-terra', 'User')
+[Environment]::SetEnvironmentVariable('LINE_AI_GEMINI_MODEL', 'gemini-3.7-flash', 'User')
 ```
 
-Uygulama anahtar değerlerini arayüze döndürmez. Sağlayıcı hata metinleri cevaplanmadan önce anahtar değerlerinden arındırılır.
+Uygulama anahtar değerlerini arayüze döndürmez. Sağlayıcı hata metinleri kullanıcıya gösterilmeden önce anahtar değerlerinden arındırılır.
 
 ## Geliştirme
 
@@ -106,7 +109,7 @@ Portable Windows çalıştırılabilir dosyası:
 pnpm tauri:build
 ```
 
-Çıktı `src-tauri/target/release/line-cli.exe` yolunda oluşur. Dağıtımdaki çalıştırılabilir dosya imzalanmamışsa Windows bunu bilinmeyen yayıncı olarak gösterebilir; yayın öncesinde güvenilir bir Authenticode sertifikasıyla imzalanması önerilir.
+Çıktı `src-tauri/target/release/line-ai.exe` yolunda oluşur. Dağıtımdaki çalıştırılabilir dosya imzalanmamışsa Windows bunu bilinmeyen yayıncı olarak gösterebilir; yayın öncesinde güvenilir bir Authenticode sertifikasıyla imzalanması önerilir.
 
 Doğrulama, Rust testleri, native derleme, masaüstü EXE kopyası ve temiz Git kaynak ZIP'i tek komutla üretilebilir:
 
@@ -114,25 +117,29 @@ Doğrulama, Rust testleri, native derleme, masaüstü EXE kopyası ve temiz Git 
 pnpm release:desktop
 ```
 
-Komut masaüstünde yalnız `Line CLI.exe` ile `line-cli-src.zip` teslim dosyalarını günceller. Kaynak ZIP, Git'teki doğrulanmış `HEAD` içeriğinden üretildiği için `node_modules`, `target`, `.git`, ortam dosyaları ve yerel secret'ları içermez.
+Komut masaüstünde `Line AI.exe` ile `line-ai-src.zip` teslim dosyalarını günceller. Kaynak ZIP, Git'teki doğrulanmış `HEAD` içeriğinden üretildiği için `node_modules`, `target`, `.git`, ortam dosyaları ve yerel secret'ları içermez.
 
-## Türkçe sürüm ve görsel güncelleme standardı
+## Dosya ve klasör sınırları
 
-- Kullanıcıya görünen her değişiklik `CHANGELOG.md` içinde Türkçe kaydedilir.
-- Arayüz değişikliklerinden sonra geliştirme sunucusu açıkken `pnpm docs:screenshots` çalıştırılır.
-- Ekran görüntüleri sabit dosya adlarıyla yenilendiğinden README her zaman son açık/koyu arayüzü gösterir.
-- Her yayın öncesinde `pnpm release:desktop` çalıştırılır ve GitHub sürümüne aynı doğrulanmış EXE ile kaynak ZIP yüklenir.
-- CI; lint, TypeScript, React testleri, production build ve Rust testlerini Windows üzerinde yeniden çalıştırır.
-
-Değişiklik geçmişi için [CHANGELOG.md](./CHANGELOG.md) dosyasına bakın.
-
-## Dosya sürükle-bırak sınırları
-
-- Tek işlemde en fazla 4 dosya.
-- Dosya başına en fazla 1 MiB.
+- Tek işlemde en fazla **30 dosya**.
+- Dosya başına en fazla **512 MiB**.
+- Model bağlamı için dosya başına en fazla 64 KiB, toplamda en fazla 2 MiB metin önizlemesi okunur; dosyanın kendisi değiştirilmez.
 - Desteklenen uzantılar: `txt`, `md`, `json`, `csv`, `ts`, `tsx`, `js`, `jsx`, `py`, `rs`, `html`, `css`, `toml`, `yaml`, `yml`.
-- Klasörler, çalıştırılabilir dosyalar ve desteklenmeyen ikili dosyalar reddedilir.
-- Bırakılan dosya içeriği güvenilmeyen kullanıcı verisi kabul edilir; içindeki talimatlar sistem talimatı sayılmaz.
+- Bırakılan klasörler alt klasörleriyle güvenli biçimde taranır; sembolik bağlantılar izlenmez, desteklenmeyen dosyalar atlanır.
+- Doğrudan bırakılan desteklenmeyen veya ikili dosyalar açık hata mesajıyla reddedilir.
+- Bırakılan içerik güvenilmeyen kullanıcı verisi kabul edilir; dosyadaki talimatlar sistem talimatı sayılmaz.
+
+## `+` komut paneli
+
+Sohbet alanı `+` ile başladığında komut paneli açılır. Kullanıcı buradan gerçek sağlayıcıyı ve akıl yürütme düzeyini değiştirebilir, Truth Mode'u açıp kapatabilir veya eklenmiş dosyaları temizleyebilir. `+` karakteri tek başına modele gönderilmez.
+
+## Klavye kısayolları
+
+- `Ctrl+K`: Sohbet ve gerçek uygulama komutlarını arayan komut merkezini açar.
+- `Ctrl+N`: Yeni ve boş bir sohbet açar.
+- `Ctrl+,`: Ayarlar panelini açar.
+- `Enter`: Mesajı gönderir.
+- `Shift+Enter`: Mesaj içinde yeni satır açar.
 
 ## Truth Mode
 
@@ -144,15 +151,22 @@ Truth Mode varsayılan olarak açıktır. Arayüzdeki kalkan düğmesiyle veya s
 /truthmode kapat
 ```
 
-Bu özellik model hatalarını tamamen ortadan kaldırma garantisi değildir. Model cevaplarını önemli kararlar öncesinde bağımsız olarak doğrulayın.
+Bu özellik model hatalarını tamamen ortadan kaldırma garantisi değildir. Önemli kararlar öncesinde model cevaplarını bağımsız olarak doğrulayın.
 
 ## Veri ve gizlilik
 
 - Sohbet geçmişi cihazdaki WebView `localStorage` alanında tutulur.
 - Mesaj gönderildiğinde seçili sağlayıcıya sohbet bağlamı ve eklenmiş dosya metni gönderilir.
-- Telemetri veya ayrı bir Line CLI sunucusu bulunmaz.
+- Telemetri veya ayrı bir Line AI sunucusu bulunmaz.
 - API kullanımı, kota ve ücretlendirme seçilen sağlayıcının hesabına aittir.
+
+## Türkçe sürüm ve görsel güncelleme standardı
+
+- Kullanıcıya görünen her değişiklik [CHANGELOG.md](./CHANGELOG.md) içinde Türkçe kaydedilir.
+- Arayüz değişikliklerinden sonra gerçek uygulamadan açık/koyu görüntüler ve tanıtım GIF'i yenilenir.
+- Her yayın öncesinde doğrulama zinciri çalıştırılır; GitHub sürümüne aynı doğrulanmış EXE ve kaynak ZIP yüklenir.
+- CI; lint, TypeScript, React testleri, production build ve Rust testlerini Windows üzerinde yeniden çalıştırır.
 
 ## Lisans ve atıf
 
-Line CLI MIT lisansı altında yayımlanır. Arayüz, MIT lisanslı [SmoothUI Chat Template](https://smoothui.dev/docs/templates/chat) ve bileşenlerinden uyarlanmıştır. Ayrıntılar için `LICENSE` ve `THIRD_PARTY_NOTICES.md` dosyalarına bakın.
+Line AI MIT lisansı altında yayımlanır. Üçüncü taraf lisans ve telif bildirimleri [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) içinde korunur.

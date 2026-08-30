@@ -7,7 +7,7 @@ $devServer = "http://127.0.0.1:1430"
 try {
     Invoke-WebRequest -Uri $devServer -UseBasicParsing -TimeoutSec 5 | Out-Null
 } catch {
-    throw "Line CLI geliştirme sunucusu çalışmıyor. Ayrı bir terminalde 'pnpm dev' komutunu başlatın."
+    throw "Line AI geliştirme sunucusu çalışmıyor. Ayrı bir terminalde 'pnpm dev' komutunu başlatın."
 }
 
 $chromeCandidates = @(
@@ -22,13 +22,13 @@ if (-not $chrome) {
 New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
 
 $captures = @(
-    @{ Theme = "light"; File = "line-cli-acik-tema.png" },
-    @{ Theme = "dark"; File = "line-cli-koyu-tema.png" }
+    @{ Theme = "light"; File = "line-ai-acik-tema.png" },
+    @{ Theme = "dark"; File = "line-ai-koyu-tema.png" }
 )
 
 foreach ($capture in $captures) {
     $target = Join-Path $outputDirectory $capture.File
-    $profile = Join-Path $env:TEMP ("line-cli-docs-" + $capture.Theme + "-" + [guid]::NewGuid().ToString("N"))
+    $profile = Join-Path $env:TEMP ("line-ai-docs-" + $capture.Theme + "-" + [guid]::NewGuid().ToString("N"))
     if (Test-Path -LiteralPath $target) {
         Remove-Item -LiteralPath $target -Force
     }
@@ -38,7 +38,9 @@ foreach ($capture in $captures) {
         "--no-first-run" `
         "--no-default-browser-check" `
         "--disable-gpu" `
+        "--force-prefers-reduced-motion" `
         "--hide-scrollbars" `
+        "--run-all-compositor-stages-before-draw" `
         "--user-data-dir=$profile" `
         "--window-size=1440,1000" `
         "--virtual-time-budget=3500" `

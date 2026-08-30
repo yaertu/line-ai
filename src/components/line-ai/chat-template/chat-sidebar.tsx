@@ -2,22 +2,26 @@
 
 import { cn } from "@/lib/utils";
 import {
+  Clock3,
+  Command,
+  History,
   MessageSquareText,
-  Moon,
   MoreHorizontal,
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
+  Pin,
+  PinOff,
   Plus,
   Search,
+  Settings2,
   ShieldCheck,
-  Sun,
   Trash2,
   X,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ChatConversation } from "./chat-data";
+import { PROVIDERS, type ChatConversation, type ProviderChoice } from "./chat-data";
 
 export type ChatSidebarProps = {
   activeId: string;
@@ -26,12 +30,18 @@ export type ChatSidebarProps = {
   conversations: ChatConversation[];
   onDelete: (id: string) => void;
   onNewChat: () => void;
+  onOpenSettings: () => void;
   onRename: (id: string, title: string) => void;
   onSelect: (id: string) => void;
+  onTogglePin: (id: string) => void;
   onToggleCollapsed?: () => void;
+  onWidthChange?: (width: number) => void;
+  provider: ProviderChoice;
+  width?: number;
+  truthMode: boolean;
 };
 
-const LineCliMark = ({ className }: { className?: string }) => (
+const LineAiMark = ({ className }: { className?: string }) => (
   <svg
     aria-hidden="true"
     className={className}
@@ -54,6 +64,27 @@ const LineCliMark = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const formatHistoryGroup = (value: string) => {
+  const date = new Date(value);
+  const today = new Date();
+  const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDifference = Math.round((startToday.getTime() - startDate.getTime()) / 86_400_000);
+  if (dayDifference === 0) return "Bugün";
+  if (dayDifference === 1) return "Dün";
+  if (dayDifference < 7) return "Son 7 gün";
+  return date.toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+};
+
+const formatHistoryTime = (value: string) => {
+  const date = new Date(value);
+  const today = new Date();
+  const sameDay = date.toDateString() === today.toDateString();
+  return sameDay
+    ? date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })
+    : date.toLocaleDateString("tr-TR", { day: "2-digit", month: "short" });
+};
+
 export const ChatSidebar = ({
   activeId,
   className,
@@ -61,14 +92,21 @@ export const ChatSidebar = ({
   conversations,
   onDelete,
   onNewChat,
+  onOpenSettings,
   onRename,
   onSelect,
+  onTogglePin,
   onToggleCollapsed,
+  onWidthChange,
+  provider,
+  width = 272,
+  truthMode,
 }: ChatSidebarProps) => {
   const [query, setQuery] = useState("");
   const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
   const [renameTarget, setRenameTarget] = useState<ChatConversation | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ChatConversation | null>(null);
+  const [isResizing, setIsResizing] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const shouldReduceMotion = useReducedMotion();
@@ -80,13 +118,19 @@ export const ChatSidebar = ({
           conversation.title.toLocaleLowerCase("tr-TR").includes(needle)
         )
       : conversations;
+    const pinned = matching.filter((conversation) => conversation.pinned);
+    const regular = matching.filter((conversation) => !conversation.pinned);
     const byGroup = new Map<string, ChatConversation[]>();
-    for (const conversation of matching) {
-      const bucket = byGroup.get(conversation.group) ?? [];
+    for (const conversation of regular) {
+      const group = formatHistoryGroup(conversation.updatedAt);
+      const bucket = byGroup.get(group) ?? [];
       bucket.push(conversation);
-      byGroup.set(conversation.group, bucket);
+      byGroup.set(group, bucket);
     }
-    return [...byGroup.entries()];
+    return [
+      ...(pinned.length > 0 ? [["Sabitlenenler", pinned] as [string, ChatConversation[]]] : []),
+      ...byGroup.entries(),
+    ];
   }, [conversations, query]);
 
   useEffect(() => {
@@ -104,6 +148,24 @@ export const ChatSidebar = ({
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [contextMenu]);
+
+  useEffect(() => {
+    if (!isResizing || !onWidthChange) return;
+    const resize = (event: PointerEvent) => {
+      onWidthChange(Math.min(400, Math.max(240, event.clientX)));
+    };
+    const stop = () => setIsResizing(false);
+    window.addEventListener("pointermove", resize);
+    window.addEventListener("pointerup", stop, { once: true });
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    return () => {
+      window.removeEventListener("pointermove", resize);
+      window.removeEventListener("pointerup", stop);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+  }, [isResizing, onWidthChange]);
 
   const openContextMenu = (conversation: ChatConversation, x: number, y: number) => {
     setContextMenu({
@@ -123,17 +185,12 @@ export const ChatSidebar = ({
         )}
       >
         <span className="mb-1 flex size-9 items-center justify-center rounded-xl bg-primary/10 text-foreground">
-          <LineCliMark className="size-6" />
+          <LineAiMark className="size-6" />
         </span>
         <RailButton
           icon={<PanelLeftOpen aria-hidden="true" size={17} />}
           label="Kenar çubuğunu genişlet"
           onClick={onToggleCollapsed}
-        />
-        <RailButton
-          icon={<Plus aria-hidden="true" size={17} />}
-          label="Yeni sohbet"
-          onClick={onNewChat}
         />
         <RailButton
           icon={<Search aria-hidden="true" size={17} />}
@@ -143,11 +200,16 @@ export const ChatSidebar = ({
             requestAnimationFrame(() => searchRef.current?.focus());
           }}
         />
+        <RailButton
+          icon={<Plus aria-hidden="true" size={17} />}
+          label="Yeni sohbet"
+          onClick={onNewChat}
+        />
         <div className="mt-auto flex flex-col items-center gap-2">
-          <span aria-label="Truth Mode açık" className="text-primary" title="Truth Mode açık">
+          <span aria-label={`Truth Mode ${truthMode ? "açık" : "kapalı"}`} className={truthMode ? "text-primary" : "text-muted-foreground"} title={`Truth Mode ${truthMode ? "açık" : "kapalı"}`}>
             <ShieldCheck aria-hidden="true" size={17} />
           </span>
-          <ThemeButton compact />
+          <RailButton icon={<Settings2 aria-hidden="true" size={17} />} label="Ayarlar" onClick={onOpenSettings} />
         </div>
       </aside>
     );
@@ -157,45 +219,44 @@ export const ChatSidebar = ({
     <aside
       aria-label="Sohbet kenar çubuğu"
       className={cn(
-        "flex h-full w-[17rem] shrink-0 flex-col gap-3 border-border/60 border-r bg-muted/60 p-3",
+        "relative flex h-full shrink-0 flex-col gap-3 border-border/60 border-r bg-muted/60 p-3",
         className
       )}
+      style={{ width }}
     >
       <div className="flex items-center justify-between gap-2 px-1">
         <span className="flex min-w-0 items-center gap-2.5 font-semibold text-sm">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-            <LineCliMark className="size-6" />
+            <LineAiMark className="size-6" />
           </span>
-          <span className="truncate">Line CLI</span>
+          <span className="truncate">Line AI</span>
         </span>
-        <button
-          aria-label="Kenar çubuğunu daralt"
-          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          onClick={onToggleCollapsed}
-          type="button"
-        >
-          <PanelLeftClose aria-hidden="true" size={16} />
-        </button>
+        <span className="flex items-center gap-1">
+          <button
+            aria-label="Sohbetlerde ara"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            onClick={() => searchRef.current?.focus()}
+            title="Sohbetlerde ara"
+            type="button"
+          >
+            <Search aria-hidden="true" size={16} />
+          </button>
+          <button
+            aria-label="Kenar çubuğunu daralt"
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            onClick={onToggleCollapsed}
+            type="button"
+          >
+            <PanelLeftClose aria-hidden="true" size={16} />
+          </button>
+        </span>
       </div>
 
-      <motion.button
-        aria-label="Yeni sohbet"
-        className="flex items-center gap-2 rounded-xl border border-border/70 bg-background px-3 py-2.5 text-left text-sm shadow-black/5 shadow-xs transition-colors hover:border-primary/40 hover:bg-primary/5"
-        onClick={onNewChat}
-        transition={shouldReduceMotion ? { duration: 0 } : { bounce: 0.1, duration: 0.22, type: "spring" }}
-        type="button"
-        whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
-      >
-        <span className="flex size-6 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Plus aria-hidden="true" size={14} />
-        </span>
-        Yeni sohbet
-      </motion.button>
-
-      <label className="flex items-center gap-2 rounded-xl border border-transparent bg-muted px-2.5 py-2 transition-colors focus-within:border-border focus-within:bg-background">
+      <label className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/75 px-2.5 py-2 shadow-black/5 shadow-xs transition-colors focus-within:border-primary/45 focus-within:bg-background">
         <span className="sr-only">Sohbetlerde ara</span>
         <Search aria-hidden="true" className="shrink-0 text-muted-foreground" size={14} />
         <input
+          aria-label="Sohbetlerde ara"
           className="w-full appearance-none bg-transparent text-sm outline-none placeholder:text-muted-foreground"
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Sohbetlerde ara"
@@ -203,15 +264,37 @@ export const ChatSidebar = ({
           type="search"
           value={query}
         />
+        <kbd className="hidden shrink-0 whitespace-nowrap rounded-md border border-border/70 bg-muted px-1.5 py-0.5 font-medium text-[0.6rem] text-muted-foreground min-[340px]:inline">Ctrl K</kbd>
       </label>
+
+      <motion.button
+        aria-label="Yeni sohbet"
+        className="group relative flex items-center gap-2 overflow-hidden rounded-xl border border-primary/35 bg-primary/12 px-3 py-2.5 text-left font-medium text-sm shadow-black/5 shadow-xs transition-colors hover:border-primary/60 hover:bg-primary/18"
+        onClick={onNewChat}
+        transition={shouldReduceMotion ? { duration: 0 } : { bounce: 0.1, duration: 0.22, type: "spring" }}
+        type="button"
+        whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
+      >
+        <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/15 to-transparent transition-transform duration-500 group-hover:translate-x-[430%]" />
+        <span className="relative flex size-6 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+          <Plus aria-hidden="true" size={14} />
+        </span>
+        <span className="relative">Yeni sohbet</span>
+      </motion.button>
 
       <nav aria-label="Sohbet geçmişi" className="-mx-1 flex-1 overflow-y-auto px-1">
         {groups.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/70 px-3 py-5 text-center">
+          <div className="rounded-2xl border border-dashed border-border/80 bg-background/35 px-3 py-5 text-center">
+            <History aria-hidden="true" className="mx-auto mb-2 text-muted-foreground" size={18} />
             <p className="font-medium text-sm">{query ? "Sonuç bulunamadı" : "Henüz sohbet yok"}</p>
             <p className="mt-1 text-muted-foreground text-xs">
               {query ? "Başka bir arama deneyin." : "İlk mesajınız burada yeni bir başlık açar."}
             </p>
+            {!query ? (
+              <p className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-muted px-2 py-1 text-muted-foreground text-[0.68rem]">
+                <Command aria-hidden="true" size={12} /> Komutlar için yazma alanına + girin
+              </p>
+            ) : null}
           </div>
         ) : null}
 
@@ -226,6 +309,7 @@ export const ChatSidebar = ({
                   <button
                     aria-current={conversation.id === activeId ? "page" : undefined}
                     aria-haspopup="menu"
+                    aria-label={conversation.title}
                     className={cn(
                       "group flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors",
                       conversation.id === activeId
@@ -247,6 +331,15 @@ export const ChatSidebar = ({
                     type="button"
                   >
                     <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
+                    <time
+                      aria-hidden="true"
+                      className="inline-flex shrink-0 items-center gap-1 text-[0.66rem] text-muted-foreground/80 tabular-nums"
+                      dateTime={conversation.updatedAt}
+                      title={new Date(conversation.updatedAt).toLocaleString("tr-TR")}
+                    >
+                      <Clock3 aria-hidden="true" size={11} />
+                      {formatHistoryTime(conversation.updatedAt)}
+                    </time>
                     <MoreHorizontal
                       aria-hidden="true"
                       className="shrink-0 opacity-0 transition-opacity group-hover:opacity-70 group-focus-visible:opacity-70"
@@ -265,10 +358,10 @@ export const ChatSidebar = ({
           <ShieldCheck aria-hidden="true" size={16} />
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block font-medium text-xs">Truth Mode açık</span>
-          <span className="block truncate text-muted-foreground text-[0.68rem]">OpenAI + Gemini ortam anahtarları</span>
+          <span className="block font-medium text-xs">Truth Mode {truthMode ? "açık" : "kapalı"}</span>
+          <span className="block truncate text-muted-foreground text-[0.68rem]">{PROVIDERS.find((item) => item.id === provider)?.label ?? provider} sağlayıcı yönlendirmesi</span>
         </span>
-        <ThemeButton compact />
+        <button aria-label="Ayarları aç" className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" onClick={onOpenSettings} title="Ayarlar" type="button"><Settings2 aria-hidden="true" size={16} /></button>
       </div>
 
       {contextMenu ? (
@@ -284,6 +377,18 @@ export const ChatSidebar = ({
             label="Sohbeti aç"
             onClick={() => {
               onSelect(contextMenu.id);
+              setContextMenu(null);
+            }}
+          />
+          <ContextAction
+            icon={conversations.find((conversation) => conversation.id === contextMenu.id)?.pinned
+              ? <PinOff aria-hidden="true" size={15} />
+              : <Pin aria-hidden="true" size={15} />}
+            label={conversations.find((conversation) => conversation.id === contextMenu.id)?.pinned
+              ? "Sabitlemeyi kaldır"
+              : "Sohbeti sabitle"}
+            onClick={() => {
+              onTogglePin(contextMenu.id);
               setContextMenu(null);
             }}
           />
@@ -341,7 +446,7 @@ export const ChatSidebar = ({
       {deleteTarget ? (
         <DialogShell onClose={() => setDeleteTarget(null)} title="Sohbet silinsin mi?">
           <p className="text-muted-foreground text-sm">
-            “{deleteTarget.title}” ve içindeki mesajlar bu cihazdan kalıcı olarak silinecek.
+            “{deleteTarget.title}” ve içindeki mesajlar bu cihazdan silinecek. İşlemi kısa süre içinde geri alabilirsiniz.
           </p>
           <div className="mt-4 flex justify-end gap-2">
             <DialogButton label="Vazgeç" onClick={() => setDeleteTarget(null)} />
@@ -355,6 +460,39 @@ export const ChatSidebar = ({
             />
           </div>
         </DialogShell>
+      ) : null}
+
+      {onWidthChange ? (
+        <div
+          aria-label="Kenar çubuğu genişliğini ayarla"
+          aria-orientation="vertical"
+          aria-valuemax={400}
+          aria-valuemin={240}
+          aria-valuenow={width}
+          className="group absolute inset-y-0 -right-1 z-10 hidden w-2 cursor-col-resize items-center justify-center outline-none md:flex"
+          onDoubleClick={() => onWidthChange(272)}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              onWidthChange(Math.max(240, width - 16));
+            }
+            if (event.key === "ArrowRight") {
+              event.preventDefault();
+              onWidthChange(Math.min(400, width + 16));
+            }
+            if (event.key === "Home") onWidthChange(240);
+            if (event.key === "End") onWidthChange(400);
+          }}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            setIsResizing(true);
+          }}
+          role="separator"
+          tabIndex={0}
+          title="Sürükleyerek yeniden boyutlandır; çift tıklayarak sıfırla"
+        >
+          <span className={cn("h-12 w-0.5 rounded-full bg-border transition-colors group-hover:bg-primary group-focus-visible:bg-primary", isResizing && "bg-primary")} />
+        </div>
       ) : null}
     </aside>
   );
@@ -443,44 +581,5 @@ const RailButton = ({ icon, label, onClick }: { icon: React.ReactNode; label: st
     {icon}
   </button>
 );
-
-const ThemeButton = ({ compact = false }: { compact?: boolean }) => {
-  const [isDark, setIsDark] = useState(() => {
-    const documentedTheme = new URLSearchParams(window.location.search).get("theme");
-    if (documentedTheme === "dark") return true;
-    if (documentedTheme === "light") return false;
-
-    const stored = localStorage.getItem("line-cli.theme");
-    return stored
-      ? stored === "dark"
-      : window.matchMedia?.("(prefers-color-scheme: dark)").matches === true;
-  });
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-  }, [isDark]);
-
-  const toggleTheme = () => {
-    const next = !isDark;
-    document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("line-cli.theme", next ? "dark" : "light");
-    setIsDark(next);
-  };
-
-  return (
-    <button
-      aria-label={isDark ? "Açık temaya geç" : "Koyu temaya geç"}
-      className={cn(
-        "rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
-        compact ? "p-2" : "px-2 py-1.5"
-      )}
-      onClick={toggleTheme}
-      title={isDark ? "Açık tema" : "Koyu tema"}
-      type="button"
-    >
-      {isDark ? <Sun aria-hidden="true" size={16} /> : <Moon aria-hidden="true" size={16} />}
-    </button>
-  );
-};
 
 export default ChatSidebar;

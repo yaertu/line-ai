@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Line CLI",
-  "version": "0.1.0",
-  "identifier": "app.linecli.desktop",
+  "productName": "Line AI",
+  "version": "0.2.0",
+  "identifier": "app.lineai.desktop",
   "build": {
     "beforeBuildCommand": "pnpm build",
     "beforeDevCommand": "pnpm dev",
@@ -15,7 +15,7 @@
     },
     "windows": [
       {
-        "title": "Line CLI",
+        "title": "Line AI",
         "width": 1280,
         "height": 820,
         "minWidth": 800,

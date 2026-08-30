@@ -36,10 +36,10 @@ export type AIToolCallProps = {
 };
 
 const STATUS_LABEL: Record<AIToolCallStatus, string> = {
-  error: "Failed",
-  pending: "Queued",
-  running: "Running",
-  success: "Done",
+  error: "Başarısız",
+  pending: "Sırada",
+  running: "Çalışıyor",
+  success: "Tamamlandı",
 };
 
 /**
@@ -264,7 +264,7 @@ const AIToolCall = ({
               {args ? (
                 <div>
                   <p className="mb-1 text-[10px] text-muted-foreground uppercase tracking-wide">
-                    Arguments
+                    Girdi
                   </p>
                   <div className="overflow-x-auto font-mono text-foreground">
                     {args}
@@ -274,7 +274,7 @@ const AIToolCall = ({
               {result ? (
                 <div>
                   <p className="mb-1 text-[10px] text-muted-foreground uppercase tracking-wide">
-                    Result
+                    Sonuç
                   </p>
                   <div className="overflow-x-auto text-foreground">
                     {result}

@@ -1781,8 +1781,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "line-cli"
-version = "0.1.0"
+name = "line-ai"
+version = "0.2.0"
 dependencies = [
  "reqwest 0.12.28",
  "serde",

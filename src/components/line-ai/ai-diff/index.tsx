@@ -190,7 +190,7 @@ const AIDiff = ({
               onClick={reject}
               type="button"
             >
-              Reject
+              Reddet
             </button>
           ) : null}
           {onAccept ? (
@@ -199,7 +199,7 @@ const AIDiff = ({
               onClick={accept}
               type="button"
             >
-              Accept
+              Onayla
             </button>
           ) : null}
         </div>
@@ -208,7 +208,7 @@ const AIDiff = ({
       {decision ? (
         <motion.p
           animate={{ opacity: 1 }}
-          className="border-border border-t px-3 py-2 text-muted-foreground text-xs capitalize"
+          className="border-border border-t px-3 py-2 text-muted-foreground text-xs"
           initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
           transition={
             shouldReduceMotion
@@ -216,7 +216,7 @@ const AIDiff = ({
               : { duration: 0.2, ease: EASE_OUT }
           }
         >
-          {decision}
+          {decision === "accepted" ? "Onaylandı" : "Reddedildi"}
         </motion.p>
       ) : null}
     </motion.div>

@@ -48,6 +48,8 @@ export type AIPromptAttachment = {
   /** Bytes. Rendered as a human-readable size when present. */
   size?: number;
   name: string;
+  /** The provider receives a bounded text preview instead of the complete file. */
+  truncated?: boolean;
 };
 
 export type AIPromptInputProps = {
@@ -259,6 +261,11 @@ const AIPromptInput = ({
                     {formatSize(attachment.size)}
                   </span>
                 )}
+                {attachment.truncated ? (
+                  <span className="rounded bg-primary/10 px-1 py-0.5 text-[0.62rem] text-primary">
+                    önizleme
+                  </span>
+                ) : null}
                 {onRemoveAttachment ? (
                   <button
                     aria-label={`Remove ${attachment.name}`}

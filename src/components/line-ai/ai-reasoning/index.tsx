@@ -87,12 +87,12 @@ const AIReasoning = ({
   const seconds = duration ?? measuredSeconds;
   const summary = (() => {
     if (isStreaming) {
-      return "Thinking";
+      return "Düşünüyor";
     }
     if (seconds !== null) {
-      return `Thought for ${seconds.toFixed(1)}s`;
+      return `${seconds.toFixed(1)} sn işlendi`;
     }
-    return "Reasoning";
+    return "Akıl yürütme özeti";
   })();
 
   return (

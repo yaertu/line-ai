@@ -2,7 +2,7 @@
 
 ## Desteklenen sürüm
 
-Güvenlik düzeltmeleri ana daldaki en güncel Line CLI sürümüne uygulanır. Eski ikili dosyalar için güvenlik güncellemesi garantisi verilmez.
+Güvenlik düzeltmeleri ana daldaki en güncel Line AI sürümüne uygulanır. Eski ikili dosyalar için güvenlik güncellemesi garantisi verilmez.
 
 ## Güvenlik açığı bildirimi
 
@@ -22,7 +22,6 @@ Gerçek API anahtarlarını, erişim belirteçlerini, kullanıcı verilerini vey
 
 - Sağlayıcı anahtarları yalnız Rust/Tauri sürecinde Windows ortam değişkenlerinden okunur.
 - Anahtarlar frontend'e, sohbet kaydına veya `localStorage` alanına gönderilmez.
-- Dosya bırakma yalnız allowlist içindeki küçük UTF-8 metin/kod dosyalarını kabul eder.
+- Dosya bırakma yalnız allowlist içindeki UTF-8 metin/kod dosyalarını kabul eder; okunan önizleme ve toplam bağlam ayrıca sınırlandırılır.
 - Ek dosya içeriği güvenilmeyen veri sayılır; sistem talimatı değildir.
-- Line CLI, sağlayıcı cevaplarının doğruluğunu veya haricî servislerin sürekliliğini garanti etmez.
-
+- Line AI, sağlayıcı cevaplarının doğruluğunu veya haricî servislerin sürekliliğini garanti etmez.

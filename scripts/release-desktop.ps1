@@ -2,9 +2,9 @@ $ErrorActionPreference = "Stop"
 
 $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $desktop = [Environment]::GetFolderPath("Desktop")
-$releaseExecutable = Join-Path $projectRoot "src-tauri\target\release\line-cli.exe"
-$desktopExecutable = Join-Path $desktop "Line CLI.exe"
-$desktopSourceZip = Join-Path $desktop "line-cli-src.zip"
+$releaseExecutable = Join-Path $projectRoot "src-tauri\target\release\line-ai.exe"
+$desktopExecutable = Join-Path $desktop "Line AI.exe"
+$desktopSourceZip = Join-Path $desktop "line-ai-src.zip"
 
 function Get-Sha256Hash {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -98,7 +98,7 @@ if ($LASTEXITCODE -ne 0) { throw "Rust testleri başarısız." }
 & pnpm tauri:build
 if ($LASTEXITCODE -ne 0) { throw "Native Windows derlemesi başarısız." }
 if (-not (Test-Path -LiteralPath $releaseExecutable)) {
-    throw "Derlenen Line CLI çalıştırılabilir dosyası bulunamadı."
+    throw "Derlenen Line AI çalıştırılabilir dosyası bulunamadı."
 }
 
 Copy-Item -LiteralPath $releaseExecutable -Destination $desktopExecutable -Force
