@@ -6,7 +6,7 @@ use std::{
     fmt::Write as _,
     fs,
     io::{ErrorKind, Read as _, Write as _},
-    net::{TcpListener, TcpStream},
+    net::{TcpListener, TcpStream, UdpSocket},
     path::PathBuf,
     process::Command,
     sync::{
@@ -20,6 +20,7 @@ use trust_policy::{GateFailure, ReleasePolicy, ReleaseRule, RuleStatus, verify_w
 
 const ERROR_NO_MORE_ITEMS: i32 = -2_147_024_637; // 0x80070103
 const FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_HTTP";
+const PORTPROXY_FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_PORTPROXY";
 const PORTPROXY_LISTEN_ADDRESS: &str = "127.0.0.2";
 const REVOCATION_HOSTS: &[&str] = &[
     "www.microsoft.com",
@@ -75,7 +76,7 @@ impl Drop for RevocationNetworkGuard {
 struct PortProxyGuard;
 
 impl PortProxyGuard {
-    fn forward_http_to(connect_port: u16) -> Self {
+    fn forward_http_to(connect_address: &str, connect_port: u16) -> Self {
         let _ = Command::new("netsh.exe")
             .args([
                 "interface",
@@ -86,6 +87,34 @@ impl PortProxyGuard {
                 &format!("listenaddress={PORTPROXY_LISTEN_ADDRESS}"),
             ])
             .status();
+        let _ = Command::new("netsh.exe")
+            .args([
+                "advfirewall",
+                "firewall",
+                "delete",
+                "rule",
+                &format!("name={PORTPROXY_FIREWALL_RULE}"),
+            ])
+            .status();
+        let firewall = Command::new("netsh.exe")
+            .args([
+                "advfirewall",
+                "firewall",
+                "add",
+                "rule",
+                &format!("name={PORTPROXY_FIREWALL_RULE}"),
+                "dir=in",
+                "action=allow",
+                "protocol=TCP",
+                &format!("localport={connect_port}"),
+                "profile=any",
+            ])
+            .status()
+            .expect("netsh firewall must be launchable for the portproxy qualification route");
+        assert!(
+            firewall.success(),
+            "failed to allow the portproxy responder port"
+        );
         let status = Command::new("netsh.exe")
             .args([
                 "interface",
@@ -95,7 +124,7 @@ impl PortProxyGuard {
                 "listenport=80",
                 &format!("listenaddress={PORTPROXY_LISTEN_ADDRESS}"),
                 &format!("connectport={connect_port}"),
-                "connectaddress=127.0.0.1",
+                &format!("connectaddress={connect_address}"),
             ])
             .status()
             .expect("netsh portproxy must be launchable on the Windows qualification runner");
@@ -103,6 +132,7 @@ impl PortProxyGuard {
             status.success(),
             "failed to install the localhost revocation portproxy"
         );
+        thread::sleep(Duration::from_millis(250));
         Self
     }
 }
@@ -117,6 +147,15 @@ impl Drop for PortProxyGuard {
                 "v4tov4",
                 "listenport=80",
                 &format!("listenaddress={PORTPROXY_LISTEN_ADDRESS}"),
+            ])
+            .status();
+        let _ = Command::new("netsh.exe")
+            .args([
+                "advfirewall",
+                "firewall",
+                "delete",
+                "rule",
+                &format!("name={PORTPROXY_FIREWALL_RULE}"),
             ])
             .status();
     }
@@ -166,15 +205,15 @@ struct MalformedRevocationResponder {
 
 impl MalformedRevocationResponder {
     fn start() -> Self {
-        let listener = TcpListener::bind("127.0.0.1:0")
-            .expect("an ephemeral localhost port must be available for revocation fault injection");
+        let listener = TcpListener::bind("0.0.0.0:0")
+            .expect("an ephemeral local port must be available for revocation fault injection");
         let port = listener
             .local_addr()
-            .expect("localhost fault listener must expose its bound address")
+            .expect("fault listener must expose its bound address")
             .port();
         listener
             .set_nonblocking(true)
-            .expect("localhost fault listener must support nonblocking mode");
+            .expect("local fault listener must support nonblocking mode");
         let stop = Arc::new(AtomicBool::new(false));
         let worker_stop = Arc::clone(&stop);
         let worker = thread::spawn(move || {
@@ -184,7 +223,7 @@ impl MalformedRevocationResponder {
                     Err(error) if error.kind() == ErrorKind::WouldBlock => {
                         thread::sleep(Duration::from_millis(10));
                     }
-                    Err(error) => panic!("localhost revocation responder failed: {error}"),
+                    Err(error) => panic!("local revocation responder failed: {error}"),
                 }
             }
         });
@@ -207,9 +246,24 @@ impl Drop for MalformedRevocationResponder {
         if let Some(worker) = self.worker.take() {
             worker
                 .join()
-                .expect("localhost revocation responder must stop cleanly");
+                .expect("local revocation responder must stop cleanly");
         }
     }
+}
+
+fn local_non_loopback_ipv4() -> String {
+    let socket = UdpSocket::bind("0.0.0.0:0").expect("a UDP probe socket must be bindable");
+    socket
+        .connect("8.8.8.8:80")
+        .expect("UDP route probing must resolve the runner IPv4 address");
+    let address = socket
+        .local_addr()
+        .expect("UDP route probe must expose the runner local address");
+    assert!(
+        address.ip().is_ipv4() && !address.ip().is_loopback(),
+        "qualification requires a non-loopback runner IPv4 address, got {address}"
+    );
+    address.ip().to_string()
 }
 
 fn serve_malformed_revocation(stream: &mut TcpStream) {
@@ -354,11 +408,12 @@ fn offline_revocation_is_a_structured_blocked_release_decision() {
 }
 
 #[test]
-#[ignore = "mutates Windows hosts, portproxy, and CryptNet cache for destructive qualification"]
+#[ignore = "mutates Windows hosts, portproxy, firewall, and CryptNet cache for destructive qualification"]
 fn malformed_revocation_response_is_a_structured_unknown_block() {
     let (artifact, auth) = verified_physical_fixture();
     let responder = MalformedRevocationResponder::start();
-    let _portproxy = PortProxyGuard::forward_http_to(responder.port());
+    let connect_address = local_non_loopback_ipv4();
+    let _portproxy = PortProxyGuard::forward_http_to(&connect_address, responder.port());
     prove_fault_proxy_route();
     let _hosts = HostsGuard::redirect_revocation_hosts_to_fault_proxy();
     force_chain_cache_resync();
