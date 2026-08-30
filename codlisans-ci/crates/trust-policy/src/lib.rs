@@ -1,6 +1,10 @@
 #![forbid(unsafe_code)]
 
-use std::{fmt::Write as _, path::Path, time::Duration};
+use std::{
+    fmt::Write as _,
+    path::Path,
+    time::{Duration, Instant},
+};
 
 use evidence_model::{
     EvidenceEnvelope, EvidenceError, EvidenceType, NormalizedResult, TrustStatus,
@@ -87,24 +91,34 @@ pub struct RevocationEvidence {
     pub revoked: bool,
     pub offline: bool,
     pub unknown: bool,
+    pub configured_budget_ms: u128,
+    pub inspection_elapsed_ms: u128,
 }
 
 impl RevocationEvidence {
-    const fn verified() -> Self {
+    const fn verified(configured_budget_ms: u128, inspection_elapsed_ms: u128) -> Self {
         Self {
             native_status: 0,
             revoked: false,
             offline: false,
             unknown: false,
+            configured_budget_ms,
+            inspection_elapsed_ms,
         }
     }
 
-    const fn from_native_status(native_status: u32) -> Self {
+    const fn from_native_status(
+        native_status: u32,
+        configured_budget_ms: u128,
+        inspection_elapsed_ms: u128,
+    ) -> Self {
         Self {
             native_status,
             revoked: native_status & CERT_TRUST_IS_REVOKED != 0,
             offline: native_status & CERT_TRUST_IS_OFFLINE_REVOCATION != 0,
             unknown: native_status & CERT_TRUST_REVOCATION_STATUS_UNKNOWN != 0,
+            configured_budget_ms,
+            inspection_elapsed_ms,
         }
     }
 }
@@ -143,14 +157,20 @@ pub fn verify_windows_release(
         .artifact_digest
         .as_deref()
         .ok_or(TrustPolicyError::MissingAuthenticodeDigest)?;
+    let configured_budget_ms = timeout_budget.as_millis();
+    let inspection_started = Instant::now();
+    let inspection = inspect_authenticode(artifact, timeout_budget);
+    let inspection_elapsed_ms = inspection_started.elapsed().as_millis();
 
-    match inspect_authenticode(artifact, timeout_budget) {
+    match inspection {
         Ok(snapshot) => evaluate_release_gate(
             artifact_digest,
             hash_evidence,
             authenticode_evidence,
             &snapshot,
             policy,
+            configured_budget_ms,
+            inspection_elapsed_ms,
         ),
         Err(NativeTrustError::RevocationCheckFailed { status }) => blocked_revocation_decision(
             artifact_digest,
@@ -158,6 +178,8 @@ pub fn verify_windows_release(
             authenticode_evidence,
             policy,
             status,
+            configured_budget_ms,
+            inspection_elapsed_ms,
         ),
         Err(error) => Err(error.into()),
     }
@@ -169,6 +191,8 @@ fn evaluate_release_gate(
     authenticode_evidence: &EvidenceEnvelope,
     snapshot: &TrustSnapshot,
     policy: &ReleasePolicy,
+    configured_budget_ms: u128,
+    inspection_elapsed_ms: u128,
 ) -> Result<ReleaseGateDecision, TrustPolicyError> {
     let rules = vec![
         evaluate_envelope(
@@ -228,7 +252,7 @@ fn evaluate_release_gate(
         status,
         decision_digest,
         rules,
-        revocation: RevocationEvidence::verified(),
+        revocation: RevocationEvidence::verified(configured_budget_ms, inspection_elapsed_ms),
         evidence,
     })
 }
@@ -239,8 +263,14 @@ fn blocked_revocation_decision(
     authenticode_evidence: &EvidenceEnvelope,
     policy: &ReleasePolicy,
     native_status: u32,
+    configured_budget_ms: u128,
+    inspection_elapsed_ms: u128,
 ) -> Result<ReleaseGateDecision, TrustPolicyError> {
-    let revocation = RevocationEvidence::from_native_status(native_status);
+    let revocation = RevocationEvidence::from_native_status(
+        native_status,
+        configured_budget_ms,
+        inspection_elapsed_ms,
+    );
     let failure = classify_revocation_failure(native_status);
     let rules = vec![
         evaluate_envelope(
