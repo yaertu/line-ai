@@ -1,9 +1,10 @@
+#![cfg(not(windows))]
+
 use std::time::Duration;
 
 use evidence_model::{EvidenceEnvelope, EvidenceType, NormalizedResult, TrustStatus};
 use trust_policy::{ReleasePolicy, TrustPolicyError, verify_windows_release};
 
-#[cfg(not(windows))]
 #[test]
 fn non_windows_host_cannot_claim_windows_release_trust() {
     let artifact = std::env::current_exe().expect("test executable path must be available");
