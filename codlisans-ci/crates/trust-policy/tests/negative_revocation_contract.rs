@@ -142,9 +142,8 @@ impl HostsGuard {
         }
         replacement.extend_from_slice(b"# CODLISANS negative revocation qualification\n");
         for host in REVOCATION_HOSTS {
-            replacement.extend_from_slice(
-                format!("{PORTPROXY_LISTEN_ADDRESS} {host}\n").as_bytes(),
-            );
+            replacement
+                .extend_from_slice(format!("{PORTPROXY_LISTEN_ADDRESS} {host}\n").as_bytes());
         }
         fs::write(&path, replacement).expect("Windows hosts file must be writable by CI admin");
         flush_dns_cache();
