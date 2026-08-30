@@ -51,3 +51,6 @@ jobs:
           exit 0
       - name: Tests
         run: cargo test --workspace --all-targets -- --nocapture
+      - name: Negative revocation offline contract
+        if: runner.os == 'Windows'
+        run: cargo test -p trust-policy --test negative_revocation_contract offline_revocation_is_a_structured_blocked_release_decision -- --ignored --nocapture --test-threads=1
