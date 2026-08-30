@@ -31,5 +31,13 @@ jobs:
         run: cargo fmt --all -- --check
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Clear Windows CryptNet URL cache
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          certutil.exe -urlcache "*" delete
+          if ($LASTEXITCODE -ne 0) {
+            throw "certutil failed to clear the Windows CryptNet URL cache with exit code $LASTEXITCODE"
+          }
       - name: Tests
         run: cargo test --workspace --all-targets -- --nocapture
