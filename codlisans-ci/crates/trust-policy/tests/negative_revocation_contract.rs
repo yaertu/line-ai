@@ -27,7 +27,10 @@ impl RevocationNetworkGuard {
             ])
             .status()
             .expect("netsh firewall must be launchable on the Windows qualification runner");
-        assert!(status.success(), "failed to install outbound HTTP block rule");
+        assert!(
+            status.success(),
+            "failed to install outbound HTTP block rule"
+        );
         Self
     }
 }
