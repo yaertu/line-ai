@@ -2,10 +2,41 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import LineAiApp from "@/LineAiApp";
+import type {
+  ExecutePromptResult,
+  PromptExecutor,
+} from "@/components/line-ai/chat-template/chat-data";
+
+const cloud = vi.hoisted(() => ({
+  clearCloudHistory: vi.fn(),
+  loadCloudHistory: vi.fn(),
+  readCloudStatus: vi.fn(),
+  removeCloudConversation: vi.fn(),
+  saveCloudConversation: vi.fn(),
+}));
+
+vi.mock("@/lib/cloud-history", async (importOriginal) => ({
+  ...await importOriginal<typeof import("@/lib/cloud-history")>(),
+  ...cloud,
+}));
 
 describe("Line AI masaüstü çalışma alanı", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.clearAllMocks();
+    cloud.loadCloudHistory.mockResolvedValue({
+      conversations: [],
+      endpoint: "https://lineai-eta.vercel.app/api/v1",
+    });
+    cloud.readCloudStatus.mockResolvedValue({
+      connected: true,
+      endpoint: "https://lineai-eta.vercel.app/api/v1",
+      message: "Bulut bağlantısı hazır.",
+      registered: true,
+    });
+    cloud.saveCloudConversation.mockResolvedValue(undefined);
+    cloud.removeCloudConversation.mockResolvedValue(undefined);
+    cloud.clearCloudHistory.mockResolvedValue(undefined);
   });
 
   it("Line AI sohbet çalışma alanını sunar", () => {
@@ -62,12 +93,12 @@ describe("Line AI masaüstü çalışma alanı", () => {
       provider: "auto",
       reasoning: "medium",
       truthMode: true,
-    }));
+    }), expect.any(Function));
     const transcript = await screen.findByRole("log", { name: "Sohbet mesajları" });
     await waitFor(() => expect(transcript).toHaveTextContent("Gerçek OpenAI API yanıtı"));
     expect(within(transcript).getByText("Bu klasörü açıkla")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Bu klasörü açıkla" })).toHaveAttribute("aria-current", "page");
-    expect(JSON.parse(localStorage.getItem("line-ai.conversations.v1") ?? "[]")).toEqual([
+    await waitFor(() => expect(cloud.saveCloudConversation).toHaveBeenCalledWith(
       expect.objectContaining({
         title: "Bu klasörü açıkla",
         turns: expect.arrayContaining([
@@ -75,7 +106,81 @@ describe("Line AI masaüstü çalışma alanı", () => {
           expect.objectContaining({ from: "assistant", text: "Gerçek OpenAI API yanıtı" }),
         ]),
       }),
-    ]);
+    ));
+    expect(localStorage.getItem("line-ai.conversations.v1")).toBeNull();
+  });
+
+  it("thinking, web kaynağı ve gerçek metin deltalarını tek canlı akışta gösterir", async () => {
+    const user = userEvent.setup();
+    let finishPrompt!: (value: {
+      message: string;
+      model: string;
+      provider: "openai";
+      sources: Array<{ id: string; title: string; url: string }>;
+    }) => void;
+    const source = {
+      id: "source-1",
+      title: "Line AI kaynağı",
+      url: "https://example.com/line-ai",
+    };
+    const executePrompt: PromptExecutor = vi.fn((_request, onEvent) => {
+      onEvent?.({ kind: "status", label: "İsteği çözümlüyor" });
+      onEvent?.({ kind: "search", label: "Web kaynaklarını arıyor" });
+      onEvent?.({ kind: "source", source });
+      onEvent?.({ kind: "text_delta", text: "Canlı yanıt başlıyor." });
+      onEvent?.({ kind: "text_delta", text: "\n```html\n<h1>Sohbette görünmeyecek kod</h1>" });
+      return new Promise<ExecutePromptResult>((resolve) => {
+        finishPrompt = resolve;
+      });
+    });
+    render(<LineAiApp executePrompt={executePrompt} />);
+
+    const input = screen.getByRole("textbox", { name: "Line AI'ya mesaj gönder" });
+    await user.type(input, "Canlı akışı göster");
+    await user.click(screen.getByRole("button", { name: "Mesajı gönder" }));
+
+    const liveFlow = await screen.findByRole("status", { name: "Canlı yapay zekâ akışı" });
+    expect(liveFlow).toHaveTextContent("Yanıtı yazıyor");
+    expect(liveFlow).toHaveTextContent("example.com");
+    expect(screen.getByRole("log", { name: "Sohbet mesajları" })).toHaveTextContent(
+      "Canlı yanıt başlıyor.",
+    );
+    expect(screen.getByRole("log", { name: "Sohbet mesajları" })).not.toHaveTextContent(
+      "Sohbette görünmeyecek kod",
+    );
+
+    finishPrompt({
+      message: "Canlı yanıt başlıyor. Tamamlandı.",
+      model: "gpt-5.6-terra",
+      provider: "openai",
+      sources: [source],
+    });
+    await waitFor(() =>
+      expect(screen.getByRole("log", { name: "Sohbet mesajları" })).toHaveTextContent(
+        "Canlı yanıt başlıyor. Tamamlandı.",
+      ),
+    );
+  });
+
+  it("sağlayıcının gerçek unified diff çıktısını okunabilir değişiklik paneline dönüştürür", () => {
+    localStorage.setItem("line-ai.conversations.v1", JSON.stringify([{
+      id: "conversation-diff",
+      title: "Diff görünümü",
+      turns: [{
+        from: "assistant",
+        id: "turn-diff",
+        text: "İstenen düzenleme:\n\n```diff\n--- a/index.html\n+++ b/index.html\n-old title\n+new title\n```",
+        timestamp: "12:10",
+      }],
+      updatedAt: new Date().toISOString(),
+    }]));
+
+    render(<LineAiApp executePrompt={vi.fn()} />);
+
+    const diff = screen.getByRole("region", { name: "Kod değişikliği: index.html" });
+    expect(diff).toHaveTextContent("-old title");
+    expect(diff).toHaveTextContent("+new title");
+    expect(screen.queryByText(/```diff/)).not.toBeInTheDocument();
   });
 
   it("kenar çubuğunu erişilebilir bir ikon rayına daraltır", async () => {
@@ -136,7 +241,8 @@ describe("Line AI masaüstü çalışma alanı", () => {
     await user.click(within(deleteDialog).getByRole("button", { name: "Sohbeti sil" }));
 
     expect(screen.getByText("Henüz sohbet yok")).toBeInTheDocument();
-    await waitFor(() => expect(localStorage.getItem("line-ai.conversations.v1")).toBe("[]"));
+    await waitFor(() => expect(cloud.removeCloudConversation).toHaveBeenCalledWith("conversation-1"));
+    expect(localStorage.getItem("line-ai.conversations.v1")).toBeNull();
   });
 
   it("silinen sohbeti zaman sınırlı geri alma kaydıyla geri getirir", async () => {
@@ -178,7 +284,9 @@ describe("Line AI masaüstü çalışma alanı", () => {
     await user.click(screen.getByRole("menuitem", { name: "Sohbeti sabitle" }));
 
     expect(screen.getByText("Sabitlenenler")).toBeInTheDocument();
-    await waitFor(() => expect(JSON.parse(localStorage.getItem("line-ai.conversations.v1") ?? "[]")[0]?.pinned).toBe(true));
+    await waitFor(() => expect(cloud.saveCloudConversation).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "conversation-pin", pinned: true }),
+    ));
   });
 
   it("sidebar genişliğini klavye ile değiştirip cihazda saklar", async () => {
@@ -238,7 +346,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
       provider: "gemini",
       reasoning: "high",
       truthMode: false,
-    })));
+    }), expect.any(Function)));
     expect(JSON.parse(localStorage.getItem("line-ai.preferences.v1") ?? "null")).toEqual({
       provider: "gemini",
       reasoning: "high",
@@ -268,6 +376,6 @@ describe("Line AI masaüstü çalışma alanı", () => {
     await waitFor(() => expect(executePrompt).toHaveBeenCalledWith(expect.objectContaining({
       provider: "gemini",
       prompt: "Komut seçimi çalıştı mı?",
-    })));
+    }), expect.any(Function)));
   });
 });

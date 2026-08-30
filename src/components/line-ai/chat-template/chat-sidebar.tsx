@@ -446,7 +446,7 @@ export const ChatSidebar = ({
       {deleteTarget ? (
         <DialogShell onClose={() => setDeleteTarget(null)} title="Sohbet silinsin mi?">
           <p className="text-muted-foreground text-sm">
-            “{deleteTarget.title}” ve içindeki mesajlar bu cihazdan silinecek. İşlemi kısa süre içinde geri alabilirsiniz.
+            “{deleteTarget.title}” ve içindeki mesajlar Line AI Cloud geçmişinden silinecek. İşlemi kısa süre içinde geri alabilirsiniz.
           </p>
           <div className="mt-4 flex justify-end gap-2">
             <DialogButton label="Vazgeç" onClick={() => setDeleteTarget(null)} />

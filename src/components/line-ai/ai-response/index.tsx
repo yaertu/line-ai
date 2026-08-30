@@ -89,7 +89,7 @@ const AIResponse = ({
   return (
     <p
       className={cn(
-        "text-pretty text-foreground text-sm leading-relaxed",
+        "whitespace-pre-wrap text-pretty font-normal text-[length:var(--line-ai-chat-font-size)] text-foreground leading-[1.68] tracking-[-0.004em]",
         className
       )}
     >

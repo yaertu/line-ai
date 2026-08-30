@@ -1,9 +1,18 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import {
+  clearCloudHistory,
+  type CloudConnectionState,
+  loadCloudHistory,
+  mergeConversationHistories,
+  readCloudStatus,
+  removeCloudConversation,
+  saveCloudConversation,
+} from "@/lib/cloud-history";
 import { Undo2, X } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type AppPreferences,
   type ChatConversation,
@@ -136,15 +145,143 @@ const ChatTemplate = ({
     index: number;
   } | null>(null);
   const [preferences, setPreferences] = useState(loadPreferences);
+  const [cloudState, setCloudState] = useState<CloudConnectionState>("connecting");
+  const [cloudMessage, setCloudMessage] = useState("Line AI Cloud bağlantısı hazırlanıyor.");
   const shouldReduceMotion = useReducedMotion();
+  const conversationItemsRef = useRef(conversationItems);
+  const cloudHydratedRef = useRef(false);
+  const hydrateStartedRef = useRef(false);
+  const lastSyncedRef = useRef(new Map<string, string>());
+  const pendingClearRef = useRef(false);
+  const syncInFlightRef = useRef(false);
+  const syncRequestedRef = useRef(false);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(CHAT_STORE_KEY, JSON.stringify(conversationItems));
-    } catch {
-      // The current session remains usable when local storage is unavailable.
-    }
+    conversationItemsRef.current = conversationItems;
   }, [conversationItems]);
+
+  const runCloudSync = useCallback(async () => {
+    if (!cloudHydratedRef.current) return;
+    if (syncInFlightRef.current) {
+      syncRequestedRef.current = true;
+      return;
+    }
+
+    syncInFlightRef.current = true;
+    try {
+      do {
+        syncRequestedRef.current = false;
+        const snapshot = conversationItemsRef.current;
+        const nextMap = new Map(
+          snapshot.map((conversation) => [conversation.id, JSON.stringify(conversation)]),
+        );
+
+        if (pendingClearRef.current) {
+          await clearCloudHistory();
+          pendingClearRef.current = false;
+          lastSyncedRef.current = new Map();
+        } else {
+          const deletedIds = [...lastSyncedRef.current.keys()].filter(
+            (id) => !nextMap.has(id),
+          );
+          await Promise.all(
+            deletedIds.map((id) => removeCloudConversation(id)),
+          );
+        }
+
+        const changed = snapshot.filter(
+          (conversation) =>
+            lastSyncedRef.current.get(conversation.id) !==
+            nextMap.get(conversation.id),
+        );
+        await Promise.all(
+          changed.map((conversation) => saveCloudConversation(conversation)),
+        );
+        lastSyncedRef.current = nextMap;
+        setCloudState("connected");
+        setCloudMessage("Sohbet geçmişi Line AI Cloud ile eşitlendi.");
+      } while (syncRequestedRef.current);
+    } catch (error) {
+      setCloudState("unsynced");
+      setCloudMessage(
+        error instanceof Error
+          ? error.message
+          : "Bulut senkronizasyonu tamamlanamadı; açık oturum bellekte korunuyor.",
+      );
+    } finally {
+      syncInFlightRef.current = false;
+    }
+  }, []);
+
+  const hydrateCloud = useCallback(async () => {
+    if (hydrateStartedRef.current) return;
+    hydrateStartedRef.current = true;
+    setCloudState("connecting");
+    setCloudMessage("Line AI Cloud bağlantısı hazırlanıyor.");
+
+    try {
+      const remote = await loadCloudHistory();
+      const merged = mergeConversationHistories(
+        remote.conversations,
+        conversationItemsRef.current,
+      );
+      const remoteMap = new Map(
+        remote.conversations.map((conversation) => [
+          conversation.id,
+          JSON.stringify(conversation),
+        ]),
+      );
+      const migrations = merged.filter(
+        (conversation) =>
+          remoteMap.get(conversation.id) !== JSON.stringify(conversation),
+      );
+      await Promise.all(
+        migrations.map((conversation) => saveCloudConversation(conversation)),
+      );
+
+      const status = await readCloudStatus().catch(() => null);
+      lastSyncedRef.current = new Map(
+        merged.map((conversation) => [conversation.id, JSON.stringify(conversation)]),
+      );
+      cloudHydratedRef.current = true;
+      setConversationItems(merged);
+      localStorage.removeItem(CHAT_STORE_KEY);
+      setCloudState("connected");
+      setCloudMessage(
+        status?.message ??
+          `Sohbet geçmişi ${remote.endpoint || "Line AI Cloud"} ile eşitlendi.`,
+      );
+    } catch (error) {
+      hydrateStartedRef.current = false;
+      setCloudState("offline");
+      setCloudMessage(
+        error instanceof Error
+          ? error.message
+          : "Line AI Cloud erişilemiyor; açık oturum bellekte çalışmaya devam ediyor.",
+      );
+    }
+  }, []);
+
+  const retryCloud = useCallback(() => {
+    if (!cloudHydratedRef.current) {
+      void hydrateCloud();
+      return;
+    }
+    setCloudState("connecting");
+    syncRequestedRef.current = true;
+    void runCloudSync();
+  }, [hydrateCloud, runCloudSync]);
+
+  useEffect(() => {
+    void hydrateCloud();
+  }, [hydrateCloud]);
+
+  useEffect(() => {
+    if (!cloudHydratedRef.current) return;
+    syncRequestedRef.current = true;
+    const timer = window.setTimeout(() => void runCloudSync(), 250);
+    return () => window.clearTimeout(timer);
+  }, [conversationItems, runCloudSync]);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_STORE_KEY, String(sidebarWidth));
@@ -258,6 +395,7 @@ const ChatTemplate = ({
   };
 
   const clearHistory = () => {
+    pendingClearRef.current = true;
     setConversationItems([]);
     setDeletedConversation(null);
     setActiveId(createConversationId());
@@ -384,11 +522,14 @@ const ChatTemplate = ({
 
       {isSettingsOpen ? (
         <SettingsPanel
+          cloudMessage={cloudMessage}
+          cloudState={cloudState}
           conversationCount={conversationItems.length}
           messageCount={conversationItems.reduce((total, conversation) => total + conversation.turns.length, 0)}
           onChange={setPreferences}
           onClearHistory={clearHistory}
           onClose={() => setIsSettingsOpen(false)}
+          onRetryCloud={retryCloud}
           preferences={preferences}
         />
       ) : null}

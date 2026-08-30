@@ -22,6 +22,10 @@ Gerçek API anahtarlarını, erişim belirteçlerini, kullanıcı verilerini vey
 
 - Sağlayıcı anahtarları yalnız Rust/Tauri sürecinde Windows ortam değişkenlerinden okunur.
 - Anahtarlar frontend'e, sohbet kaydına veya `localStorage` alanına gönderilmez.
-- Dosya bırakma yalnız allowlist içindeki UTF-8 metin/kod dosyalarını kabul eder; okunan önizleme ve toplam bağlam ayrıca sınırlandırılır.
+- Dosya bırakma uzantıya güvenmek yerine içerik tabanlı metin/ikili algılama uygular; okunan önizleme ve toplam bağlam ayrıca sınırlandırılır.
+- Klasör taramasında sembolik bağlantılar izlenmez; ikili içerik metin gibi işlenmez.
 - Ek dosya içeriği güvenilmeyen veri sayılır; sistem talimatı değildir.
+- Line AI Cloud her kurulumu ayrı kimlik ve gizli anahtarla doğrular. Özgün gizli anahtar Windows Credential Manager içinde, sunucu tarafında yalnız SHA-256 özeti tutulur.
+- Bulut trafiği HTTPS kullanır; API gövde, konuşma, turn ve depolama kotaları uygular. Konuşma içeriği servis tarafından işlenebildiği için sistem uçtan uca şifreleme iddiasında bulunmaz.
+- Bulut verileri uygulamanın Ayarlar > Bulut verileri bölümünden silinebilir; kurulum kaydını silmek mevcut cihazın bulut kimliğini de geçersiz kılar.
 - Line AI, sağlayıcı cevaplarının doğruluğunu veya haricî servislerin sürekliliğini garanti etmez.

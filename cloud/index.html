@@ -1,0 +1,726 @@
+<!doctype html>
+<html lang="tr" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Line AI; OpenAI ve Gemini ile çalışan, bulut geçmişi, web kaynakları, dosya analizi ve canlı kod önizlemesi sunan Windows yapay zekâ uygulamasıdır."
+    />
+    <meta name="theme-color" content="#06101c" />
+    <meta property="og:title" content="Line AI — Düşünceden ürüne, tek akışta." />
+    <meta
+      property="og:description"
+      content="Gerçek modeller, doğrulanabilir web kaynakları, güvenli bulut geçmişi ve canlı kod önizlemesi tek bir Windows uygulamasında."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="tr_TR" />
+    <title>Line AI — Windows için yapay zekâ çalışma alanı</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #050910;
+        --bg-soft: #091421;
+        --surface: rgba(13, 23, 37, 0.72);
+        --surface-solid: #0d1725;
+        --raised: rgba(20, 33, 50, 0.9);
+        --line: rgba(207, 229, 255, 0.12);
+        --line-strong: rgba(207, 229, 255, 0.22);
+        --text: #f5f9fd;
+        --muted: #9daabc;
+        --muted-strong: #c4cfdb;
+        --cyan: #78e8f5;
+        --violet: #a18cff;
+        --green: #6af0b2;
+        --orange: #ff9d62;
+        --shadow: 0 32px 120px rgba(0, 0, 0, 0.5);
+        --max: 1180px;
+        font-family: "Segoe UI Variable Display", "Segoe UI Variable Text", Inter, ui-sans-serif, system-ui, sans-serif;
+        font-synthesis: none;
+      }
+      html[data-theme="light"] {
+        color-scheme: light;
+        --bg: #f5f9ff;
+        --bg-soft: #eaf3fd;
+        --surface: rgba(255, 255, 255, 0.76);
+        --surface-solid: #ffffff;
+        --raised: rgba(255, 255, 255, 0.94);
+        --line: rgba(12, 42, 76, 0.1);
+        --line-strong: rgba(12, 42, 76, 0.2);
+        --text: #0a1725;
+        --muted: #607184;
+        --muted-strong: #31465b;
+        --cyan: #087f91;
+        --violet: #7056db;
+        --green: #168b5b;
+        --orange: #d96022;
+        --shadow: 0 32px 100px rgba(41, 80, 120, 0.16);
+      }
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        min-width: 320px;
+        margin: 0;
+        overflow-x: hidden;
+        background: var(--bg);
+        color: var(--text);
+        letter-spacing: -0.012em;
+        transition: background-color 220ms ease, color 220ms ease;
+      }
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -5;
+        pointer-events: none;
+        background:
+          radial-gradient(circle at 11% 7%, rgba(102, 225, 255, 0.17), transparent 29%),
+          radial-gradient(circle at 85% 14%, rgba(155, 125, 255, 0.18), transparent 32%),
+          radial-gradient(circle at 58% 76%, rgba(48, 200, 154, 0.1), transparent 34%),
+          linear-gradient(180deg, var(--bg), var(--bg-soft) 48%, var(--bg));
+      }
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -4;
+        pointer-events: none;
+        opacity: 0.42;
+        background-image:
+          linear-gradient(var(--line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--line) 1px, transparent 1px);
+        background-size: 88px 88px;
+        mask-image: linear-gradient(to bottom, black, transparent 70%);
+      }
+      a { color: inherit; text-decoration: none; }
+      button { color: inherit; font: inherit; }
+      svg { display: block; }
+      .wrap { width: min(var(--max), calc(100% - 40px)); margin-inline: auto; }
+      .skip {
+        position: fixed;
+        left: 16px;
+        top: -80px;
+        z-index: 100;
+        padding: 12px 16px;
+        border-radius: 12px;
+        background: var(--text);
+        color: var(--bg);
+      }
+      .skip:focus { top: 16px; }
+      .clouds { position: fixed; inset: 0; z-index: -3; overflow: hidden; pointer-events: none; }
+      .cloud {
+        position: absolute;
+        width: 54vw;
+        height: 34vw;
+        min-width: 520px;
+        min-height: 330px;
+        border-radius: 50%;
+        filter: blur(68px);
+        opacity: 0.18;
+        background: linear-gradient(110deg, rgba(116, 229, 246, 0.92), rgba(135, 108, 255, 0.78), rgba(81, 239, 178, 0.56));
+        animation: cloud-drift 19s ease-in-out infinite alternate;
+      }
+      .cloud:nth-child(1) { left: -19%; top: 1%; }
+      .cloud:nth-child(2) { right: -24%; top: 23%; animation-delay: -7s; animation-duration: 24s; }
+      .cloud:nth-child(3) { left: 25%; bottom: -22%; opacity: 0.11; animation-delay: -12s; animation-duration: 28s; }
+      @keyframes cloud-drift { to { transform: translate3d(9vw, 4vh, 0) scale(1.14); } }
+
+      .site-header { position: fixed; inset: 0 0 auto; z-index: 50; padding: 14px 0; }
+      .nav-shell {
+        display: flex;
+        min-height: 62px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 8px 10px 8px 16px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: color-mix(in srgb, var(--surface-solid) 78%, transparent);
+        box-shadow: 0 18px 70px rgba(0, 0, 0, 0.16);
+        backdrop-filter: blur(22px) saturate(140%);
+      }
+      .brand { display: inline-flex; align-items: center; gap: 11px; font-weight: 730; letter-spacing: -0.035em; }
+      .mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 12px;
+        color: #071018;
+        background: linear-gradient(135deg, #f4fdff, #9beef7 55%, #9d8cff);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.8), 0 8px 28px rgba(75, 212, 235, .22);
+      }
+      .mark svg { width: 23px; height: 23px; }
+      .brand-name { display: flex; align-items: center; gap: 8px; font-size: 16px; }
+      .brand-name small {
+        padding: 4px 7px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--muted);
+        font-size: 9px;
+        letter-spacing: .08em;
+      }
+      .nav-links { display: flex; align-items: center; gap: 4px; }
+      .nav-links a {
+        padding: 10px 13px;
+        border-radius: 11px;
+        color: var(--muted-strong);
+        font-size: 13px;
+        transition: 160ms ease;
+      }
+      .nav-links a:hover, .nav-links a:focus-visible { color: var(--text); background: var(--raised); outline: none; }
+      .nav-actions { display: flex; align-items: center; gap: 8px; }
+      .theme-button, .nav-download {
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--surface);
+        cursor: pointer;
+        transition: transform 160ms ease, border-color 160ms ease;
+      }
+      .theme-button { display: grid; width: 42px; height: 42px; place-items: center; }
+      .theme-button svg { width: 18px; height: 18px; }
+      .nav-download { padding: 12px 16px; border-color: transparent; background: var(--text); color: var(--bg); font-size: 13px; font-weight: 700; }
+      .theme-button:hover, .nav-download:hover { transform: translateY(-2px); }
+
+      .hero { position: relative; padding: 172px 0 90px; overflow: hidden; }
+      .hero-copy { position: relative; z-index: 4; width: min(850px, 100%); margin: 0 auto; text-align: center; }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 24px;
+        padding: 8px 12px;
+        border: 1px solid var(--line-strong);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--muted-strong);
+        font-size: 12px;
+        font-weight: 630;
+        backdrop-filter: blur(14px);
+      }
+      .pulse { position: relative; width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+      .pulse::after {
+        content: "";
+        position: absolute;
+        inset: -5px;
+        border: 1px solid var(--green);
+        border-radius: inherit;
+        animation: pulse 1.8s ease-out infinite;
+      }
+      @keyframes pulse { from { transform: scale(.35); opacity: .9; } to { transform: scale(1.45); opacity: 0; } }
+      .hero h1 { margin: 0; font-size: clamp(54px, 8.6vw, 106px); line-height: .94; letter-spacing: -.072em; font-weight: 760; }
+      .hero h1 span {
+        display: block;
+        padding: 0 .08em .08em;
+        background: linear-gradient(105deg, var(--cyan), #e8faff 39%, var(--violet) 73%, var(--green));
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+      }
+      .hero-lead { max-width: 680px; margin: 26px auto 0; color: var(--muted); font-size: clamp(17px, 2vw, 20px); line-height: 1.65; }
+      .hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 34px; }
+      .button {
+        display: inline-flex;
+        min-height: 52px;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 0 20px;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: var(--surface);
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 690;
+        cursor: pointer;
+        transition: transform 180ms ease, border-color 180ms ease;
+      }
+      .button svg { width: 18px; height: 18px; }
+      .button.primary { border-color: transparent; background: var(--text); color: var(--bg); box-shadow: 0 16px 55px rgba(109, 225, 244, .15); }
+      .button:hover { transform: translateY(-3px); border-color: var(--line-strong); }
+      .soon { padding: 4px 7px; border-radius: 999px; background: color-mix(in srgb, var(--bg) 12%, transparent); font-size: 9px; letter-spacing: .08em; text-transform: uppercase; }
+      .hero-notes { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 22px; margin-top: 22px; color: var(--muted); font-size: 11px; }
+      .hero-notes span { display: inline-flex; align-items: center; gap: 7px; }
+      .hero-notes svg { width: 14px; height: 14px; color: var(--green); }
+
+      .app-stage { position: relative; z-index: 3; width: min(1080px, calc(100% - 26px)); margin: 82px auto 0; perspective: 1600px; }
+      .app-glow { position: absolute; inset: 12% 10% -8%; z-index: -1; border-radius: 50%; background: linear-gradient(90deg, rgba(89,218,239,.32), rgba(139,108,255,.34)); filter: blur(80px); opacity: .58; }
+      .app-window {
+        overflow: hidden;
+        min-height: 580px;
+        border: 1px solid var(--line-strong);
+        border-radius: 26px;
+        background: color-mix(in srgb, var(--surface-solid) 94%, transparent);
+        box-shadow: var(--shadow);
+        transform: rotateX(2deg);
+        transform-origin: center bottom;
+      }
+      .window-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 48px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--surface); }
+      .traffic { display: flex; gap: 7px; }
+      .traffic i { width: 10px; height: 10px; border-radius: 50%; background: var(--line-strong); }
+      .traffic i:nth-child(1) { background: #ff756d; }
+      .traffic i:nth-child(2) { background: #f6c15d; }
+      .traffic i:nth-child(3) { background: #57ce86; }
+      .window-title { color: var(--muted); font-size: 11px; }
+      .window-state { justify-self: end; display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
+      .window-state i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); box-shadow: 0 0 14px var(--green); }
+      .workspace { display: grid; grid-template-columns: 216px minmax(0, 1fr) 298px; min-height: 532px; }
+      .mock-sidebar { display: flex; flex-direction: column; padding: 15px; border-right: 1px solid var(--line); background: color-mix(in srgb, var(--surface-solid) 86%, transparent); }
+      .mock-brand { display: flex; align-items: center; gap: 8px; margin-bottom: 17px; font-size: 12px; font-weight: 720; }
+      .mini-mark { display: grid; width: 26px; height: 26px; place-items: center; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 11px; font-weight: 800; }
+      .new-chat { display: flex; align-items: center; gap: 9px; padding: 11px; border: 1px solid var(--line-strong); border-radius: 11px; background: var(--raised); font-size: 11px; font-weight: 640; }
+      .new-chat b { display: grid; width: 20px; height: 20px; place-items: center; border-radius: 7px; background: var(--text); color: var(--bg); font-size: 14px; }
+      .mock-search { margin-top: 9px; padding: 10px 11px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); font-size: 10px; }
+      .side-label { margin: 21px 6px 8px; color: var(--muted); font-size: 8px; font-weight: 750; text-transform: uppercase; letter-spacing: .12em; }
+      .history { padding: 9px 8px; border-radius: 9px; color: var(--muted-strong); font-size: 10px; }
+      .history.active { background: var(--raised); color: var(--text); }
+      .side-footer { margin-top: auto; padding: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
+      .mock-chat { display: flex; min-width: 0; flex-direction: column; padding: 18px 24px; }
+      .chat-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+      .chat-head strong { font-size: 12px; }
+      .chat-head span { color: var(--muted); font-size: 9px; }
+      .chat-feed { display: flex; flex: 1; flex-direction: column; gap: 13px; padding: 24px 0 18px; }
+      .message { max-width: 84%; padding: 13px 15px; border-radius: 15px; font-size: 10px; line-height: 1.55; }
+      .message.user { align-self: flex-end; border: 1px solid var(--line); background: var(--raised); }
+      .message.ai { padding-left: 0; }
+      .message.ai strong { display: block; margin-bottom: 8px; color: var(--cyan); font-size: 9px; letter-spacing: .08em; }
+      .thinking { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 9px; }
+      .thinking i { width: 11px; height: 11px; border: 2px solid var(--line-strong); border-top-color: var(--cyan); border-radius: 50%; animation: spin 1s linear infinite; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .sources { display: flex; flex-wrap: wrap; gap: 6px; }
+      .source { display: flex; align-items: center; gap: 5px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted-strong); font-size: 8px; }
+      .source i { width: 10px; height: 10px; border-radius: 3px; background: linear-gradient(135deg, var(--cyan), var(--violet)); }
+      .composer { margin-top: auto; padding: 12px; border: 1px solid var(--line-strong); border-radius: 16px; background: var(--surface); }
+      .composer p { margin: 0 0 18px; color: var(--muted); font-size: 10px; }
+      .composer-tools { display: flex; align-items: center; gap: 7px; }
+      .tool { padding: 7px 9px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted-strong); font-size: 8px; }
+      .send { margin-left: auto; display: grid; width: 28px; height: 28px; place-items: center; border-radius: 9px; background: var(--text); color: var(--bg); font-size: 13px; }
+      .mock-code { border-left: 1px solid var(--line); background: #080e17; }
+      html[data-theme="light"] .mock-code { background: #f8fbff; }
+      .code-tabs { display: flex; gap: 3px; padding: 11px; border-bottom: 1px solid var(--line); }
+      .code-tabs span { padding: 7px 9px; border-radius: 8px; color: var(--muted); font-size: 8px; }
+      .code-tabs .active { background: var(--raised); color: var(--text); }
+      .code-file { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid var(--line); color: var(--muted-strong); font: 9px ui-monospace, monospace; }
+      .code { padding: 15px 13px; color: #93a6ba; font: 9px/1.8 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .purple { color: #bc9dff; } .blue { color: #70d8f4; } .green { color: #67e8b1; } .orange { color: #ffa56f; }
+      .preview { margin: 16px 12px; padding: 18px; border: 1px solid var(--line); border-radius: 15px; background: linear-gradient(135deg, rgba(110,227,245,.08), rgba(151,119,255,.1)); }
+      .preview b { display: block; font-size: 11px; }
+      .preview p { margin: 7px 0 14px; color: var(--muted); font-size: 8px; line-height: 1.5; }
+      .preview span { display: inline-block; padding: 7px 10px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 8px; font-weight: 700; }
+      .signals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; margin-top: 24px; overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: var(--line); }
+      .signal { padding: 16px 18px; background: var(--surface); backdrop-filter: blur(12px); }
+      .signal strong { display: block; font-size: 13px; }
+      .signal span { color: var(--muted); font-size: 10px; }
+
+      .section { padding: 112px 0; }
+      .section-heading { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(280px, .7fr); gap: 60px; align-items: end; margin-bottom: 48px; }
+      .kicker { margin: 0 0 13px; color: var(--cyan); font-size: 11px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+      h2 { max-width: 760px; margin: 0; font-size: clamp(36px, 5.5vw, 64px); line-height: 1.02; letter-spacing: -.055em; }
+      .lead { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.7; }
+      .bento { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
+      .feature {
+        position: relative;
+        min-height: 300px;
+        overflow: hidden;
+        padding: 26px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: var(--surface);
+        backdrop-filter: blur(18px);
+        transition: transform 200ms ease, border-color 200ms ease;
+      }
+      .feature:hover { transform: translateY(-4px); border-color: var(--line-strong); }
+      .feature.large { grid-column: span 7; }
+      .feature.medium { grid-column: span 5; }
+      .feature.third { grid-column: span 4; min-height: 280px; }
+      .feature-icon { display: grid; width: 42px; height: 42px; place-items: center; margin-bottom: 34px; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--raised); color: var(--cyan); }
+      .feature-icon svg { width: 19px; height: 19px; }
+      .feature h3 { margin: 0 0 10px; font-size: 20px; letter-spacing: -.035em; }
+      .feature > p { max-width: 470px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+      .orbit { position: absolute; width: 270px; height: 270px; right: -30px; bottom: -80px; border: 1px solid var(--line); border-radius: 50%; }
+      .orbit::before, .orbit::after { content: ""; position: absolute; inset: 38px; border: 1px solid var(--line); border-radius: 50%; }
+      .orbit::after { inset: 78px; }
+      .orbit-center { position: absolute; left: 50%; top: 50%; display: grid; width: 54px; height: 54px; place-items: center; border-radius: 18px; background: var(--text); color: var(--bg); font-weight: 800; transform: translate(-50%,-50%); }
+      .chip { position: absolute; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--surface-solid); font-size: 9px; }
+      .chip.openai { left: -13px; top: 82px; }
+      .chip.gemini { right: -8px; top: 31px; }
+      .chip.auto { right: 38px; bottom: 9px; color: var(--green); }
+      .sync-stack { position: absolute; right: 20px; bottom: 18px; width: 220px; height: 130px; }
+      .sync { position: absolute; left: 0; right: 0; height: 68px; border: 1px solid var(--line-strong); border-radius: 16px; background: var(--surface-solid); box-shadow: 0 20px 45px rgba(0,0,0,.15); }
+      .sync.one { bottom: 0; transform: scale(.88); opacity: .48; }
+      .sync.two { bottom: 18px; transform: scale(.94); opacity: .7; }
+      .sync.three { bottom: 36px; padding: 16px; }
+      .sync.three b { display: block; font-size: 9px; }
+      .sync.three span { color: var(--green); font-size: 8px; }
+      .mini-flow { position: absolute; left: 25px; right: 25px; bottom: 32px; display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 10px; }
+      .mini-flow::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--cyan), transparent); animation: flow 2.2s ease-in-out infinite; }
+      @keyframes flow { 0%,100% { transform: scaleX(.1); transform-origin: left; opacity: .3; } 50% { transform: scaleX(1); opacity: 1; } }
+      .file-types { position: absolute; left: 25px; right: 25px; bottom: 26px; display: flex; gap: 8px; flex-wrap: wrap; }
+      .file-types span { padding: 7px 9px; border: 1px solid var(--line); border-radius: 9px; background: var(--raised); color: var(--muted-strong); font: 8px ui-monospace, monospace; }
+      .source-grid { position: absolute; left: 25px; right: 25px; bottom: 27px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+      .source-card { display: flex; align-items: center; gap: 8px; padding: 9px; border: 1px solid var(--line); border-radius: 11px; background: var(--raised); font-size: 8px; }
+      .source-card i { width: 15px; height: 15px; border-radius: 5px; background: linear-gradient(135deg, var(--cyan), var(--violet)); }
+
+      .flow-shell { padding: 28px; border: 1px solid var(--line); border-radius: 30px; background: var(--surface); backdrop-filter: blur(20px); }
+      .flow-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+      .flow-step { position: relative; min-height: 220px; padding: 22px; border-right: 1px solid var(--line); }
+      .flow-step:last-child { border-right: 0; }
+      .step-no { color: var(--cyan); font: 10px ui-monospace, monospace; }
+      .flow-step h3 { margin: 58px 0 10px; font-size: 17px; }
+      .flow-step p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+      .flow-step::after { content: ""; position: absolute; right: -4px; top: 36px; width: 7px; height: 7px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 22px var(--cyan); }
+      .flow-step:last-child::after { display: none; }
+
+      .architecture { display: grid; grid-template-columns: .8fr 1.2fr; gap: 26px; }
+      .architecture-copy, .architecture-map { border: 1px solid var(--line); border-radius: 30px; background: var(--surface); backdrop-filter: blur(18px); }
+      .architecture-copy { padding: 36px; }
+      .architecture-copy p { color: var(--muted); line-height: 1.7; }
+      .architecture-list { display: grid; gap: 12px; margin-top: 28px; }
+      .architecture-list > div { display: flex; align-items: flex-start; gap: 11px; padding: 13px 0; border-top: 1px solid var(--line); }
+      .architecture-list svg { flex: 0 0 auto; width: 18px; height: 18px; color: var(--green); }
+      .architecture-list strong { display: block; font-size: 13px; }
+      .architecture-list span span { color: var(--muted); font-size: 11px; }
+      .architecture-map { position: relative; display: grid; min-height: 510px; place-items: center; overflow: hidden; }
+      .architecture-map::before { content: ""; position: absolute; width: 420px; height: 420px; border: 1px solid var(--line); border-radius: 50%; box-shadow: 0 0 90px rgba(95,221,241,.08) inset; }
+      .architecture-map::after { content: ""; position: absolute; width: 280px; height: 280px; border: 1px dashed var(--line-strong); border-radius: 50%; animation: spin 28s linear infinite; }
+      .cloud-core { position: relative; z-index: 3; display: grid; width: 142px; height: 142px; place-items: center; border: 1px solid var(--line-strong); border-radius: 42px; background: linear-gradient(145deg, rgba(113,230,246,.18), rgba(145,117,255,.16)), var(--surface-solid); box-shadow: 0 28px 70px rgba(0,0,0,.25); text-align: center; }
+      .cloud-core svg { width: 34px; height: 34px; margin: 0 auto 8px; color: var(--cyan); }
+      .cloud-core b { display: block; font-size: 13px; }
+      .cloud-core small { color: var(--muted); font-size: 8px; }
+      .map-node { position: absolute; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 11px 13px; border: 1px solid var(--line-strong); border-radius: 13px; background: var(--surface-solid); box-shadow: 0 12px 36px rgba(0,0,0,.2); font-size: 9px; }
+      .map-node i { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+      .map-node.one { left: 7%; top: 20%; }
+      .map-node.two { right: 6%; top: 28%; }
+      .map-node.three { left: 12%; bottom: 18%; }
+      .map-node.four { right: 12%; bottom: 15%; }
+
+      .privacy { display: grid; grid-template-columns: 1fr auto; gap: 50px; align-items: center; padding: 40px; border: 1px solid var(--line); border-radius: 28px; background: linear-gradient(120deg, rgba(99,230,246,.08), rgba(147,116,255,.08)), var(--surface); }
+      .privacy h3 { margin: 0 0 9px; font-size: 25px; letter-spacing: -.04em; }
+      .privacy p { max-width: 680px; margin: 0; color: var(--muted); font-size: 13px; line-height: 1.7; }
+      .stats { display: flex; gap: 28px; }
+      .stats div { min-width: 88px; }
+      .stats strong { display: block; font-size: 24px; }
+      .stats span { color: var(--muted); font-size: 9px; }
+
+      .final-cta { position: relative; overflow: hidden; padding: 84px 24px; border: 1px solid var(--line-strong); border-radius: 36px; background: var(--surface); text-align: center; box-shadow: var(--shadow); }
+      .final-cta::before { content: ""; position: absolute; left: 50%; top: -240px; width: 680px; height: 480px; border-radius: 50%; background: linear-gradient(90deg, rgba(91,225,245,.36), rgba(151,116,255,.38)); filter: blur(100px); transform: translateX(-50%); }
+      .final-cta > * { position: relative; z-index: 1; }
+      .final-cta h2 { margin-inline: auto; }
+      .final-cta > p:not(.kicker) { max-width: 600px; margin: 20px auto 0; color: var(--muted); line-height: 1.65; }
+      .downloads { display: grid; grid-template-columns: repeat(2, minmax(0, 280px)); justify-content: center; gap: 12px; margin-top: 34px; }
+      .download-card { display: flex; align-items: center; gap: 13px; padding: 15px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-solid); text-align: left; cursor: pointer; transition: transform 180ms ease, border-color 180ms ease; }
+      .download-card:hover { transform: translateY(-3px); border-color: var(--line-strong); }
+      .download-card svg { width: 24px; height: 24px; }
+      .download-card b { display: block; font-size: 13px; }
+      .download-card span span { color: var(--muted); font-size: 9px; }
+      footer { padding: 30px 0 42px; }
+      .footer { display: flex; align-items: center; justify-content: space-between; gap: 22px; padding-top: 26px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; }
+      .footer-links { display: flex; gap: 18px; }
+      .footer-links a:hover { color: var(--text); }
+      .toast { position: fixed; left: 50%; bottom: 26px; z-index: 100; display: flex; align-items: center; gap: 10px; padding: 13px 16px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--surface-solid); box-shadow: 0 20px 60px rgba(0,0,0,.32); font-size: 12px; opacity: 0; pointer-events: none; transform: translate(-50%, 20px); transition: 220ms ease; }
+      .toast.show { opacity: 1; transform: translate(-50%, 0); }
+      .toast i { width: 8px; height: 8px; border-radius: 50%; background: var(--orange); }
+      .reveal { opacity: 0; transform: translateY(22px); transition: opacity 700ms ease, transform 700ms ease; }
+      .reveal.visible { opacity: 1; transform: translateY(0); }
+
+      @media (max-width: 960px) {
+        .nav-links { display: none; }
+        .workspace { grid-template-columns: 180px minmax(0, 1fr); }
+        .mock-code { display: none; }
+        .signals { grid-template-columns: repeat(2, 1fr); }
+        .feature.large, .feature.medium, .feature.third { grid-column: span 6; }
+        .section-heading, .architecture { grid-template-columns: 1fr; }
+        .flow-grid { grid-template-columns: repeat(2, 1fr); }
+        .flow-step:nth-child(2) { border-right: 0; }
+        .flow-step:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+        .privacy { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 680px) {
+        .wrap { width: min(100% - 24px, var(--max)); }
+        .site-header { padding-top: 8px; }
+        .nav-shell { min-height: 54px; border-radius: 16px; }
+        .brand-name small, .nav-download { display: none; }
+        .hero { padding-top: 136px; }
+        .hero h1 { font-size: clamp(48px, 16vw, 72px); }
+        .hero-lead { font-size: 16px; }
+        .button { width: 100%; }
+        .app-stage { margin-top: 58px; }
+        .app-window { min-height: 500px; border-radius: 20px; }
+        .window-bar { grid-template-columns: 1fr auto; }
+        .window-title { display: none; }
+        .workspace { grid-template-columns: 1fr; min-height: 452px; }
+        .mock-sidebar { display: none; }
+        .mock-chat { padding: 16px; }
+        .signals { grid-template-columns: 1fr 1fr; }
+        .section { padding: 82px 0; }
+        .section-heading { gap: 22px; margin-bottom: 32px; }
+        .feature.large, .feature.medium, .feature.third { grid-column: span 12; }
+        .flow-shell { padding: 8px; }
+        .flow-grid { grid-template-columns: 1fr; }
+        .flow-step, .flow-step:nth-child(2) { border-right: 0; border-bottom: 1px solid var(--line); }
+        .flow-step:last-child { border-bottom: 0; }
+        .flow-step::after { display: none; }
+        .architecture-map { min-height: 410px; }
+        .architecture-map::before { width: 330px; height: 330px; }
+        .architecture-map::after { width: 220px; height: 220px; }
+        .map-node { padding: 9px; }
+        .map-node.one { left: 3%; }
+        .map-node.two { right: 2%; }
+        .map-node.three { left: 4%; }
+        .map-node.four { right: 3%; }
+        .privacy { padding: 28px; }
+        .stats { flex-wrap: wrap; }
+        .downloads { grid-template-columns: 1fr; }
+        .footer { align-items: flex-start; flex-direction: column; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        .reveal { opacity: 1; transform: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#content">İçeriğe geç</a>
+    <div class="clouds" aria-hidden="true"><div class="cloud"></div><div class="cloud"></div><div class="cloud"></div></div>
+
+    <header class="site-header">
+      <div class="wrap nav-shell">
+        <a class="brand" href="#top" aria-label="Line AI ana sayfa">
+          <span class="mark" aria-hidden="true">
+            <svg viewBox="0 0 64 64" fill="none"><path d="M15 10v29c0 8 7 15 15 15h20" stroke="currentColor" stroke-width="8" stroke-linecap="round"/><path d="m31 20 14 12-14 12" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <span class="brand-name">Line AI <small>CLOUD</small></span>
+        </a>
+        <nav class="nav-links" aria-label="Ana menü">
+          <a href="#features">Özellikler</a>
+          <a href="#workflow">Nasıl çalışır?</a>
+          <a href="#cloud">Line AI Cloud</a>
+          <a href="#download">İndir</a>
+        </nav>
+        <div class="nav-actions">
+          <button class="theme-button" id="theme-toggle" type="button" aria-label="Açık temaya geç">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3a6.7 6.7 0 1 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+          </button>
+          <button class="nav-download download-trigger" type="button">Windows için indir</button>
+        </div>
+      </div>
+    </header>
+
+    <main id="content">
+      <section class="hero" id="top">
+        <div class="wrap">
+          <div class="hero-copy reveal">
+            <div class="eyebrow"><span class="pulse"></span><span id="service-label">Line AI Cloud hazırlanıyor</span></div>
+            <h1>Fikrini yaz.<span>Gerisini birlikte çözelim.</span></h1>
+            <p class="hero-lead">OpenAI ve Gemini modelleri, doğrulanabilir web kaynakları, dosya analizi, canlı kod önizlemesi ve güvenli bulut geçmişi — Windows için tek, akıcı bir yapay zekâ çalışma alanında.</p>
+            <div class="hero-actions">
+              <button class="button primary download-trigger" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg>
+                Windows için indir <span class="soon">Yakında</span>
+              </button>
+              <a class="button" href="#product">Ürünü keşfet <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="m6 9 6 6 6-6"/></svg></a>
+            </div>
+            <div class="hero-notes">
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg>Windows 10 ve 11</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg>OpenAI + Gemini</span>
+              <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg>Hesap zorunluluğu yok</span>
+            </div>
+          </div>
+
+          <div class="app-stage reveal" id="product">
+            <div class="app-glow"></div>
+            <div class="app-window" aria-label="Line AI masaüstü uygulaması arayüz önizlemesi">
+              <div class="window-bar"><div class="traffic"><i></i><i></i><i></i></div><div class="window-title">Line AI — Tasarımdan çalışan ürüne</div><div class="window-state"><i></i> Cloud bağlı</div></div>
+              <div class="workspace">
+                <aside class="mock-sidebar">
+                  <div class="mock-brand"><span class="mini-mark">L</span> Line AI</div>
+                  <div class="new-chat"><b>+</b> Yeni sohbet</div>
+                  <div class="mock-search">⌕ Sohbetlerde ara</div>
+                  <div class="side-label">Bugün</div>
+                  <div class="history active">Yeni ürün sayfası</div>
+                  <div class="history">API mimarisini incele</div>
+                  <div class="history">Dosyaları özetle</div>
+                  <div class="side-label">Dün</div>
+                  <div class="history">React hatasını çöz</div>
+                  <div class="side-footer">✓ Truth Mode açık</div>
+                </aside>
+                <div class="mock-chat">
+                  <div class="chat-head"><strong>Yeni ürün sayfası</strong><span>Şimdi · Line AI Cloud</span></div>
+                  <div class="chat-feed">
+                    <div class="message user">Modern, hızlı ve ürünümüzü iyi anlatan bir landing page hazırla.</div>
+                    <div class="thinking"><i></i> Tasarım dilini, içerik hiyerarşisini ve responsive yapıyı hazırlıyor</div>
+                    <div class="message ai"><strong>LINE AI</strong>Ürün hikâyesini güçlü bir ilk görünüm, gerçek özellikler ve canlı arayüz önizlemesiyle kurdum. Kod sağ panelde; sohbet yalnız kararları gösteriyor.</div>
+                    <div class="sources"><span class="source"><i></i> React</span><span class="source"><i></i> Vercel</span><span class="source"><i></i> Erişilebilirlik</span></div>
+                  </div>
+                  <div class="composer"><p>Line AI'ya bir görev veya soru yazın…</p><div class="composer-tools"><span class="tool">⌁ Dosya</span><span class="tool">✦ Otomatik</span><span class="tool">◉ Dengeli</span><span class="send">↑</span></div></div>
+                </div>
+                <aside class="mock-code">
+                  <div class="code-tabs"><span class="active">KOD</span><span>ÖNİZLE</span><span>DEĞİŞİKLİK</span></div>
+                  <div class="code-file"><span>index.html</span><span>●</span></div>
+                  <div class="code"><span class="purple">&lt;main</span> <span class="blue">class</span>=<span class="green">"hero"</span><span class="purple">&gt;</span><br>&nbsp;&nbsp;<span class="purple">&lt;h1&gt;</span>Fikrini yaz.<span class="purple">&lt;/h1&gt;</span><br>&nbsp;&nbsp;<span class="purple">&lt;p&gt;</span><span class="orange">Gerisini Line AI ile çöz.</span><span class="purple">&lt;/p&gt;</span><br><span class="purple">&lt;/main&gt;</span></div>
+                  <div class="preview"><b>Düşünceden ürüne.</b><p>Canlı önizleme, kod yazılırken güvenli panelde güncellenir.</p><span>Hemen keşfet</span></div>
+                </aside>
+              </div>
+            </div>
+            <div class="signals">
+              <div class="signal"><strong>Gerçek modeller</strong><span>OpenAI ve Gemini</span></div>
+              <div class="signal"><strong>Canlı kaynaklar</strong><span>Web araması ve faviconlar</span></div>
+              <div class="signal"><strong>Güvenli geçmiş</strong><span>Kuruluma özel bulut alanı</span></div>
+              <div class="signal"><strong>Kod + Önizle</strong><span>Sohbetten ayrılmış çalışma paneli</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="features">
+        <div class="wrap">
+          <div class="section-heading reveal">
+            <div><p class="kicker">Tek bir çalışma alanı</p><h2>Bir sohbet kutusundan çok daha fazlası.</h2></div>
+            <p class="lead">Line AI; doğru modeli seçmekten kaynakları izlemeye, klasörleri anlamaktan çalışan kodu görmeye kadar üretim akışının parçalarını bir araya getirir.</p>
+          </div>
+          <div class="bento">
+            <article class="feature large reveal">
+              <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/></svg></div>
+              <h3>Akıllı model yönlendirme</h3><p>İsteğinize göre OpenAI veya Gemini modelini seçin; hız ve akıl yürütme düzeyini sohbet kutusundan yönetin.</p>
+              <div class="orbit"><span class="orbit-center">AI</span><span class="chip openai">OpenAI</span><span class="chip gemini">Gemini</span><span class="chip auto">Otomatik</span></div>
+            </article>
+            <article class="feature medium reveal">
+              <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 19a4 4 0 0 1-.2-8A6.5 6.5 0 0 1 18 9.5a4.5 4.5 0 0 1 0 9H6Z"/><path d="m9 14 2 2 4-5"/></svg></div>
+              <h3>Line AI Cloud</h3><p>Hesap açmadan, her kuruluma özel ayrılmış ve silinebilir bir bulut geçmişi. Sohbetleriniz cihaz değişse bile taşınmaya hazırdır.</p>
+              <div class="sync-stack"><div class="sync one"></div><div class="sync two"></div><div class="sync three"><b>Sohbet geçmişi eşitlendi</b><span>● Şimdi güncellendi</span></div></div>
+            </article>
+            <article class="feature third reveal">
+              <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4z"/><path d="m8 9 2 2-2 2M12 13h4"/></svg></div>
+              <h3>Kod sohbeti kirletmez</h3><p>Üretilen dosyalar ayrı KOD · ÖNİZLE panelinde akar; açıklamalarınız okunabilir kalır.</p><div class="mini-flow">Kodu doğruluyor</div>
+            </article>
+            <article class="feature third reveal">
+              <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 4h6l2 3h8v13H4z"/><path d="M8 12h8M8 16h5"/></svg></div>
+              <h3>Dosya ve klasörleri anlayan akış</h3><p>Metin, kod, yapılandırma ve yaygın belge türlerini sürükleyip bırakın; içerik güvenli sınırlarla işlenir.</p>
+              <div class="file-types"><span>.tsx</span><span>.py</span><span>.pdf</span><span>.docx</span><span>.json</span><span>+ klasör</span></div>
+            </article>
+            <article class="feature third reveal">
+              <div class="feature-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg></div>
+              <h3>Kaynağı görünen web araştırması</h3><p>Arama süreci tek satırda canlı akar; kullanılan siteler faviconlarıyla birlikte cevabın altında görünür.</p>
+              <div class="source-grid"><span class="source-card"><i></i> Resmî doküman</span><span class="source-card"><i></i> Güncel kaynak</span><span class="source-card"><i></i> Teknik rehber</span><span class="source-card"><i></i> Araştırma</span></div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="workflow">
+        <div class="wrap">
+          <div class="section-heading reveal">
+            <div><p class="kicker">Doğal iş akışı</p><h2>Sorudan sonuca, bağlamı kaybetmeden.</h2></div>
+            <p class="lead">Her adım görünür, anlaşılır ve geri dönülebilir kalır. Line AI gereksiz teknik gürültüyü ayırırken gerçek işlem durumlarını gizlemez.</p>
+          </div>
+          <div class="flow-shell reveal">
+            <div class="flow-grid">
+              <article class="flow-step"><span class="step-no">01 / İSTEK</span><h3>Ne istediğinizi yazın</h3><p>Görev, soru, klasör veya kod bağlamı aynı akışta birleşir.</p></article>
+              <article class="flow-step"><span class="step-no">02 / DÜŞÜNME</span><h3>Canlı ilerlemeyi izleyin</h3><p>Tek satırlık insancıl durum akışı, gerçekten yürüyen adımı gösterir.</p></article>
+              <article class="flow-step"><span class="step-no">03 / ÜRETİM</span><h3>İçerik veya kod oluşsun</h3><p>Metin sohbette; kod, diff ve canlı önizleme sağ çalışma alanında görünür.</p></article>
+              <article class="flow-step"><span class="step-no">04 / BULUT</span><h3>Geçmişiniz eşitlensin</h3><p>Kuruluma özel bulut alanı konuşmayı sürümlü ve silinebilir biçimde saklar.</p></article>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="cloud">
+        <div class="wrap architecture">
+          <div class="architecture-copy reveal">
+            <p class="kicker">Line AI Cloud</p>
+            <h2>Herkes için ortak servis. Her kurulum için özel alan.</h2>
+            <p>Kullanıcı hesabı zorunluluğu olmadan çalışan genel Line AI Cloud; uygulama kurulduğunda güvenli bir kurulum anahtarı üretir. Sohbetler yalnız o kurulumun erişebildiği ayrı alanda tutulur.</p>
+            <div class="architecture-list">
+              <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg><span><strong>Hesap veya giriş zorunluluğu yok</strong><span>Line AI ilk açılışta bağlantıyı kendi hazırlar.</span></span></div>
+              <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg><span><strong>Kurulumlar birbirinden ayrılır</strong><span>Ortak anonim bir veri havuzu kullanılmaz.</span></span></div>
+              <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 4 4L19 6"/></svg><span><strong>Silinebilir bulut geçmişi</strong><span>Ayarlar üzerinden geçmiş veya kurulum alanı kaldırılabilir.</span></span></div>
+            </div>
+          </div>
+          <div class="architecture-map reveal" aria-label="Line AI Cloud mimari özeti">
+            <div class="cloud-core"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 19a4 4 0 0 1-.2-8A6.5 6.5 0 0 1 18 9.5a4.5 4.5 0 0 1 0 9H6Z"/><path d="M12 11v5M9.5 13.5 12 11l2.5 2.5"/></svg><b>Line AI Cloud</b><small>lineai.vercel.app</small></div></div>
+            <span class="map-node one"><i></i> Windows kurulumu A</span>
+            <span class="map-node two"><i></i> Windows kurulumu B</span>
+            <span class="map-node three"><i></i> Sohbet geçmişi</span>
+            <span class="map-node four"><i></i> Sürümlü API</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="wrap">
+          <div class="privacy reveal">
+            <div><h3>Gizlilik, ürünün sonradan eklenen maddesi değil.</h3><p>Sağlayıcı anahtarları masaüstü güvenli depolamasında tutulur; Line AI Cloud anahtarları tarayıcıya yazılmaz. API erişimi sunucu tarafında sınırlandırılır ve kurulum alanı istenildiğinde silinebilir.</p></div>
+            <div class="stats"><div><strong>0</strong><span>Zorunlu hesap</span></div><div><strong>1</strong><span>Kuruluma özel alan</span></div><div><strong>∞</strong><span>Üretim fikri</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="download">
+        <div class="wrap">
+          <div class="final-cta reveal">
+            <p class="kicker">Windows uygulaması</p>
+            <h2>Line AI, yakında indirilmeye hazır.</h2>
+            <p>İndirme paketleri üretim doğrulaması tamamlandığında burada yayınlanacak. Şimdilik düğmeler hazır; dosya indirme başlatmaz.</p>
+            <div class="downloads">
+              <button class="download-card download-trigger" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/></svg><span><b>Line AI.exe</b><span>Windows 10/11 · Yakında</span></span></button>
+              <button class="download-card download-trigger" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4z"/><path d="m8 9 2 2-2 2M12 13h4"/></svg><span><b>Kaynak kod paketi</b><span>Türkçe dokümantasyon · Yakında</span></span></button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap footer">
+        <a class="brand" href="#top"><span class="mark" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none"><path d="M15 10v29c0 8 7 15 15 15h20" stroke="currentColor" stroke-width="8" stroke-linecap="round"/><path d="m31 20 14 12-14 12" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span>Line AI</span></a>
+        <span>© 2026 Line AI. Düşünceden ürüne, tek akışta.</span>
+        <nav class="footer-links" aria-label="Alt menü"><a href="#features">Özellikler</a><a href="#cloud">Cloud</a><a href="#download">İndir</a></nav>
+      </div>
+    </footer>
+    <div class="toast" id="toast" role="status" aria-live="polite"><i></i><span>Line AI indirme paketi çok yakında burada olacak.</span></div>
+
+    <script>
+      const root = document.documentElement;
+      const toggle = document.getElementById("theme-toggle");
+      const themeColor = document.querySelector('meta[name="theme-color"]');
+      const savedTheme = localStorage.getItem("lineai.site.theme");
+      const preferredTheme = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+
+      function setTheme(theme) {
+        root.dataset.theme = theme;
+        localStorage.setItem("lineai.site.theme", theme);
+        themeColor.setAttribute("content", theme === "dark" ? "#06101c" : "#f5f9ff");
+        toggle.setAttribute("aria-label", theme === "dark" ? "Açık temaya geç" : "Koyu temaya geç");
+        toggle.innerHTML = theme === "dark"
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3a6.7 6.7 0 1 0 9 9 9 9 0 1 1-9-9Z"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>';
+      }
+      setTheme(savedTheme || preferredTheme);
+      toggle.addEventListener("click", () => setTheme(root.dataset.theme === "dark" ? "light" : "dark"));
+
+      const toast = document.getElementById("toast");
+      let toastTimer;
+      document.querySelectorAll(".download-trigger").forEach((button) => button.addEventListener("click", () => {
+        clearTimeout(toastTimer);
+        toast.classList.add("show");
+        toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+      }));
+
+      const reveal = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("visible");
+            reveal.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      document.querySelectorAll(".reveal").forEach((item) => reveal.observe(item));
+
+      fetch("/api/v1/health", { headers: { accept: "application/json" } })
+        .then((response) => response.ok ? response.json() : Promise.reject(new Error("unavailable")))
+        .then(() => { document.getElementById("service-label").textContent = "Line AI Cloud çevrimiçi"; })
+        .catch(() => { document.getElementById("service-label").textContent = "Line AI Cloud yakında"; });
+    </script>
+  </body>
+</html>

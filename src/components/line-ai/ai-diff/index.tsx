@@ -76,6 +76,7 @@ const AIDiff = ({
 
   return (
     <motion.div
+      aria-label={`Kod değişikliği: ${title ?? "Değişiklik"}`}
       // One flash on accept, then it settles. Anything more celebratory turns an
       // ordinary code review into an event.
       animate={
@@ -93,6 +94,7 @@ const AIDiff = ({
         className
       )}
       layout={!shouldReduceMotion}
+      role="region"
       transition={
         shouldReduceMotion
           ? { duration: 0 }
@@ -125,7 +127,7 @@ const AIDiff = ({
             }
             transition={shouldReduceMotion ? { duration: 0 } : SPRING_DEFAULT}
           >
-            <pre className="overflow-x-auto py-1 font-mono text-xs leading-relaxed">
+            <pre className="overflow-x-auto py-1.5 font-mono text-[0.78rem] leading-6">
               {lines.map((line, index) => (
                 <motion.div
                   animate={

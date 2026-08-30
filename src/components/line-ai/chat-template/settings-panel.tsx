@@ -2,10 +2,12 @@
 
 import { cn } from "@/lib/utils";
 import { readDesktopProviderStatus } from "@/lib/ai";
+import type { CloudConnectionState } from "@/lib/cloud-history";
 import {
   BrainCircuit,
   Check,
-  Database,
+  Cloud,
+  CloudOff,
   Info,
   Laptop,
   Moon,
@@ -31,11 +33,14 @@ import {
 type SettingsSection = "general" | "ai" | "appearance" | "data" | "about";
 
 export type SettingsPanelProps = {
+  cloudMessage: string;
+  cloudState: CloudConnectionState;
   conversationCount: number;
   messageCount: number;
   onChange: (preferences: AppPreferences) => void;
   onClearHistory: () => void;
   onClose: () => void;
+  onRetryCloud: () => void;
   preferences: AppPreferences;
 };
 
@@ -43,7 +48,7 @@ const SECTIONS = [
   { icon: Sparkles, id: "general", label: "Genel" },
   { icon: BrainCircuit, id: "ai", label: "Yapay zekâ" },
   { icon: Palette, id: "appearance", label: "Görünüm" },
-  { icon: Database, id: "data", label: "Yerel veriler" },
+  { icon: Cloud, id: "data", label: "Bulut verileri" },
   { icon: Info, id: "about", label: "Hakkında" },
 ] as const;
 
@@ -61,11 +66,14 @@ const updatePreference = <K extends keyof AppPreferences>(
 ) => ({ ...preferences, [key]: value });
 
 const SettingsPanel = ({
+  cloudMessage,
+  cloudState,
   conversationCount,
   messageCount,
   onChange,
   onClearHistory,
   onClose,
+  onRetryCloud,
   preferences,
 }: SettingsPanelProps) => {
   const [section, setSection] = useState<SettingsSection>("general");
@@ -110,6 +118,13 @@ const SettingsPanel = ({
 
   const configuredCount = Number(providerStatus.openAiConfigured) + Number(providerStatus.geminiConfigured);
   const activeLabel = SECTIONS.find((item) => item.id === section)?.label ?? "Ayarlar";
+  const cloudStateLabel = cloudState === "connected"
+    ? "Bağlı"
+    : cloudState === "connecting"
+      ? "Bağlanıyor"
+      : cloudState === "unsynced"
+        ? "Senkron bekliyor"
+        : "Çevrimdışı";
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-foreground/25 p-0 backdrop-blur-sm sm:p-5" role="presentation">
@@ -126,7 +141,7 @@ const SettingsPanel = ({
         <header className="flex h-16 shrink-0 items-center gap-3 border-border/60 border-b px-4 sm:px-6">
           <div className="min-w-0 flex-1">
             <h2 className="font-semibold text-base">Ayarlar</h2>
-            <p className="truncate text-muted-foreground text-xs">Tercihler bu cihazda saklanır; API anahtarları arayüze taşınmaz.</p>
+            <p className="truncate text-muted-foreground text-xs">Arayüz tercihleri bu cihazda; sohbet geçmişi Line AI Cloud’da saklanır.</p>
           </div>
           <button aria-label="Ayarları kapat" className="rounded-xl border border-border/70 p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" onClick={onClose} type="button">
             <X aria-hidden="true" size={18} />
@@ -170,7 +185,7 @@ const SettingsPanel = ({
                   <SummaryCard icon={<ShieldCheck size={18} />} label="Truth Mode" value={preferences.truthMode ? "Açık" : "Kapalı"} note="Belirsizlikler açıkça belirtilir." />
                   <SummaryCard icon={<BrainCircuit size={18} />} label="Akıl yürütme" value={reasoningLabel(preferences.reasoning)} note="Yeni isteklerde kullanılır." />
                   <SummaryCard icon={<Sparkles size={18} />} label="Sağlayıcı" value={providerLabel(preferences.provider)} note={`${statusState === "ready" ? configuredCount : "—"} sağlayıcı yapılandırılmış`} />
-                  <SummaryCard icon={<Database size={18} />} label="Yerel geçmiş" value={`${conversationCount} sohbet`} note={`${messageCount} mesaj bu cihazda`} />
+                  <SummaryCard icon={<Cloud size={18} />} label="Bulut geçmişi" value={`${conversationCount} sohbet`} note={`${messageCount} mesaj · ${cloudStateLabel}`} />
                 </div>
               ) : null}
 
@@ -221,15 +236,39 @@ const SettingsPanel = ({
 
               {section === "data" ? (
                 <div className="space-y-5">
-                  <SettingsGroup description="Sohbet içeriği tarayıcıya veya harici telemetriye gönderilmez; model isteği seçilen sağlayıcıya gider." title="Bu cihazdaki veriler">
+                  <SettingsGroup description="Sohbet geçmişi kurulum kimliğine bağlı Line AI Cloud alanında saklanır; erişim secret’ı Windows Credential Manager’dan arayüze taşınmaz." title="Line AI Cloud">
+                    <div
+                      className={cn(
+                        "mb-3 flex items-start gap-3 rounded-xl border p-3",
+                        cloudState === "connected"
+                          ? "border-emerald-500/25 bg-emerald-500/5"
+                          : cloudState === "connecting"
+                            ? "border-primary/25 bg-primary/5"
+                            : "border-amber-500/30 bg-amber-500/5",
+                      )}
+                      role="status"
+                    >
+                      {cloudState === "offline" || cloudState === "unsynced" ? (
+                        <CloudOff aria-hidden="true" className="mt-0.5 shrink-0 text-amber-500" size={17} />
+                      ) : (
+                        <Cloud aria-hidden="true" className={cn("mt-0.5 shrink-0", cloudState === "connecting" ? "animate-pulse text-primary" : "text-emerald-500")} size={17} />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm">{cloudStateLabel}</p>
+                        <p className="mt-0.5 text-muted-foreground text-xs leading-relaxed">{cloudMessage}</p>
+                      </div>
+                      {cloudState === "offline" || cloudState === "unsynced" ? (
+                        <button className="shrink-0 rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs hover:bg-muted" onClick={onRetryCloud} type="button">Yeniden dene</button>
+                      ) : null}
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <Metric label="Sohbet" value={conversationCount} /><Metric label="Mesaj" value={messageCount} />
                     </div>
                   </SettingsGroup>
-                  <SettingsGroup description="Bu işlem yalnız Line AI sohbet geçmişini temizler. Uygulama tercihleri ve Windows ortam anahtarları korunur." title="Sohbet geçmişi">
+                  <SettingsGroup description="Bu işlem Line AI Cloud sohbet geçmişini temizler. Uygulama tercihleri, sağlayıcı anahtarları ve kurulum kimliği korunur." title="Sohbet geçmişi">
                     {confirmClear ? (
                       <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-3">
-                        <p className="font-medium text-sm">Tüm yerel sohbetler silinsin mi?</p>
+                        <p className="font-medium text-sm">Tüm bulut sohbetleri silinsin mi?</p>
                         <div className="mt-3 flex gap-2"><button className="rounded-lg border border-border px-3 py-2 text-xs hover:bg-muted" onClick={() => setConfirmClear(false)} type="button">Vazgeç</button><button className="rounded-lg bg-destructive px-3 py-2 text-destructive-foreground text-xs" onClick={() => { onClearHistory(); setConfirmClear(false); }} type="button">Kalıcı olarak temizle</button></div>
                       </div>
                     ) : (
@@ -241,11 +280,11 @@ const SettingsPanel = ({
 
               {section === "about" ? (
                 <div className="space-y-4">
-                  <SettingsGroup description="Windows için yerel, açık kaynak yapay zekâ çalışma alanı." title="Line AI 0.2.0">
+                  <SettingsGroup description="Windows için açık kaynak yapay zekâ çalışma alanı." title="Line AI 0.2.0">
                     <p className="text-muted-foreground text-sm leading-relaxed">OpenAI ve Gemini sağlayıcılarına doğrudan bağlanır; sohbet, dosya bağlamı, sağlayıcı yönlendirme ve çalışma durumlarını tek masaüstü arayüzünde birleştirir.</p>
                   </SettingsGroup>
                   <SettingsGroup description="Arayüz bileşenlerinin kaynak ve lisans bildirimleri dağıtımdaki THIRD_PARTY_NOTICES.md dosyasında tutulur." title="Gizlilik ve lisans">
-                    <p className="text-muted-foreground text-sm leading-relaxed">Secret değerleri React katmanına aktarılmaz. Telemetri veya Line AI hesabı bulunmaz.</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed">Sağlayıcı anahtarları ve bulut erişim secret’ı React katmanına aktarılmaz. Her kurulum kendi kimliğiyle ayrılır; geçmiş silinebilir.</p>
                   </SettingsGroup>
                 </div>
               ) : null}

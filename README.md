@@ -17,7 +17,11 @@
   <img alt="Lisans: MIT" src="https://img.shields.io/badge/Lisans-MIT-2EA44F">
 </p>
 
-Line AI; OpenAI ve Gemini modellerini tek arayüzde kullandıran, sohbetleri cihazda düzenleyen ve dosya ya da klasör bağlamıyla çalışabilen bir Windows masaüstü uygulamasıdır. Gösterişli bir maket değil: sağlayıcı seçimi, akıl yürütme düzeyi, dosya okuma, hata durumu, geçmiş ve ayarlar gerçek uygulama akışlarına bağlıdır.
+Line AI; OpenAI ve Gemini modellerini tek arayüzde kullandıran, sohbet geçmişini Line AI Cloud ile eşitleyen ve dosya ya da klasör bağlamıyla çalışabilen bir Windows masaüstü uygulamasıdır. Gösterişli bir maket değil: sağlayıcı seçimi, akıl yürütme düzeyi, dosya okuma, hata durumu, bulut geçmişi ve ayarlar gerçek uygulama akışlarına bağlıdır.
+
+<p align="center">
+  <a href="https://lineai-eta.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
+</p>
 
 ## Uygulamadan görüntüler
 
@@ -34,12 +38,13 @@ Line AI; OpenAI ve Gemini modellerini tek arayüzde kullandıran, sohbetleri cih
 - 🔀 **Sağlayıcı yönlendirme:** `Otomatik`, `OpenAI` ve `Gemini`; otomatik modda kontrollü sağlayıcı geçişi.
 - 🧠 **Akıl yürütme ve durum:** Hızlı, orta ve yüksek düzeyler; bekleme, düşünme, araç ve hata durumları sohbet içinde görünür.
 - 🧩 **Yapılandırılmış yanıtlar:** Kod farkları, kaynak bağlantıları, görev adımları ve araç sonuçları uygun bileşenlerle gösterilir.
-- ⚙️ **Ayrıntılı Ayarlar:** Genel, Yapay zekâ, Görünüm, Yerel veriler ve Hakkında bölümleri; değişiklikler gerçek tercih durumuna bağlıdır.
+- ⚙️ **Ayrıntılı Ayarlar:** Genel, Yapay zekâ, Görünüm, Bulut verileri ve Hakkında bölümleri; değişiklikler gerçek tercih durumuna bağlıdır.
 - 📎 **Dosya ve klasör bağlamı:** Windows sürükle-bırak, klasörleri güvenli biçimde dolaşma, tür/adet/boyut sınırı ve metin önizlemesi.
 - ⌨️ **`+` komut paneli:** Görünür bir ek düğme olmadan sağlayıcı, akıl yürütme, Truth Mode ve ek dosya komutlarına hızlı erişim.
 - 🔎 **Hızlı komut merkezi:** `Ctrl+K` ile sohbetleri, ayarları, sağlayıcıyı, akıl yürütmeyi ve temayı tek arama alanından yönetme.
 - 🛡️ **Truth Mode:** Varsayılan açık doğruluk disiplini; doğrulanmamış sonucu tamamlanmış gibi göstermeyi engelleyen sistem talimatı.
 - 🔐 **Anahtar güvenliği:** Sağlayıcı anahtarları yalnız native masaüstü sürecinde okunur; arayüze veya sohbet kaydına yazılmaz.
+- ☁️ **Line AI Cloud geçmişi:** Her kurulum için ayrı kimlikle otomatik eşitleme, eski cihaz geçmişini ilk başarılı bağlantıda taşıma, yeniden deneme ve bulut verilerini silme.
 - 🌗 **Açık/koyu tema:** Sistem tercihini izleme, okunaklı tipografi ve hareket azaltma ayarına saygı.
 - 📐 **Responsive yapı:** İçeriği ezmek yerine Sidebar ve panelleri ekran genişliğine uygun düzene dönüştürür.
 
@@ -124,9 +129,9 @@ Komut masaüstünde `Line AI.exe` ile `line-ai-src.zip` teslim dosyalarını gü
 - Tek işlemde en fazla **30 dosya**.
 - Dosya başına en fazla **512 MiB**.
 - Model bağlamı için dosya başına en fazla 64 KiB, toplamda en fazla 2 MiB metin önizlemesi okunur; dosyanın kendisi değiştirilmez.
-- Desteklenen uzantılar: `txt`, `md`, `json`, `csv`, `ts`, `tsx`, `js`, `jsx`, `py`, `rs`, `html`, `css`, `toml`, `yaml`, `yml`.
-- Bırakılan klasörler alt klasörleriyle güvenli biçimde taranır; sembolik bağlantılar izlenmez, desteklenmeyen dosyalar atlanır.
-- Doğrudan bırakılan desteklenmeyen veya ikili dosyalar açık hata mesajıyla reddedilir.
+- Metin/kod dosyaları yalnız uzantı listesine göre değil, gerçek içeriklerine göre algılanır. Yaygın `txt`, `md`, `json`, `csv`, `ts`, `tsx`, `js`, `jsx`, `py`, `rs`, `html`, `css`, `toml`, `yaml`, `yml` türleri ve metin içeren diğer uzantılar kabul edilir.
+- Bırakılan klasörler alt klasörleriyle güvenli biçimde taranır; sembolik bağlantılar izlenmez.
+- İkili dosyalar belleğe metin gibi alınmaz; güvenli dosya metadatasıyla açıkça işaretlenir.
 - Bırakılan içerik güvenilmeyen kullanıcı verisi kabul edilir; dosyadaki talimatlar sistem talimatı sayılmaz.
 
 ## `+` komut paneli
@@ -155,10 +160,25 @@ Bu özellik model hatalarını tamamen ortadan kaldırma garantisi değildir. Ö
 
 ## Veri ve gizlilik
 
-- Sohbet geçmişi cihazdaki WebView `localStorage` alanında tutulur.
+- Sohbet geçmişi, her Line AI kurulumuna ayrılan izole Line AI Cloud alanında saklanır ve HTTPS üzerinden eşitlenir.
+- Uygulama ilk bağlantıda rastgele bir kurulum kimliği ve gizli anahtar oluşturur. Sunucuda yalnız gizli anahtarın özeti tutulur; özgün gizli anahtar Windows Credential Manager içinde saklanır.
+- Tema ve arayüz tercihleri gibi cihaz ayarları cihazda kalır. Eski sürümden kalan sohbet geçmişi yalnız ilk başarılı bulut aktarımına kadar geçiş kaynağı olarak okunur ve aktarım tamamlanınca temizlenir.
 - Mesaj gönderildiğinde seçili sağlayıcıya sohbet bağlamı ve eklenmiş dosya metni gönderilir.
-- Telemetri veya ayrı bir Line AI sunucusu bulunmaz.
+- Bulut servisi konuşma içeriğini eşitlemek için işler; uçtan uca şifreli bir kasa değildir. Bulut kayıtları Ayarlar > Bulut verileri bölümünden silinebilir.
+- Line AI Cloud kullanıcı hesabı istemez; erişim kurulum kimliği ile Windows Credential Manager'daki gizli anahtarın birlikte doğrulanmasına dayanır.
 - API kullanımı, kota ve ücretlendirme seçilen sağlayıcının hesabına aittir.
+
+## Line AI Cloud geliştirme ve doğrulama
+
+Tanıtım sitesi ile konuşma API'si `cloud/` dizinindedir. Gizli değerler repoya eklenmez.
+
+```powershell
+pnpm -C cloud install --frozen-lockfile
+pnpm -C cloud check
+pnpm -C cloud smoke:production
+```
+
+Üretim sağlık uç noktası: [`https://lineai-eta.vercel.app/api/health`](https://lineai-eta.vercel.app/api/health)
 
 ## Türkçe sürüm ve görsel güncelleme standardı
 

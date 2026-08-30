@@ -1,0 +1,4 @@
+allowBuilds:
+  # @vercel/node'un resmi derleme zinciri, platforma uygun esbuild ikilisini
+  # kurulum betiğiyle doğrular. Yalnız bu bilinen paket için izin verilir.
+  esbuild: true

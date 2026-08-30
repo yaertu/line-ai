@@ -175,10 +175,16 @@ const AIMessage = ({
 
       {avatar ? <div className="mt-0.5 shrink-0">{avatar}</div> : null}
 
-      <div className={cn("flex min-w-0 flex-col gap-1", isUser && "items-end")}>
+      <div
+        className={cn(
+          "flex min-w-0 flex-col gap-1",
+          isUser ? "items-end" : "w-full"
+        )}
+      >
         <div
           className={cn(
-            "w-fit max-w-prose text-sm leading-relaxed",
+            "font-normal text-[length:var(--line-ai-chat-font-size)] leading-[1.62] tracking-[-0.004em]",
+            bubble ? "w-fit max-w-prose" : "w-full max-w-none",
             bubble && "rounded-2xl px-3.5 py-2.5",
             bubble && isUser && "rounded-br-md bg-foreground text-background",
             bubble && !isUser && "rounded-bl-md bg-muted text-foreground",

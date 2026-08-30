@@ -1,9 +1,26 @@
 @import "tailwindcss";
 
+@font-face {
+    font-family: "Geist Sans";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("./assets/fonts/Geist-Variable.woff2") format("woff2");
+}
+
+@font-face {
+    font-family: "Geist Mono";
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url("./assets/fonts/GeistMono-Variable.woff2") format("woff2");
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-sans: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+    --font-sans: "Geist Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "Geist Mono", "Cascadia Code", Consolas, monospace;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
     --color-sidebar-primary: var(--sidebar-primary);
@@ -45,6 +62,9 @@
 }
 
 :root {
+    --line-ai-ui-font-size: 14px;
+    --line-ai-chat-font-size: 14px;
+    --line-ai-composer-font-size: 15px;
     --accent: oklch(0.75 0.17 47.65);
     --accent-foreground: oklch(1 0 0);
     --background: oklch(0.99 0 0);
@@ -82,9 +102,9 @@
 .dark {
     --accent: oklch(0.75 0.17 47.65);
     --accent-foreground: oklch(1 0 0);
-    --background: oklch(0.2 0 0);
-    --border: oklch(0.315 0 0);
-    --card: oklch(0.2 0 0);
+    --background: oklch(0.16 0 0);
+    --border: oklch(0.29 0 0);
+    --card: oklch(0.18 0 0);
     --card-foreground: oklch(0.96 0 0);
     --chart-1: oklch(0.75 0.17 47.65);
     --chart-2: oklch(0.68 0.21 40.59);
@@ -94,17 +114,17 @@
     --destructive: oklch(0.704 0.191 22.216);
     --foreground: oklch(0.96 0 0);
     --input: oklch(0.55 0 0);
-    --muted: oklch(0.275 0 0);
-    --muted-foreground: oklch(0.66 0 0);
-    --popover: oklch(0.2 0 0);
+    --muted: oklch(0.225 0 0);
+    --muted-foreground: oklch(0.69 0 0);
+    --popover: oklch(0.18 0 0);
     --popover-foreground: oklch(0.96 0 0);
     --primary: oklch(0.7 0.18 46);
     --primary-foreground: oklch(0.18 0 0);
     --ring: oklch(0.75 0.17 47.65);
-    --secondary: oklch(0.275 0 0);
+    --secondary: oklch(0.225 0 0);
     --secondary-foreground: oklch(0.74 0 0);
-    --sidebar: oklch(0.235 0 0);
-    --sidebar-accent: oklch(0.275 0 0);
+    --sidebar: oklch(0.19 0 0);
+    --sidebar-accent: oklch(0.235 0 0);
     --sidebar-accent-foreground: oklch(0.74 0 0);
     --sidebar-border: oklch(0.36 0 0);
     --sidebar-foreground: oklch(0.96 0 0);
@@ -123,7 +143,7 @@ body,
 }
 
 html {
-    font-family: "Segoe UI Variable Text", "Segoe UI", Inter, system-ui, sans-serif;
+    font-family: "Geist Sans", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
     font-optical-sizing: auto;
     text-rendering: optimizeLegibility;
@@ -134,6 +154,10 @@ body {
     background: var(--background);
     color: var(--foreground);
     font-family: inherit;
+    font-size: var(--line-ai-ui-font-size);
+    font-weight: 400;
+    line-height: 1.5;
+    letter-spacing: -0.006em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }

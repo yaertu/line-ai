@@ -1,5 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import type {
+  ExecutePromptEvent,
   ExecutePromptRequest,
   ExecutePromptResult,
   ProviderStatus,
@@ -7,7 +8,8 @@ import type {
 } from "@/components/line-ai/chat-template/chat-data";
 
 export const executeDesktopPrompt: PromptExecutor = async (
-  request: ExecutePromptRequest
+  request: ExecutePromptRequest,
+  onEvent?: (event: ExecutePromptEvent) => void
 ): Promise<ExecutePromptResult> => {
   if (!("__TAURI_INTERNALS__" in window)) {
     throw new Error(
@@ -15,7 +17,12 @@ export const executeDesktopPrompt: PromptExecutor = async (
     );
   }
 
-  return invoke<ExecutePromptResult>("execute_ai_prompt", { request });
+  const onEventChannel = new Channel<ExecutePromptEvent>();
+  onEventChannel.onmessage = (event) => onEvent?.(event);
+  return invoke<ExecutePromptResult>("execute_ai_prompt", {
+    onEvent: onEventChannel,
+    request,
+  });
 };
 
 export const readDesktopProviderStatus = async (): Promise<ProviderStatus> => {
