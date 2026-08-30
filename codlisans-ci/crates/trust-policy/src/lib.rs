@@ -13,6 +13,9 @@ use wintrust_native::{
 
 const PRODUCER: &str = "trust-policy";
 const PRODUCER_VERSION: &str = env!("CARGO_PKG_VERSION");
+const CERT_TRUST_IS_REVOKED: u32 = 0x0000_0004;
+const CERT_TRUST_REVOCATION_STATUS_UNKNOWN: u32 = 0x0000_0040;
+const CERT_TRUST_IS_OFFLINE_REVOCATION: u32 = 0x0100_0000;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReleasePolicy {
@@ -33,6 +36,7 @@ impl Default for ReleasePolicy {
 pub enum ReleaseRule {
     ArtifactHash,
     Authenticode,
+    Revocation,
     CertificateChain,
     Timestamp,
     PublisherIdentity,
@@ -44,6 +48,7 @@ pub enum RuleStatus {
     Passed,
     Failed,
     NotRequired,
+    NotEvaluated,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -56,6 +61,9 @@ pub enum GateFailure {
     ArtifactDigestMismatch,
     ParentEvidenceMissing,
     NativePolicyUntrusted,
+    RevocationRevoked,
+    RevocationOffline,
+    RevocationUnknown,
     ProviderError,
     CertificateChainEmpty,
     TrustedRootMissing,
@@ -107,14 +115,23 @@ pub fn verify_windows_release(
         .as_deref()
         .ok_or(TrustPolicyError::MissingAuthenticodeDigest)?;
 
-    let snapshot = inspect_authenticode(artifact, timeout_budget)?;
-    evaluate_release_gate(
-        artifact_digest,
-        hash_evidence,
-        authenticode_evidence,
-        &snapshot,
-        policy,
-    )
+    match inspect_authenticode(artifact, timeout_budget) {
+        Ok(snapshot) => evaluate_release_gate(
+            artifact_digest,
+            hash_evidence,
+            authenticode_evidence,
+            &snapshot,
+            policy,
+        ),
+        Err(NativeTrustError::RevocationCheckFailed { status }) => blocked_revocation_decision(
+            artifact_digest,
+            hash_evidence,
+            authenticode_evidence,
+            policy,
+            status,
+        ),
+        Err(error) => Err(error.into()),
+    }
 }
 
 fn evaluate_release_gate(
@@ -139,6 +156,7 @@ fn evaluate_release_gate(
             "authenticode-verifier",
             artifact_digest,
         ),
+        passed(ReleaseRule::Revocation),
         evaluate_certificate_chain(snapshot),
         evaluate_timestamp(snapshot.timestamp.as_ref(), policy.require_timestamp),
         evaluate_publisher(
@@ -168,6 +186,85 @@ fn evaluate_release_gate(
         &rules,
     );
 
+    let evidence = release_evidence(
+        artifact_digest,
+        hash_evidence,
+        authenticode_evidence,
+        status,
+        result,
+        &decision_digest,
+    )?;
+
+    Ok(ReleaseGateDecision {
+        status,
+        decision_digest,
+        rules,
+        evidence,
+    })
+}
+
+fn blocked_revocation_decision(
+    artifact_digest: &str,
+    hash_evidence: &EvidenceEnvelope,
+    authenticode_evidence: &EvidenceEnvelope,
+    policy: &ReleasePolicy,
+    native_status: u32,
+) -> Result<ReleaseGateDecision, TrustPolicyError> {
+    let failure = classify_revocation_failure(native_status);
+    let rules = vec![
+        evaluate_envelope(
+            ReleaseRule::ArtifactHash,
+            hash_evidence,
+            EvidenceType::ArtifactHash,
+            "hash-engine",
+            artifact_digest,
+        ),
+        evaluate_envelope(
+            ReleaseRule::Authenticode,
+            authenticode_evidence,
+            EvidenceType::AuthenticodeVerification,
+            "authenticode-verifier",
+            artifact_digest,
+        ),
+        failed(ReleaseRule::Revocation, failure),
+        not_evaluated(ReleaseRule::CertificateChain),
+        not_evaluated(ReleaseRule::Timestamp),
+        not_evaluated(ReleaseRule::PublisherIdentity),
+        evaluate_lineage(hash_evidence, authenticode_evidence),
+    ];
+    let decision_digest = revocation_decision_digest(
+        artifact_digest,
+        hash_evidence,
+        authenticode_evidence,
+        native_status,
+        policy,
+        &rules,
+    );
+    let evidence = release_evidence(
+        artifact_digest,
+        hash_evidence,
+        authenticode_evidence,
+        TrustStatus::Blocked,
+        NormalizedResult::Failure,
+        &decision_digest,
+    )?;
+
+    Ok(ReleaseGateDecision {
+        status: TrustStatus::Blocked,
+        decision_digest,
+        rules,
+        evidence,
+    })
+}
+
+fn release_evidence(
+    artifact_digest: &str,
+    hash_evidence: &EvidenceEnvelope,
+    authenticode_evidence: &EvidenceEnvelope,
+    status: TrustStatus,
+    result: NormalizedResult,
+    decision_digest: &str,
+) -> Result<EvidenceEnvelope, EvidenceError> {
     let mut evidence = EvidenceEnvelope::new(
         status,
         EvidenceType::ReleaseGate,
@@ -176,16 +273,22 @@ fn evaluate_release_gate(
         Some(artifact_digest.to_owned()),
         result,
     )?;
-    evidence.raw_output_digest = Some(decision_digest.clone());
+    evidence.raw_output_digest = Some(decision_digest.to_owned());
     evidence.parent_evidence_ids.push(hash_evidence.id);
     evidence.parent_evidence_ids.push(authenticode_evidence.id);
+    Ok(evidence)
+}
 
-    Ok(ReleaseGateDecision {
-        status,
-        decision_digest,
-        rules,
-        evidence,
-    })
+const fn classify_revocation_failure(status: u32) -> GateFailure {
+    if status & CERT_TRUST_IS_REVOKED != 0 {
+        GateFailure::RevocationRevoked
+    } else if status & CERT_TRUST_IS_OFFLINE_REVOCATION != 0 {
+        GateFailure::RevocationOffline
+    } else if status & CERT_TRUST_REVOCATION_STATUS_UNKNOWN != 0 {
+        GateFailure::RevocationUnknown
+    } else {
+        GateFailure::NativePolicyUntrusted
+    }
 }
 
 fn evaluate_envelope(
@@ -348,6 +451,45 @@ fn decision_digest(
     canonical.push('\n');
     canonical.push_str(&snapshot.signer.sha256_thumbprint);
     canonical.push('\n');
+    append_policy(&mut canonical, policy);
+    if let Some(timestamp) = &snapshot.timestamp {
+        canonical.push_str(&timestamp.signer.sha256_thumbprint);
+        canonical.push('\n');
+        writeln!(
+            canonical,
+            "timestamp-time={}",
+            timestamp.verify_as_of_filetime
+        )
+        .expect("writing into String must succeed");
+    }
+    append_rules(&mut canonical, rules);
+    hex::encode(Sha256::digest(canonical.as_bytes()))
+}
+
+fn revocation_decision_digest(
+    artifact_digest: &str,
+    hash: &EvidenceEnvelope,
+    authenticode: &EvidenceEnvelope,
+    native_status: u32,
+    policy: &ReleasePolicy,
+    rules: &[RuleEvaluation],
+) -> String {
+    let mut canonical = String::new();
+    canonical.push_str("codlisans-release-gate-revocation-v1\n");
+    canonical.push_str(artifact_digest);
+    canonical.push('\n');
+    canonical.push_str(&hash.id.to_string());
+    canonical.push('\n');
+    canonical.push_str(&authenticode.id.to_string());
+    canonical.push('\n');
+    writeln!(canonical, "revocation-status=0x{native_status:08x}")
+        .expect("writing into String must succeed");
+    append_policy(&mut canonical, policy);
+    append_rules(&mut canonical, rules);
+    hex::encode(Sha256::digest(canonical.as_bytes()))
+}
+
+fn append_policy(canonical: &mut String, policy: &ReleasePolicy) {
     canonical.push_str(if policy.require_timestamp {
         "timestamp=1"
     } else {
@@ -359,16 +501,9 @@ fn decision_digest(
         canonical.push_str(expected.trim());
         canonical.push('\n');
     }
-    if let Some(timestamp) = &snapshot.timestamp {
-        canonical.push_str(&timestamp.signer.sha256_thumbprint);
-        canonical.push('\n');
-        writeln!(
-            canonical,
-            "timestamp-time={}",
-            timestamp.verify_as_of_filetime
-        )
-        .expect("writing into String must succeed");
-    }
+}
+
+fn append_rules(canonical: &mut String, rules: &[RuleEvaluation]) {
     for rule in rules {
         writeln!(
             canonical,
@@ -377,7 +512,6 @@ fn decision_digest(
         )
         .expect("writing into String must succeed");
     }
-    hex::encode(Sha256::digest(canonical.as_bytes()))
 }
 
 const fn passed(rule: ReleaseRule) -> RuleEvaluation {
@@ -392,6 +526,14 @@ const fn not_required(rule: ReleaseRule) -> RuleEvaluation {
     RuleEvaluation {
         rule,
         status: RuleStatus::NotRequired,
+        failure: None,
+    }
+}
+
+const fn not_evaluated(rule: ReleaseRule) -> RuleEvaluation {
+    RuleEvaluation {
+        rule,
+        status: RuleStatus::NotEvaluated,
         failure: None,
     }
 }
