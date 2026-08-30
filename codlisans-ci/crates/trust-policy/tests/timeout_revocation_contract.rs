@@ -280,6 +280,14 @@ fn stalled_revocation_retrieval_is_bounded_and_blocks_release() {
     );
 
     let decision = result.expect("stalled revocation retrieval must fail closed as BLOCKED");
+    eprintln!(
+        "CODLISANS stalled revocation native_status=0x{:08x} revoked={} offline={} unknown={} rules={:?}",
+        decision.revocation.native_status,
+        decision.revocation.revoked,
+        decision.revocation.offline,
+        decision.revocation.unknown,
+        decision.rules
+    );
     assert_eq!(decision.status, TrustStatus::Blocked);
     assert_ne!(decision.revocation.native_status, 0);
     assert!(
