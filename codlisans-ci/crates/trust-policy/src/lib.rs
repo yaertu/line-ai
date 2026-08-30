@@ -83,7 +83,6 @@ pub struct RuleEvaluation {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct RevocationEvidence {
-    pub checked: bool,
     pub native_status: u32,
     pub revoked: bool,
     pub offline: bool,
@@ -93,7 +92,6 @@ pub struct RevocationEvidence {
 impl RevocationEvidence {
     const fn verified() -> Self {
         Self {
-            checked: true,
             native_status: 0,
             revoked: false,
             offline: false,
@@ -103,7 +101,6 @@ impl RevocationEvidence {
 
     const fn from_native_status(native_status: u32) -> Self {
         Self {
-            checked: true,
             native_status,
             revoked: native_status & CERT_TRUST_IS_REVOKED != 0,
             offline: native_status & CERT_TRUST_IS_OFFLINE_REVOCATION != 0,
