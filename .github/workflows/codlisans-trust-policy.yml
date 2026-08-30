@@ -47,5 +47,7 @@ jobs:
           if ($exitCode -eq $errorNoMoreItems) {
             Write-Host "CryptNet cache enumeration exhausted after deletion (ERROR_NO_MORE_ITEMS)."
           }
+
+          exit 0
       - name: Tests
         run: cargo test --workspace --all-targets -- --nocapture
