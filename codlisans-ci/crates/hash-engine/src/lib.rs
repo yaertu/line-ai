@@ -38,7 +38,9 @@ pub fn hash_file(path: &Path) -> Result<HashEvidence, HashError> {
         }
         hasher.update(&buffer[..read]);
         let read_u64 = u64::try_from(read).map_err(|_| HashError::LengthOverflow)?;
-        bytes = bytes.checked_add(read_u64).ok_or(HashError::LengthOverflow)?;
+        bytes = bytes
+            .checked_add(read_u64)
+            .ok_or(HashError::LengthOverflow)?;
     }
     let digest_hex = hex::encode(hasher.finalize());
     let evidence = EvidenceEnvelope::new(
