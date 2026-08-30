@@ -54,6 +54,26 @@ fn real_authenticode_evidence_flows_into_native_release_gate() {
                             auth.hash_evidence.id
                         );
                         assert_eq!(decision.evidence.parent_evidence_ids[1], auth.evidence.id);
+                        assert_eq!(decision.revocation.configured_budget_ms, 30_000);
+
+                        let alternate_budget_decision = verify_windows_release(
+                            &artifact,
+                            &auth.hash_evidence,
+                            &auth.evidence,
+                            &ReleasePolicy::default(),
+                            Duration::from_secs(31),
+                        )
+                        .expect("alternate revocation budget must still produce a release decision");
+                        assert_eq!(alternate_budget_decision.status, TrustStatus::Verified);
+                        assert_eq!(
+                            alternate_budget_decision.revocation.configured_budget_ms,
+                            31_000
+                        );
+                        assert_ne!(
+                            decision.decision_digest,
+                            alternate_budget_decision.decision_digest,
+                            "different configured revocation budgets must be integrity-bound into the decision digest"
+                        );
                         return;
                     }
                     Ok(decision) => writeln!(
