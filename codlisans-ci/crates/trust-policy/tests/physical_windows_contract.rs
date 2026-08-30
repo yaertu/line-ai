@@ -8,8 +8,10 @@ use std::{
     time::Duration,
 };
 use trust_policy::{
-    ReleaseGateDecision, ReleasePolicy, ReleaseRule, RuleStatus, verify_windows_release,
+    GateFailure, ReleaseGateDecision, ReleasePolicy, ReleaseRule, RuleStatus,
+    verify_production_windows_release, verify_windows_release,
 };
+use wintrust_native::inspect_authenticode;
 
 fn assert_budget_is_integrity_bound(
     artifact: &Path,
@@ -34,6 +36,41 @@ fn assert_budget_is_integrity_bound(
         baseline.decision_digest, alternate_budget_decision.decision_digest,
         "different configured revocation budgets must be integrity-bound into the decision digest"
     );
+}
+
+fn assert_production_publisher_identity(artifact: &Path, auth: &AuthenticodeResult) {
+    let snapshot = inspect_authenticode(artifact, Duration::from_secs(30))
+        .expect("physical fixture must expose native signer identity");
+    let expected = snapshot.signer.subject.trim();
+    assert!(!expected.is_empty(), "physical signer subject must not be empty");
+
+    let matching = verify_production_windows_release(
+        artifact,
+        &auth.hash_evidence,
+        &auth.evidence,
+        expected,
+        Duration::from_secs(30),
+    )
+    .expect("matching production publisher identity must produce a decision");
+    assert_eq!(matching.status, TrustStatus::Verified);
+    assert!(matching.rules.iter().any(|rule| {
+        rule.rule == ReleaseRule::PublisherIdentity && rule.status == RuleStatus::Passed
+    }));
+
+    let mismatched = verify_production_windows_release(
+        artifact,
+        &auth.hash_evidence,
+        &auth.evidence,
+        "CN=CODLISANS Deliberately Wrong Publisher",
+        Duration::from_secs(30),
+    )
+    .expect("publisher mismatch must normalize into a blocked decision");
+    assert_eq!(mismatched.status, TrustStatus::Blocked);
+    assert!(mismatched.rules.iter().any(|rule| {
+        rule.rule == ReleaseRule::PublisherIdentity
+            && rule.status == RuleStatus::Failed
+            && rule.failure == Some(GateFailure::PublisherIdentityMismatch)
+    }));
 }
 
 #[test]
@@ -86,6 +123,7 @@ fn real_authenticode_evidence_flows_into_native_release_gate() {
                         );
                         assert_eq!(decision.evidence.parent_evidence_ids[1], auth.evidence.id);
                         assert_budget_is_integrity_bound(&artifact, &auth, &decision);
+                        assert_production_publisher_identity(&artifact, &auth);
                         return;
                     }
                     Ok(decision) => writeln!(
