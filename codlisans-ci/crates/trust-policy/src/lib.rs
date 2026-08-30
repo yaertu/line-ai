@@ -140,6 +140,37 @@ pub enum TrustPolicyError {
     Evidence(#[from] EvidenceError),
     #[error("authenticode evidence has no artifact digest")]
     MissingAuthenticodeDigest,
+    #[error("production release policy requires a non-empty expected publisher identity")]
+    MissingPublisherIdentity,
+}
+
+/// Evaluates the production Windows release contract with a mandatory publisher identity.
+///
+/// # Errors
+/// Returns [`TrustPolicyError::MissingPublisherIdentity`] before native inspection when the
+/// expected publisher is blank, or propagates a native/evidence error from the release gate.
+pub fn verify_production_windows_release(
+    artifact: &Path,
+    hash_evidence: &EvidenceEnvelope,
+    authenticode_evidence: &EvidenceEnvelope,
+    expected_publisher_subject: &str,
+    timeout_budget: Duration,
+) -> Result<ReleaseGateDecision, TrustPolicyError> {
+    let expected_publisher_subject = expected_publisher_subject.trim();
+    if expected_publisher_subject.is_empty() {
+        return Err(TrustPolicyError::MissingPublisherIdentity);
+    }
+    let policy = ReleasePolicy {
+        require_timestamp: true,
+        expected_publisher_subject: Some(expected_publisher_subject.to_owned()),
+    };
+    verify_windows_release(
+        artifact,
+        hash_evidence,
+        authenticode_evidence,
+        &policy,
+        timeout_budget,
+    )
 }
 
 /// Re-inspects the physical artifact with `WinTrust` and evaluates a fail-closed release policy.
