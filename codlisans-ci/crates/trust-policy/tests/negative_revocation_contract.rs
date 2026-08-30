@@ -2,11 +2,33 @@
 
 use authenticode_verifier::{AuthenticodeResult, verify_authenticode};
 use evidence_model::TrustStatus;
-use std::{fmt::Write as _, path::PathBuf, process::Command, time::Duration};
+use std::{
+    fmt::Write as _,
+    fs,
+    io::{ErrorKind, Read as _, Write as _},
+    net::{TcpListener, TcpStream},
+    path::PathBuf,
+    process::Command,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread::{self, JoinHandle},
+    time::Duration,
+};
 use trust_policy::{GateFailure, ReleasePolicy, ReleaseRule, RuleStatus, verify_windows_release};
 
 const ERROR_NO_MORE_ITEMS: i32 = -2_147_024_637; // 0x80070103
 const FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_HTTP";
+const REVOCATION_HOSTS: &[&str] = &[
+    "www.microsoft.com",
+    "crl.microsoft.com",
+    "oneocsp.microsoft.com",
+    "ocsp.digicert.com",
+    "ocsp.sectigo.com",
+    "ocsp2.globalsign.com",
+    "ocsp.globalsign.com",
+];
 
 struct RevocationNetworkGuard;
 
@@ -47,6 +69,111 @@ impl Drop for RevocationNetworkGuard {
             ])
             .status();
     }
+}
+
+struct HostsGuard {
+    path: PathBuf,
+    original: Vec<u8>,
+}
+
+impl HostsGuard {
+    fn redirect_revocation_hosts_to_localhost() -> Self {
+        let windows = PathBuf::from(std::env::var_os("WINDIR").expect("WINDIR must exist"));
+        let path = windows
+            .join("System32")
+            .join("drivers")
+            .join("etc")
+            .join("hosts");
+        let original = fs::read(&path).expect("Windows hosts file must be readable");
+        let mut replacement = original.clone();
+        if !replacement.ends_with(b"\n") {
+            replacement.push(b'\n');
+        }
+        replacement.extend_from_slice(b"# CODLISANS negative revocation qualification\n");
+        for host in REVOCATION_HOSTS {
+            replacement.extend_from_slice(format!("127.0.0.1 {host}\n").as_bytes());
+        }
+        fs::write(&path, replacement).expect("Windows hosts file must be writable by CI admin");
+        flush_dns_cache();
+        Self { path, original }
+    }
+}
+
+impl Drop for HostsGuard {
+    fn drop(&mut self) {
+        let _ = fs::write(&self.path, &self.original);
+        flush_dns_cache();
+    }
+}
+
+struct MalformedRevocationResponder {
+    stop: Arc<AtomicBool>,
+    worker: Option<JoinHandle<()>>,
+}
+
+impl MalformedRevocationResponder {
+    fn start() -> Self {
+        let listener = TcpListener::bind("127.0.0.1:80")
+            .expect("localhost port 80 must be available for revocation fault injection");
+        listener
+            .set_nonblocking(true)
+            .expect("localhost fault listener must support nonblocking mode");
+        let stop = Arc::new(AtomicBool::new(false));
+        let worker_stop = Arc::clone(&stop);
+        let worker = thread::spawn(move || {
+            while !worker_stop.load(Ordering::Acquire) {
+                match listener.accept() {
+                    Ok((mut stream, _)) => serve_malformed_revocation(&mut stream),
+                    Err(error) if error.kind() == ErrorKind::WouldBlock => {
+                        thread::sleep(Duration::from_millis(10));
+                    }
+                    Err(error) => panic!("localhost revocation responder failed: {error}"),
+                }
+            }
+        });
+        Self {
+            stop,
+            worker: Some(worker),
+        }
+    }
+}
+
+impl Drop for MalformedRevocationResponder {
+    fn drop(&mut self) {
+        self.stop.store(true, Ordering::Release);
+        let _ = TcpStream::connect("127.0.0.1:80");
+        if let Some(worker) = self.worker.take() {
+            worker
+                .join()
+                .expect("localhost revocation responder must stop cleanly");
+        }
+    }
+}
+
+fn serve_malformed_revocation(stream: &mut TcpStream) {
+    let _ = stream.set_read_timeout(Some(Duration::from_millis(100)));
+    let mut request = [0_u8; 4096];
+    let _ = stream.read(&mut request);
+    let body = b"not-a-valid-crl-or-ocsp-response";
+    let response = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        body.len()
+    );
+    stream
+        .write_all(response.as_bytes())
+        .expect("malformed responder headers must be writable");
+    stream
+        .write_all(body)
+        .expect("malformed responder body must be writable");
+    let _ = stream.flush();
+}
+
+fn flush_dns_cache() {
+    let status = Command::new("ipconfig.exe")
+        .arg("/flushdns")
+        .status()
+        .expect("ipconfig must be launchable on the Windows qualification runner");
+    assert!(status.success(), "failed to flush the Windows DNS cache");
 }
 
 fn force_chain_cache_resync() {
@@ -140,5 +267,31 @@ fn offline_revocation_is_a_structured_blocked_release_decision() {
         rule.rule == ReleaseRule::Revocation
             && rule.status == RuleStatus::Failed
             && rule.failure == Some(GateFailure::RevocationOffline)
+    }));
+}
+
+#[test]
+#[ignore = "mutates Windows hosts and CryptNet cache for destructive negative qualification"]
+fn malformed_revocation_response_is_a_structured_unknown_block() {
+    let (artifact, auth) = verified_physical_fixture();
+    let _responder = MalformedRevocationResponder::start();
+    let _hosts = HostsGuard::redirect_revocation_hosts_to_localhost();
+    force_chain_cache_resync();
+    clear_cryptnet_url_cache();
+
+    let decision = verify_windows_release(
+        &artifact,
+        &auth.hash_evidence,
+        &auth.evidence,
+        &ReleasePolicy::default(),
+        Duration::from_secs(5),
+    )
+    .expect("malformed revocation data must normalize into a structured BLOCKED decision");
+
+    assert_eq!(decision.status, TrustStatus::Blocked);
+    assert!(decision.rules.iter().any(|rule| {
+        rule.rule == ReleaseRule::Revocation
+            && rule.status == RuleStatus::Failed
+            && rule.failure == Some(GateFailure::RevocationUnknown)
     }));
 }
