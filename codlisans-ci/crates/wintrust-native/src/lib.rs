@@ -3,6 +3,44 @@
 use std::{path::Path, time::Duration};
 use thiserror::Error;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RevocationScope {
+    WholeChainExcludingRoot,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RevocationPolicy {
+    scope: RevocationScope,
+    network_retrieval: bool,
+    fail_closed: bool,
+}
+
+impl RevocationPolicy {
+    #[must_use]
+    pub const fn production() -> Self {
+        Self {
+            scope: RevocationScope::WholeChainExcludingRoot,
+            network_retrieval: true,
+            fail_closed: true,
+        }
+    }
+
+    #[must_use]
+    pub const fn scope(self) -> RevocationScope {
+        self.scope
+    }
+
+    #[must_use]
+    pub const fn allows_network_retrieval(self) -> bool {
+        self.network_retrieval
+    }
+
+    #[must_use]
+    pub const fn fail_closed(self) -> bool {
+        self.fail_closed
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CertificateRecord {
     pub subject: String,
