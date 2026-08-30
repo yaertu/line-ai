@@ -57,3 +57,6 @@ jobs:
       - name: Negative revocation unknown facts contract
         if: runner.os == 'Windows'
         run: cargo test -p trust-policy --test negative_revocation_contract malformed_revocation_response_preserves_offline_and_unknown_facts -- --ignored --nocapture --test-threads=1
+      - name: Negative revocation timeout contract
+        if: runner.os == 'Windows'
+        run: cargo test -p trust-policy --test timeout_revocation_contract stalled_revocation_retrieval_is_bounded_and_blocks_release -- --ignored --nocapture --test-threads=1
