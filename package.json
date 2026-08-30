@@ -10,6 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "docs:screenshots": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gorselleri-guncelle.ps1",
+    "release:desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-desktop.ps1",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build --no-bundle"

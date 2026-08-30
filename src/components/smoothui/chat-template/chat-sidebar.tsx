@@ -446,6 +446,10 @@ const RailButton = ({ icon, label, onClick }: { icon: React.ReactNode; label: st
 
 const ThemeButton = ({ compact = false }: { compact?: boolean }) => {
   const [isDark, setIsDark] = useState(() => {
+    const documentedTheme = new URLSearchParams(window.location.search).get("theme");
+    if (documentedTheme === "dark") return true;
+    if (documentedTheme === "light") return false;
+
     const stored = localStorage.getItem("line-cli.theme");
     return stored
       ? stored === "dark"

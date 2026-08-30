@@ -1,0 +1,41 @@
+name: Kalite doğrulaması
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  windows-kalite:
+    name: Windows / React / Rust
+    runs-on: windows-latest
+    steps:
+      - name: Kaynağı al
+        uses: actions/checkout@v4
+
+      - name: pnpm kur
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Node.js kur
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Rust kur
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Bağımlılıkları kur
+        run: pnpm install --frozen-lockfile
+
+      - name: Frontend doğrulaması
+        run: pnpm verify
+
+      - name: Rust testleri
+        run: cargo test --manifest-path src-tauri/Cargo.toml

@@ -2,7 +2,7 @@
 name = "line-cli"
 version = "0.1.0"
 description = "SmoothUI tabanlı yerel OpenAI ve Gemini masaüstü istemcisi"
-authors = ["yaaertu"]
+authors = ["yaertu"]
 edition = "2021"
 default-run = "line-cli"
 
