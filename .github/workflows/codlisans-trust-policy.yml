@@ -35,9 +35,17 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          certutil.exe -urlcache "*" delete
-          if ($LASTEXITCODE -ne 0) {
-            throw "certutil failed to clear the Windows CryptNet URL cache with exit code $LASTEXITCODE"
+          $output = & certutil.exe -urlcache "*" delete 2>&1
+          $exitCode = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+
+          $errorNoMoreItems = -2147024637 # 0x80070103 / ERROR_NO_MORE_ITEMS
+          if ($exitCode -ne 0 -and $exitCode -ne $errorNoMoreItems) {
+            throw "certutil failed to clear the Windows CryptNet URL cache with exit code $exitCode"
+          }
+
+          if ($exitCode -eq $errorNoMoreItems) {
+            Write-Host "CryptNet cache enumeration exhausted after deletion (ERROR_NO_MORE_ITEMS)."
           }
       - name: Tests
         run: cargo test --workspace --all-targets -- --nocapture
