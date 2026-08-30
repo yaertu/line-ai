@@ -1,0 +1,32 @@
+name: codlisans-trust-policy
+
+on:
+  push:
+    branches: ["ci/codlisans-trust-policy"]
+  workflow_dispatch:
+
+jobs:
+  rust-gate:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: codlisans-ci
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Install pinned Rust
+        run: rustup toolchain install 1.98.0 --profile minimal --component rustfmt --component clippy
+      - name: Select pinned Rust
+        run: rustup override set 1.98.0
+      - name: Toolchain evidence
+        run: rustc --version && cargo --version
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Tests
+        run: cargo test --workspace --all-targets -- --nocapture
