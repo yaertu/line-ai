@@ -16,6 +16,8 @@ pub struct HashEvidence {
 pub enum HashError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("artifact byte count exceeds u64 range")]
+    LengthOverflow,
     #[error("evidence error: {0}")]
     Evidence(#[from] evidence_model::EvidenceError),
 }
@@ -23,7 +25,7 @@ pub enum HashError {
 /// Hashes a physical artifact using streaming SHA-256.
 ///
 /// # Errors
-/// Returns a typed I/O or evidence-construction error.
+/// Returns a typed I/O, byte-count overflow, or evidence-construction error.
 pub fn hash_file(path: &Path) -> Result<HashEvidence, HashError> {
     let mut file = File::open(path)?;
     let mut hasher = Sha256::new();
@@ -35,7 +37,8 @@ pub fn hash_file(path: &Path) -> Result<HashEvidence, HashError> {
             break;
         }
         hasher.update(&buffer[..read]);
-        bytes += u64::try_from(read).expect("read length fits u64");
+        let read_u64 = u64::try_from(read).map_err(|_| HashError::LengthOverflow)?;
+        bytes = bytes.checked_add(read_u64).ok_or(HashError::LengthOverflow)?;
     }
     let digest_hex = hex::encode(hasher.finalize());
     let evidence = EvidenceEnvelope::new(
