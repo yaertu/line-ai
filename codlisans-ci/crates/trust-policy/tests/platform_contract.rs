@@ -3,11 +3,11 @@
 use std::time::Duration;
 
 use evidence_model::{EvidenceEnvelope, EvidenceType, NormalizedResult, TrustStatus};
-use trust_policy::{ReleasePolicy, TrustPolicyError, verify_windows_release};
+use trust_policy::{
+    ReleasePolicy, TrustPolicyError, verify_production_windows_release, verify_windows_release,
+};
 
-#[test]
-fn non_windows_host_cannot_claim_windows_release_trust() {
-    let artifact = std::env::current_exe().expect("test executable path must be available");
+fn evidence_fixture() -> (EvidenceEnvelope, EvidenceEnvelope) {
     let digest = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     let hash = EvidenceEnvelope::new(
         TrustStatus::Verified,
@@ -28,6 +28,28 @@ fn non_windows_host_cannot_claim_windows_release_trust() {
     )
     .expect("authenticode evidence fixture must be valid");
     authenticode.parent_evidence_ids.push(hash.id);
+    (hash, authenticode)
+}
+
+#[test]
+fn production_release_gate_rejects_missing_publisher_before_native_inspection() {
+    let artifact = std::env::current_exe().expect("test executable path must be available");
+    let (hash, authenticode) = evidence_fixture();
+    let error = verify_production_windows_release(
+        &artifact,
+        &hash,
+        &authenticode,
+        "   ",
+        Duration::from_secs(30),
+    )
+    .expect_err("production release trust must require a concrete publisher identity");
+    assert!(matches!(error, TrustPolicyError::MissingPublisherIdentity));
+}
+
+#[test]
+fn non_windows_host_cannot_claim_windows_release_trust() {
+    let artifact = std::env::current_exe().expect("test executable path must be available");
+    let (hash, authenticode) = evidence_fixture();
 
     let error = verify_windows_release(
         &artifact,
