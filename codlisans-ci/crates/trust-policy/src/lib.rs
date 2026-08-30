@@ -81,11 +81,43 @@ pub struct RuleEvaluation {
     pub failure: Option<GateFailure>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RevocationEvidence {
+    pub checked: bool,
+    pub native_status: u32,
+    pub revoked: bool,
+    pub offline: bool,
+    pub unknown: bool,
+}
+
+impl RevocationEvidence {
+    const fn verified() -> Self {
+        Self {
+            checked: true,
+            native_status: 0,
+            revoked: false,
+            offline: false,
+            unknown: false,
+        }
+    }
+
+    const fn from_native_status(native_status: u32) -> Self {
+        Self {
+            checked: true,
+            native_status,
+            revoked: native_status & CERT_TRUST_IS_REVOKED != 0,
+            offline: native_status & CERT_TRUST_IS_OFFLINE_REVOCATION != 0,
+            unknown: native_status & CERT_TRUST_REVOCATION_STATUS_UNKNOWN != 0,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReleaseGateDecision {
     pub status: TrustStatus,
     pub decision_digest: String,
     pub rules: Vec<RuleEvaluation>,
+    pub revocation: RevocationEvidence,
     pub evidence: EvidenceEnvelope,
 }
 
@@ -199,6 +231,7 @@ fn evaluate_release_gate(
         status,
         decision_digest,
         rules,
+        revocation: RevocationEvidence::verified(),
         evidence,
     })
 }
@@ -210,6 +243,7 @@ fn blocked_revocation_decision(
     policy: &ReleasePolicy,
     native_status: u32,
 ) -> Result<ReleaseGateDecision, TrustPolicyError> {
+    let revocation = RevocationEvidence::from_native_status(native_status);
     let failure = classify_revocation_failure(native_status);
     let rules = vec![
         evaluate_envelope(
@@ -253,6 +287,7 @@ fn blocked_revocation_decision(
         status: TrustStatus::Blocked,
         decision_digest,
         rules,
+        revocation,
         evidence,
     })
 }
