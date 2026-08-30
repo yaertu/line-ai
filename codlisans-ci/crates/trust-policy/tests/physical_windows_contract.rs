@@ -1,15 +1,19 @@
 #![cfg(windows)]
 
-use std::{path::PathBuf, time::Duration};
 use authenticode_verifier::verify_authenticode;
 use evidence_model::TrustStatus;
+use std::{path::PathBuf, time::Duration};
 use trust_policy::{ReleasePolicy, ReleaseRule, RuleStatus, verify_windows_release};
 
 #[test]
 fn real_authenticode_evidence_flows_into_native_release_gate() {
     let windows = PathBuf::from(std::env::var_os("WINDIR").expect("WINDIR must exist"));
     let mut candidates = vec![
-        windows.join("System32").join("WindowsPowerShell").join("v1.0").join("powershell.exe"),
+        windows
+            .join("System32")
+            .join("WindowsPowerShell")
+            .join("v1.0")
+            .join("powershell.exe"),
         windows.join("System32").join("notepad.exe"),
         windows.join("System32").join("msiexec.exe"),
         windows.join("System32").join("regsvr32.exe"),
@@ -17,27 +21,64 @@ fn real_authenticode_evidence_flows_into_native_release_gate() {
         windows.join("System32").join("mmc.exe"),
     ];
     if let Some(program_files) = std::env::var_os("ProgramFiles") {
-        candidates.insert(0, PathBuf::from(program_files).join("PowerShell").join("7").join("pwsh.exe"));
+        candidates.insert(
+            0,
+            PathBuf::from(program_files)
+                .join("PowerShell")
+                .join("7")
+                .join("pwsh.exe"),
+        );
     }
 
     let mut diagnostics = String::new();
     for artifact in candidates.into_iter().filter(|path| path.is_file()) {
         match verify_authenticode(&artifact) {
             Ok(auth) if auth.status == TrustStatus::Verified => {
-                match verify_windows_release(&artifact, &auth.hash_evidence, &auth.evidence, &ReleasePolicy::default(), Duration::from_secs(30)) {
+                match verify_windows_release(
+                    &artifact,
+                    &auth.hash_evidence,
+                    &auth.evidence,
+                    &ReleasePolicy::default(),
+                    Duration::from_secs(30),
+                ) {
                     Ok(decision) if decision.status == TrustStatus::Verified => {
-                        assert!(decision.rules.iter().any(|rule| rule.rule == ReleaseRule::Timestamp && rule.status == RuleStatus::Passed));
-                        assert_eq!(decision.evidence.parent_evidence_ids[0], auth.hash_evidence.id);
+                        assert!(
+                            decision
+                                .rules
+                                .iter()
+                                .any(|rule| rule.rule == ReleaseRule::Timestamp
+                                    && rule.status == RuleStatus::Passed)
+                        );
+                        assert_eq!(
+                            decision.evidence.parent_evidence_ids[0],
+                            auth.hash_evidence.id
+                        );
                         assert_eq!(decision.evidence.parent_evidence_ids[1], auth.evidence.id);
                         return;
                     }
-                    Ok(decision) => diagnostics.push_str(&format!("{} => release {:?}\n", artifact.display(), decision.rules)),
-                    Err(error) => diagnostics.push_str(&format!("{} => release error {error:?}\n", artifact.display())),
+                    Ok(decision) => diagnostics.push_str(&format!(
+                        "{} => release {:?}\n",
+                        artifact.display(),
+                        decision.rules
+                    )),
+                    Err(error) => diagnostics.push_str(&format!(
+                        "{} => release error {error:?}\n",
+                        artifact.display()
+                    )),
                 }
             }
-            Ok(auth) => diagnostics.push_str(&format!("{} => Authenticode {:?}\n", artifact.display(), auth.status)),
-            Err(error) => diagnostics.push_str(&format!("{} => verifier error {error:?}\n", artifact.display())),
+            Ok(auth) => diagnostics.push_str(&format!(
+                "{} => Authenticode {:?}\n",
+                artifact.display(),
+                auth.status
+            )),
+            Err(error) => diagnostics.push_str(&format!(
+                "{} => verifier error {error:?}\n",
+                artifact.display()
+            )),
         }
     }
-    panic!("no physical Windows fixture passed the full verifier -> WinTrust -> release gate chain:\n{diagnostics}");
+    panic!(
+        "no physical Windows fixture passed the full verifier -> WinTrust -> release gate chain:\n{diagnostics}"
+    );
 }
