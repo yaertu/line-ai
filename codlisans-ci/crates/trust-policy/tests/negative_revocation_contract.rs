@@ -20,6 +20,7 @@ use trust_policy::{GateFailure, ReleasePolicy, ReleaseRule, RuleStatus, verify_w
 
 const ERROR_NO_MORE_ITEMS: i32 = -2_147_024_637; // 0x80070103
 const FIREWALL_RULE: &str = "CODLISANS_NEGATIVE_REVOCATION_HTTP";
+const PORTPROXY_LISTEN_ADDRESS: &str = "127.0.0.2";
 const REVOCATION_HOSTS: &[&str] = &[
     "www.microsoft.com",
     "crl.microsoft.com",
@@ -71,13 +72,63 @@ impl Drop for RevocationNetworkGuard {
     }
 }
 
+struct PortProxyGuard;
+
+impl PortProxyGuard {
+    fn forward_http_to(connect_port: u16) -> Self {
+        let _ = Command::new("netsh.exe")
+            .args([
+                "interface",
+                "portproxy",
+                "delete",
+                "v4tov4",
+                "listenport=80",
+                &format!("listenaddress={PORTPROXY_LISTEN_ADDRESS}"),
+            ])
+            .status();
+        let status = Command::new("netsh.exe")
+            .args([
+                "interface",
+                "portproxy",
+                "add",
+                "v4tov4",
+                "listenport=80",
+                &format!("listenaddress={PORTPROXY_LISTEN_ADDRESS}"),
+                &format!("connectport={connect_port}"),
+                "connectaddress=127.0.0.1",
+            ])
+            .status()
+            .expect("netsh portproxy must be launchable on the Windows qualification runner");
+        assert!(
+            status.success(),
+            "failed to install the localhost revocation portproxy"
+        );
+        Self
+    }
+}
+
+impl Drop for PortProxyGuard {
+    fn drop(&mut self) {
+        let _ = Command::new("netsh.exe")
+            .args([
+                "interface",
+                "portproxy",
+                "delete",
+                "v4tov4",
+                "listenport=80",
+                &format!("listenaddress={PORTPROXY_LISTEN_ADDRESS}"),
+            ])
+            .status();
+    }
+}
+
 struct HostsGuard {
     path: PathBuf,
     original: Vec<u8>,
 }
 
 impl HostsGuard {
-    fn redirect_revocation_hosts_to_localhost() -> Self {
+    fn redirect_revocation_hosts_to_fault_proxy() -> Self {
         let windows = PathBuf::from(std::env::var_os("WINDIR").expect("WINDIR must exist"));
         let path = windows
             .join("System32")
@@ -91,7 +142,9 @@ impl HostsGuard {
         }
         replacement.extend_from_slice(b"# CODLISANS negative revocation qualification\n");
         for host in REVOCATION_HOSTS {
-            replacement.extend_from_slice(format!("127.0.0.1 {host}\n").as_bytes());
+            replacement.extend_from_slice(
+                format!("{PORTPROXY_LISTEN_ADDRESS} {host}\n").as_bytes(),
+            );
         }
         fs::write(&path, replacement).expect("Windows hosts file must be writable by CI admin");
         flush_dns_cache();
@@ -109,12 +162,17 @@ impl Drop for HostsGuard {
 struct MalformedRevocationResponder {
     stop: Arc<AtomicBool>,
     worker: Option<JoinHandle<()>>,
+    port: u16,
 }
 
 impl MalformedRevocationResponder {
     fn start() -> Self {
-        let listener = TcpListener::bind("127.0.0.1:80")
-            .expect("localhost port 80 must be available for revocation fault injection");
+        let listener = TcpListener::bind("127.0.0.1:0")
+            .expect("an ephemeral localhost port must be available for revocation fault injection");
+        let port = listener
+            .local_addr()
+            .expect("localhost fault listener must expose its bound address")
+            .port();
         listener
             .set_nonblocking(true)
             .expect("localhost fault listener must support nonblocking mode");
@@ -134,14 +192,19 @@ impl MalformedRevocationResponder {
         Self {
             stop,
             worker: Some(worker),
+            port,
         }
+    }
+
+    const fn port(&self) -> u16 {
+        self.port
     }
 }
 
 impl Drop for MalformedRevocationResponder {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Release);
-        let _ = TcpStream::connect("127.0.0.1:80");
+        let _ = TcpStream::connect(("127.0.0.1", self.port));
         if let Some(worker) = self.worker.take() {
             worker
                 .join()
@@ -166,6 +229,27 @@ fn serve_malformed_revocation(stream: &mut TcpStream) {
         .write_all(body)
         .expect("malformed responder body must be writable");
     let _ = stream.flush();
+}
+
+fn prove_fault_proxy_route() {
+    let mut stream = TcpStream::connect((PORTPROXY_LISTEN_ADDRESS, 80))
+        .expect("portproxy route must accept the qualification probe");
+    stream
+        .set_read_timeout(Some(Duration::from_secs(2)))
+        .expect("qualification probe must support a read timeout");
+    stream
+        .write_all(b"GET /codlisans-probe HTTP/1.1\r\nHost: revocation.invalid\r\nConnection: close\r\n\r\n")
+        .expect("qualification probe request must be writable");
+    let mut response = Vec::new();
+    stream
+        .read_to_end(&mut response)
+        .expect("qualification probe response must be readable");
+    assert!(
+        response
+            .windows(b"not-a-valid-crl-or-ocsp-response".len())
+            .any(|window| window == b"not-a-valid-crl-or-ocsp-response"),
+        "portproxy probe did not reach the malformed revocation responder"
+    );
 }
 
 fn flush_dns_cache() {
@@ -271,11 +355,13 @@ fn offline_revocation_is_a_structured_blocked_release_decision() {
 }
 
 #[test]
-#[ignore = "mutates Windows hosts and CryptNet cache for destructive negative qualification"]
+#[ignore = "mutates Windows hosts, portproxy, and CryptNet cache for destructive qualification"]
 fn malformed_revocation_response_is_a_structured_unknown_block() {
     let (artifact, auth) = verified_physical_fixture();
-    let _responder = MalformedRevocationResponder::start();
-    let _hosts = HostsGuard::redirect_revocation_hosts_to_localhost();
+    let responder = MalformedRevocationResponder::start();
+    let _portproxy = PortProxyGuard::forward_http_to(responder.port());
+    prove_fault_proxy_route();
+    let _hosts = HostsGuard::redirect_revocation_hosts_to_fault_proxy();
     force_chain_cache_resync();
     clear_cryptnet_url_cache();
 
