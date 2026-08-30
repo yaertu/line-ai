@@ -18,11 +18,20 @@ pub enum DiscoveryError {
     Io(#[from] std::io::Error),
 }
 
+/// Discovers the newest physical x64 SignTool from installed Windows SDK locations.
+///
+/// # Errors
+/// Returns [`DiscoveryError::UnsupportedPlatform`] outside Windows.
 #[cfg(not(windows))]
 pub fn discover_signtool() -> Result<SignToolDiscovery, DiscoveryError> {
     Err(DiscoveryError::UnsupportedPlatform)
 }
 
+/// Discovers the newest physical x64 SignTool from installed Windows SDK locations.
+///
+/// # Errors
+/// Returns [`DiscoveryError::ToolNotFound`] when no suitable SDK SignTool exists, or
+/// [`DiscoveryError::Io`] when SDK directory enumeration fails.
 #[cfg(windows)]
 pub fn discover_signtool() -> Result<SignToolDiscovery, DiscoveryError> {
     let mut roots = Vec::new();
