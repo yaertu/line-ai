@@ -259,8 +259,8 @@ mod windows {
         if millis == 0 {
             return Err(NativeTrustError::InvalidRevocationTimeoutBudget);
         }
-        let millis = u32::try_from(millis)
-            .map_err(|_| NativeTrustError::RevocationTimeoutBudgetTooLarge)?;
+        let millis =
+            u32::try_from(millis).map_err(|_| NativeTrustError::RevocationTimeoutBudgetTooLarge)?;
         Ok(ChainRevocationSettings {
             flags: CERT_CHAIN_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT
                 | CERT_CHAIN_REVOCATION_ACCUMULATIVE_TIMEOUT,
@@ -304,12 +304,7 @@ mod windows {
                 (&raw mut trust_data).cast::<c_void>(),
             )
         };
-        let result = extract_snapshot(
-            &trust_data,
-            policy_error,
-            chain_revocation,
-            timeout_budget,
-        );
+        let result = extract_snapshot(&trust_data, policy_error, chain_revocation, timeout_budget);
         trust_data.dwStateAction = WTD_STATEACTION_CLOSE;
         unsafe {
             let _ = WinVerifyTrust(
