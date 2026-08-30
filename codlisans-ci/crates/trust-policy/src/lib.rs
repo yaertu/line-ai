@@ -235,6 +235,7 @@ fn evaluate_release_gate(
         hash_evidence,
         authenticode_evidence,
         snapshot,
+        configured_budget_ms,
         policy,
         &rules,
     );
@@ -298,6 +299,7 @@ fn blocked_revocation_decision(
         hash_evidence,
         authenticode_evidence,
         native_status,
+        configured_budget_ms,
         policy,
         &rules,
     );
@@ -500,11 +502,12 @@ fn decision_digest(
     hash: &EvidenceEnvelope,
     authenticode: &EvidenceEnvelope,
     snapshot: &TrustSnapshot,
+    configured_budget_ms: u128,
     policy: &ReleasePolicy,
     rules: &[RuleEvaluation],
 ) -> String {
     let mut canonical = String::new();
-    canonical.push_str("codlisans-release-gate-v1\n");
+    canonical.push_str("codlisans-release-gate-v2\n");
     canonical.push_str(artifact_digest);
     canonical.push('\n');
     canonical.push_str(&hash.id.to_string());
@@ -513,6 +516,8 @@ fn decision_digest(
     canonical.push('\n');
     canonical.push_str(&snapshot.signer.sha256_thumbprint);
     canonical.push('\n');
+    writeln!(canonical, "revocation-budget-ms={configured_budget_ms}")
+        .expect("writing into String must succeed");
     append_policy(&mut canonical, policy);
     if let Some(timestamp) = &snapshot.timestamp {
         canonical.push_str(&timestamp.signer.sha256_thumbprint);
@@ -533,11 +538,12 @@ fn revocation_decision_digest(
     hash: &EvidenceEnvelope,
     authenticode: &EvidenceEnvelope,
     native_status: u32,
+    configured_budget_ms: u128,
     policy: &ReleasePolicy,
     rules: &[RuleEvaluation],
 ) -> String {
     let mut canonical = String::new();
-    canonical.push_str("codlisans-release-gate-revocation-v1\n");
+    canonical.push_str("codlisans-release-gate-revocation-v2\n");
     canonical.push_str(artifact_digest);
     canonical.push('\n');
     canonical.push_str(&hash.id.to_string());
@@ -545,6 +551,8 @@ fn revocation_decision_digest(
     canonical.push_str(&authenticode.id.to_string());
     canonical.push('\n');
     writeln!(canonical, "revocation-status=0x{native_status:08x}")
+        .expect("writing into String must succeed");
+    writeln!(canonical, "revocation-budget-ms={configured_budget_ms}")
         .expect("writing into String must succeed");
     append_policy(&mut canonical, policy);
     append_rules(&mut canonical, rules);
