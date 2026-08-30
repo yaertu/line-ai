@@ -353,7 +353,10 @@ fn malformed_revocation_response_is_a_structured_unknown_block() {
 
     let decision = result
         .expect("malformed revocation data must normalize into a structured BLOCKED decision");
-    eprintln!("CODLISANS malformed revocation decision rules={:?}", decision.rules);
+    eprintln!(
+        "CODLISANS malformed revocation decision rules={:?}",
+        decision.rules
+    );
     assert_eq!(decision.status, TrustStatus::Blocked);
     assert!(decision.rules.iter().any(|rule| {
         rule.rule == ReleaseRule::Revocation
