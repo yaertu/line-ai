@@ -368,7 +368,7 @@ mod windows {
             dwUrlRetrievalTimeout: settings.url_retrieval_timeout_ms,
             ..Default::default()
         };
-        let mut chain_context: *const CERT_CHAIN_CONTEXT = null();
+        let mut chain_context: *mut CERT_CHAIN_CONTEXT = null_mut();
         let built = unsafe {
             CertGetCertificateChain(
                 null_mut(),
