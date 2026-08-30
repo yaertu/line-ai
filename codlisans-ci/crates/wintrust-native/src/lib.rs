@@ -41,6 +41,32 @@ impl RevocationPolicy {
     }
 }
 
+#[cfg(windows)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NativeRevocationSettings {
+    fdw_revocation_checks: u32,
+    provider_flags: u32,
+}
+
+#[cfg(windows)]
+impl NativeRevocationSettings {
+    #[must_use]
+    pub const fn fdw_revocation_checks(self) -> u32 {
+        self.fdw_revocation_checks
+    }
+
+    #[must_use]
+    pub const fn provider_flags(self) -> u32 {
+        self.provider_flags
+    }
+}
+
+#[cfg(windows)]
+#[must_use]
+pub fn production_native_revocation_settings() -> NativeRevocationSettings {
+    windows::revocation_settings(RevocationPolicy::production())
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CertificateRecord {
     pub subject: String,
@@ -110,12 +136,15 @@ pub fn inspect_authenticode(
     artifact: &Path,
     _timeout_budget: Duration,
 ) -> Result<TrustSnapshot, NativeTrustError> {
-    windows::inspect(artifact)
+    windows::inspect(artifact, production_native_revocation_settings())
 }
 
 #[cfg(windows)]
 mod windows {
-    use super::{CertificateRecord, NativeTrustError, TimestampRecord, TrustSnapshot};
+    use super::{
+        CertificateRecord, NativeRevocationSettings, NativeTrustError, RevocationPolicy,
+        RevocationScope, TimestampRecord, TrustSnapshot,
+    };
     use std::{
         ffi::c_void,
         mem::size_of,
@@ -133,15 +162,28 @@ mod windows {
             WinTrust::{
                 CRYPT_PROVIDER_CERT, CRYPT_PROVIDER_DATA, CRYPT_PROVIDER_SGNR,
                 WINTRUST_ACTION_GENERIC_VERIFY_V2, WINTRUST_DATA, WINTRUST_DATA_0,
-                WINTRUST_FILE_INFO, WTD_CACHE_ONLY_URL_RETRIEVAL, WTD_CHOICE_FILE,
-                WTD_REVOCATION_CHECK_NONE, WTD_REVOKE_NONE, WTD_STATEACTION_CLOSE,
-                WTD_STATEACTION_VERIFY, WTD_UI_NONE, WTD_UICONTEXT_EXECUTE,
-                WTHelperProvDataFromStateData, WinVerifyTrust,
+                WINTRUST_FILE_INFO, WTD_CHOICE_FILE, WTD_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT,
+                WTD_REVOKE_WHOLECHAIN, WTD_STATEACTION_CLOSE, WTD_STATEACTION_VERIFY, WTD_UI_NONE,
+                WTD_UICONTEXT_EXECUTE, WTHelperProvDataFromStateData, WinVerifyTrust,
             },
         },
     };
 
-    pub(super) fn inspect(artifact: &Path) -> Result<TrustSnapshot, NativeTrustError> {
+    pub(super) fn revocation_settings(policy: RevocationPolicy) -> NativeRevocationSettings {
+        debug_assert!(policy.allows_network_retrieval());
+        debug_assert!(policy.fail_closed());
+        match policy.scope() {
+            RevocationScope::WholeChainExcludingRoot => NativeRevocationSettings {
+                fdw_revocation_checks: WTD_REVOKE_WHOLECHAIN,
+                provider_flags: WTD_REVOCATION_CHECK_CHAIN_EXCLUDE_ROOT,
+            },
+        }
+    }
+
+    pub(super) fn inspect(
+        artifact: &Path,
+        revocation: NativeRevocationSettings,
+    ) -> Result<TrustSnapshot, NativeTrustError> {
         let wide_path: Vec<u16> = artifact.as_os_str().encode_wide().chain(Some(0)).collect();
         let size32 =
             |size: usize| u32::try_from(size).expect("WinTrust structure size must fit u32");
@@ -154,13 +196,13 @@ mod windows {
         let mut trust_data = WINTRUST_DATA {
             cbStruct: size32(size_of::<WINTRUST_DATA>()),
             dwUIChoice: WTD_UI_NONE,
-            fdwRevocationChecks: WTD_REVOKE_NONE,
+            fdwRevocationChecks: revocation.fdw_revocation_checks,
             dwUnionChoice: WTD_CHOICE_FILE,
             Anonymous: WINTRUST_DATA_0 {
                 pFile: &raw mut file_info,
             },
             dwStateAction: WTD_STATEACTION_VERIFY,
-            dwProvFlags: WTD_CACHE_ONLY_URL_RETRIEVAL | WTD_REVOCATION_CHECK_NONE,
+            dwProvFlags: revocation.provider_flags,
             dwUIContext: WTD_UICONTEXT_EXECUTE,
             ..Default::default()
         };
