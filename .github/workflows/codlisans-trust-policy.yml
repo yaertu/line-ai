@@ -24,9 +24,11 @@ jobs:
         run: rustup override set 1.98.0
       - name: Toolchain evidence
         run: rustc --version && cargo --version
+      - name: RED contract tests
+        run: cargo test --workspace --all-targets -- --nocapture
       - name: Format
+        if: success()
         run: cargo fmt --all -- --check
       - name: Clippy
+        if: success()
         run: cargo clippy --workspace --all-targets -- -D warnings
-      - name: Tests
-        run: cargo test --workspace --all-targets -- --nocapture
