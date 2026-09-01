@@ -251,9 +251,9 @@ async fn execute_ai_prompt(
             if openai_is_configured {
                 match run_openai(&client, &request, &current_prompt, reasoning, &on_event).await {
                     Ok(result) => return Ok(result),
-                    Err(error) => {
+                    Err(_error) => {
                         #[cfg(debug_assertions)]
-                        eprintln!("[line-ai] openai fallback reason={error}");
+                        eprintln!("[line-ai] openai fallback reason={_error}");
                     }
                 }
                 emit_event(&on_event, ExecuteAiPromptEvent::Reset);
@@ -1279,9 +1279,9 @@ async fn run_gemini(
 }
 
 fn emit_event(channel: &tauri::ipc::Channel<ExecuteAiPromptEvent>, event: ExecuteAiPromptEvent) {
-    if let Err(error) = channel.send(event) {
+    if let Err(_error) = channel.send(event) {
         #[cfg(debug_assertions)]
-        eprintln!("[line-ai] event_channel_error: {error}");
+        eprintln!("[line-ai] event_channel_error: {_error}");
     }
 }
 

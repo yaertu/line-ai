@@ -36,7 +36,7 @@ Line AI; desteklenen sağlayıcı API'lerini tek arayüzde kullandıran, sohbet 
 - 💬 **Düzenli sohbet çalışma alanı:** Sidebar'ın üstünde arama, yeni sohbet, zaman damgalı ve gruplandırılmış geçmiş, sabitleme, yeniden adlandırma, silme ve beş saniyelik geri alma.
 - 🧭 **Gerçek Sidebar:** 240–400 piksel arasında sürüklenerek veya klavyeyle yeniden boyutlandırılan geniş görünüm; daraltılmış ikon şeridi ve mobil çekmece.
 - 🔀 **Sağlayıcı yönlendirme:** Kullanıcının eklediği desteklenen API bağlantılarını doğrular; otomatik modda yalnız çalıştığı doğrulanan bağlantılar arasında kontrollü geçiş yapar.
-- 🧠 **Akıl yürütme ve durum:** Hızlı, orta ve yüksek düzeyler; istek hazırlama, gerçek sağlayıcı/model/deneme, artifact aktarım miktarı ve hata durumları sohbet içinde görünür.
+- 🧠 **Akıl yürütme ve durum:** Hızlı, orta ve yüksek düzeyler; istek hazırlama, gerçek sağlayıcı/model/deneme, tamamlanan son gerçek işlem adımları, artifact aktarım miktarı ve hata durumları sohbet içinde görünür.
 - 🧩 **Gerçek artifact çalışma alanı:** Kod ve güvenli SVG çıktıları sohbet metnine dökülmeden KOD, ÖNİZLE ve indirme yüzeylerine gider; DIFF sekmesi önceki kararlı artifact ile güncel dosyayı provider'dan bağımsız olarak yerelde karşılaştırır.
 - ⚙️ **İşlevsel Ayarlar:** Genel, içe/dışa aktarma, yapay zekâ, görünüm, kişiselleştirme, kısayollar, tarayıcı, bulut verileri, arşiv ve hakkında bölümleri; kontroller gerçek uygulama durumuna bağlıdır.
 - 🌐 **Gerçek Chrome köprüsü:** Chrome'u başlatma/durdurma, etkin sayfayı okuma, URL açma, geri gitme, yenileme, tıklama ve yazma komutları native CDP köprüsü üzerinden çalışır.

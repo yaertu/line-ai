@@ -17,7 +17,7 @@ Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir.
 ### Değiştirildi
 
 - 📁 Dosya kabulü uzantı listesine bağlı olmaktan çıkarıldı; bilinmeyen dosyalar gerçek içeriğine göre metin veya ikili olarak güvenli biçimde sınıflandırılıyor.
-- 🧠 Canlı işlem ve Chrome araç durumu; gerçek sağlayıcı, model, deneme ve aktarılan artifact miktarını açıkça gösteren yapılandırılmış akışa bağlandı.
+- 🧠 Canlı işlem ve Chrome araç durumu; gerçek sağlayıcı, model, deneme, aktarılan artifact miktarı ve tamamlanan son gerçek işlem adımlarını açıkça gösteren yapılandırılmış akışa bağlandı.
 - ☁️ Line AI web yüzü açık/koyu tema, azaltılmış hareket, klavye erişimi, gerçek bulut sağlık durumu ve geniş ekranı kullanan tam sayfa sinematik düzenle baştan tasarlandı.
 - 🌍 Tanıtım sitesi ile Line AI Cloud API'si tek ve kalıcı `lineaicloud.vercel.app` adresinde birleştirildi.
 - 📦 Masaüstü ve GitHub sürüm teslimatı tek `Line AI.exe` varlığına indirildi; özel kaynak arşivi kaldırıldı.

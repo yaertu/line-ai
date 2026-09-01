@@ -272,6 +272,14 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		const liveFlow = await screen.findByRole("status", {
 			name: "Canlı yapay zekâ akışı",
 		});
+		const liveSteps = within(liveFlow).getByRole("list", {
+			name: "Canlı işlem adımları",
+		});
+		expect(liveSteps).toHaveTextContent("İstek hazırlanıyor");
+		expect(liveSteps).toHaveTextContent("İsteği çözümlüyor");
+		expect(liveSteps).toHaveTextContent("Web kaynaklarını arıyor");
+		expect(liveSteps).toHaveTextContent("Kaynakları inceliyor");
+		expect(liveSteps).toHaveTextContent("index.html yazılıyor");
 		expect(liveFlow).toHaveTextContent("index.html yazılıyor");
 		expect(liveFlow).toHaveTextContent(/\d+ KB/);
 		expect(liveFlow).toHaveTextContent("example.com");

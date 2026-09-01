@@ -79,6 +79,7 @@ type NoticeTone = "error" | "info" | "success";
 type Notice = { id: string; text: string; tone: NoticeTone };
 type LivePhase = "browser" | "thinking" | "searching" | "writing";
 type LiveProgress = {
+	history: string[];
 	label: string;
 	phase: LivePhase;
 	sources: WebSource[];
@@ -86,11 +87,26 @@ type LiveProgress = {
 };
 
 const initialLiveProgress = (): LiveProgress => ({
+	history: [],
 	label: "İstek hazırlanıyor",
 	phase: "thinking",
 	sources: [],
 	streamedText: "",
 });
+
+const advanceLiveProgress = (
+	current: LiveProgress,
+	label: string,
+	phase: LivePhase,
+): LiveProgress => {
+	const isStreamingUpdate =
+		current.phase === "writing" && phase === "writing";
+	const history =
+		current.label === label || isStreamingUpdate
+			? current.history
+			: [...current.history, current.label].slice(-5);
+	return { ...current, history, label, phase };
+};
 
 const formatClock = (date: Date) =>
 	`${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
@@ -522,6 +538,7 @@ export const ChatThread = ({
 
 		if (browserIntent.kind !== "none") {
 			setLiveProgress({
+				history: [],
 				label: "Chrome bağlantısını hazırlıyorum",
 				phase: "browser",
 				sources: [],
@@ -718,11 +735,13 @@ export const ChatThread = ({
 					return;
 				}
 				if (event.kind === "status" || event.kind === "search") {
-					setLiveProgress((current) => ({
-						...current,
-						label: event.label,
-						phase: event.kind === "search" ? "searching" : "thinking",
-					}));
+					setLiveProgress((current) =>
+						advanceLiveProgress(
+							current,
+							event.label,
+							event.kind === "search" ? "searching" : "thinking",
+						),
+					);
 					return;
 				}
 				if (event.kind === "source") {
@@ -730,6 +749,7 @@ export const ChatThread = ({
 						current.sources.some((source) => source.url === event.source.url)
 							? current
 							: {
+									history: [...current.history, current.label].slice(-5),
 									label: "Kaynakları inceliyor",
 									phase: "searching",
 									sources: [...current.sources, event.source].slice(0, 8),
@@ -746,14 +766,13 @@ export const ChatThread = ({
 						const activeFileBytes = activeFile
 							? new TextEncoder().encode(activeFile.content).byteLength
 							: 0;
-						return {
-							...current,
-							label: activeFile
+						return advanceLiveProgress(
+							{ ...current, streamedText },
+							activeFile
 								? `${activeFile.name} yazılıyor · ${formatBytes(activeFileBytes)}`
 								: "Yanıtı yazıyor",
-							phase: "writing",
-							streamedText,
-						};
+							"writing",
+						);
 					});
 				}
 			};
@@ -1512,54 +1531,74 @@ const BusyResponse = ({ progress }: { progress: LiveProgress }) => {
 		<div
 			aria-label="Canlı yapay zekâ akışı"
 			aria-live="polite"
-			className="flex h-7 min-w-0 items-center gap-2 overflow-hidden text-[0.8rem] text-muted-foreground leading-none"
+			className="flex min-w-0 flex-col gap-2 overflow-hidden text-[0.8rem] text-muted-foreground"
 			role="status"
 		>
-			<span className="relative flex size-4 shrink-0 items-center justify-center">
-				<StatusIcon aria-hidden="true" size={14} strokeWidth={1.7} />
-				{shouldReduceMotion ? null : (
-					<motion.span
-						animate={{ opacity: [0.15, 0.8, 0.15], scale: [0.7, 1.1, 0.7] }}
-						aria-hidden="true"
-						className="absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full bg-primary"
-						transition={{
-							duration: 1.25,
-							ease: "easeInOut",
-							repeat: Number.POSITIVE_INFINITY,
-						}}
-					/>
-				)}
-			</span>
-			{progress.sources.length ? (
-				<span className="flex shrink-0 -space-x-1.5">
-					{progress.sources.slice(0, 4).map((source) => (
-						<span
-							className="flex size-4 items-center justify-center overflow-hidden rounded-full border border-background bg-muted"
-							key={source.id}
-							title={source.title}
-						>
-							<SourceFavicon url={source.url} />
-						</span>
-					))}
+			<div className="flex h-7 min-w-0 items-center gap-2 leading-none">
+				<span className="relative flex size-4 shrink-0 items-center justify-center">
+					<StatusIcon aria-hidden="true" size={14} strokeWidth={1.7} />
+					{shouldReduceMotion ? null : (
+						<motion.span
+							animate={{
+								opacity: [0.15, 0.8, 0.15],
+								scale: [0.7, 1.1, 0.7],
+							}}
+							aria-hidden="true"
+							className="absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full bg-primary"
+							transition={{
+								duration: 1.25,
+								ease: "easeInOut",
+								repeat: Number.POSITIVE_INFINITY,
+							}}
+						/>
+					)}
 				</span>
-			) : null}
-			<span className="shrink-0 font-medium text-muted-foreground/95">
-				{progress.label}
-			</span>
-			{progress.sources.length ? (
-				<span className="truncate text-[0.72rem] opacity-75">
-					{progress.sources
-						.slice(0, 3)
-						.map((source) => {
-							try {
-								return new URL(source.url).hostname.replace(/^www\./, "");
-							} catch {
-								return source.title;
-							}
-						})
-						.join(" · ")}
+				{progress.sources.length ? (
+					<span className="flex shrink-0 -space-x-1.5">
+						{progress.sources.slice(0, 4).map((source) => (
+							<span
+								className="flex size-4 items-center justify-center overflow-hidden rounded-full border border-background bg-muted"
+								key={source.id}
+								title={source.title}
+							>
+								<SourceFavicon url={source.url} />
+							</span>
+						))}
+					</span>
+				) : null}
+				<span className="shrink-0 font-medium text-muted-foreground/95">
+					{progress.label}
 				</span>
-			) : null}
+				{progress.sources.length ? (
+					<span className="truncate text-[0.72rem] opacity-75">
+						{progress.sources
+							.slice(0, 3)
+							.map((source) => {
+								try {
+									return new URL(source.url).hostname.replace(/^www\./, "");
+								} catch {
+									return source.title;
+								}
+							})
+							.join(" · ")}
+					</span>
+				) : null}
+			</div>
+			<ol
+				aria-label="Canlı işlem adımları"
+				className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[0.7rem] leading-4"
+			>
+				{progress.history.map((label, index) => (
+					<li className="flex min-w-0 items-center gap-1 opacity-65" key={`${label}-${index}`}>
+						<Check aria-hidden="true" className="shrink-0" size={11} />
+						<span className="truncate">{label}</span>
+					</li>
+				))}
+				<li aria-current="step" className="flex min-w-0 items-center gap-1 font-medium">
+					<span aria-hidden="true" className="size-1.5 shrink-0 rounded-full bg-primary" />
+					<span className="truncate">{progress.label}</span>
+				</li>
+			</ol>
 		</div>
 	);
 };

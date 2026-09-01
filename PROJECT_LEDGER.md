@@ -15,7 +15,7 @@
 - Her kullanıcıya görünen değişiklikte ekran görüntüleri, özellik listesi, changelog, EXE ve GitHub Release birlikte yenilenir.
 - Temiz kaynak ZIP yalnız masaüstünde yerel teslim olarak üretilir; GitHub Release'e kaynak ZIP konmaz ve GitHub Release EXE-only kalır.
 - Fake/demo/sahte/şablon/placeholder çıktı ve çalışmayan başarı gösterimi yasaktır. Görsel/logo isteğinde kaynak sohbet metnine dökülmez; desteklenen gerçek SVG artifact ÖNİZLE/indir yüzeyine gider, desteklenmeyen raster üretim sınırı açıkça söylenir.
-- Uzun provider işlemi yalnız “Düşünüyor” demez; gerçek provider/model/deneme ve alınan artifact byte ilerlemesini kullanıcıya gösterir.
+- Uzun provider işlemi yalnız “Düşünüyor” demez; gerçek native event'lerden gelen tamamlanmış son adımları, güncel adımı, provider/model/denemeyi ve alınan artifact byte ilerlemesini kullanıcıya gösterir. Sahte yüzde veya zamanlayıcı kullanılmaz.
 
 ## SUPERSEDED / CANCELLED
 
@@ -48,8 +48,12 @@
 - Temiz gerçek capture: `cloud/media/line-ai-gercek-kodlama.mp4`, 1440×900 H.264, 135.133 s, SHA-256 `447bbcfeee83a2e314e7d4b8e4dae086f891a69b3ec5d868dbbc26268ba54972`; poster ve evidence JSON aynı native koşudan üretildi. Capture-only Tauri/WebView2 CDP ve Vite süreçleri doğrulama sonrası kapatıldı.
 - Landing preview aynı artifact üzerinde tam smoke `PASS` olduktan sonra production'a promote edildi. `https://lineaicloud.vercel.app` doğrulanmış `dpl_5en4T8nDFrYBJ6gQUU2GER2pvtYH` deployment'ına yönlendirildi; public landing/video/evidence hash, health, auth reddi, Cloud konuşma yaz/oku/sil ve silinen kimliği reddetme `PASS`; geçici smoke verisi temizlendi (`E7 PRODUCTION_VERIFIED`).
 - Production error-log taramasında işlevsel hata görülmedi; başarılı DELETE fonksiyon çağrısında Node/Supabase zincirinden gelen bir `url.parse()` deprecation uyarısı kaldı.
+- Gerçek canlı işlem geçmişi için regresyon testi önce erişilebilir adım listesi bulunmadığından beklenen nedenle `FAIL` oldu; minimal uygulamadan sonra odaklı test ve tam `pnpm verify` zinciri `42/42 PASS` verdi. Liste yalnız native provider event'lerinden oluşur; yapay süre/yüzde üretmez (`E3 SELF_TEST_PASSED`).
+- Güncel native Tauri/WebView2 CDP tekrar koşusunda iki gerçek SVG artifact, güvenli preview/download, sohbetten SVG kaynak saklama ve ikinci sürüm yerel DIFF `PASS`; DIFF `29 added / 29 removed / 63 context`, eski/yeni numaralı toplam `121/121` satır gösterdi. Canlı adım listesinde gerçek OpenAI kredi reddi, Gemini model/anahtar denemeleri ve `line-ai-logo.svg` KB aktarımı birlikte gözlendi (`E4 RUNTIME_VERIFIED_ISOLATED`, `E5 INTEGRATION_VERIFIED`, `E6 PHYSICALLY_VERIFIED_PREVIEW`).
+- `004938c` commit'inden yerel `Line AI.exe` üretildi; ancak canlı işlem geçmişi kaynak değişikliği nedeniyle bu EXE artık `STALE_REVERIFY` ve güncel kaynakla yeniden derlenecek.
+- Kullanıcının son talimatıyla yeni Vercel aktarımı/deploy işlemleri `PAUSED`; mevcut üretim kanıtı önceki deployment için geçerlidir, güncel kaynak değişikliği üretimde doğrulanmış sayılmaz.
 - Güncel EXE, masaüstü temiz kaynak ZIP'i ve GitHub EXE-only release henüz yeniden üretilip doğrulanmadı.
 
 ## EXACT NEXT ACTION
 
-Dirty worktree'deki mevcut Line AI değişikliklerini secret ve kapsam denetiminden geçir; kullanıcı değişikliklerini silmeden doğrulanabilir bir commit oluştur. Sonra sırasıyla güncel Windows EXE'yi temiz commit'ten derle/kopyala/hash doğrula → masaüstünde build/cache/secret içermeyen temiz yerel kaynak ZIP'i üret → GitHub `yaertu/line-ai` release'ini yalnız aynı doğrulanmış EXE ile güncelle → public download/hash ve EXE-only varlık listesini doğrula. Kaynak ZIP'i GitHub'a yükleme. P0 bitince geçici Gemini anahtarlarının kullanıcı tarafından revoke/rotate edilmesi gerektiğini bildir ve ancak sonrasında onaylı eski Line AI/Codex temizlik kapsamına geç.
+Canlı işlem geçmişi değişikliğini frontend ve Rust zincirleriyle doğrula; secret ve kapsam denetiminden geçirip kullanıcı değişikliklerini silmeden commit oluştur. Sonra güncel Windows EXE'yi temiz commit'ten derle/kopyala/hash doğrula → masaüstünde build/cache/secret içermeyen temiz yerel kaynak ZIP'i üret → GitHub `yaertu/line-ai` release'ini yalnız aynı doğrulanmış EXE ile güncelle → public download/hash ve EXE-only varlık listesini doğrula. Kaynak ZIP'i GitHub'a yükleme. Kullanıcı kaldırana kadar yeni Vercel aktarımı/deploy adımlarını beklet. P0 bitince geçici Gemini anahtarlarının kullanıcı tarafından revoke/rotate edilmesi gerektiğini bildir ve ancak sonrasında onaylı eski Line AI/Codex temizlik kapsamına geç.
