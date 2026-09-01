@@ -17,10 +17,10 @@
   <img alt="Lisans: MIT" src="https://img.shields.io/badge/Lisans-MIT-2EA44F">
 </p>
 
-Line AI; OpenAI ve Gemini modellerini tek arayüzde kullandıran, sohbet geçmişini Line AI Cloud ile eşitleyen ve dosya ya da klasör bağlamıyla çalışabilen bir Windows masaüstü uygulamasıdır. Gösterişli bir maket değil: sağlayıcı seçimi, akıl yürütme düzeyi, dosya okuma, hata durumu, bulut geçmişi ve ayarlar gerçek uygulama akışlarına bağlıdır.
+Line AI; desteklenen sağlayıcı API'lerini tek arayüzde kullandıran, sohbet geçmişini Line AI Cloud ile eşitleyen ve dosya ya da klasör bağlamıyla çalışabilen bir Windows masaüstü uygulamasıdır. Gösterişli bir maket değil: eklenen API bağlantısının doğrulanması, model seçimi, akıl yürütme düzeyi, dosya okuma, hata durumu, bulut geçmişi ve ayarlar gerçek uygulama akışlarına bağlıdır.
 
 <p align="center">
-  <a href="https://lineai-eta.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
+  <a href="https://lineaicloud.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
 </p>
 
 ## Uygulamadan görüntüler
@@ -35,11 +35,13 @@ Line AI; OpenAI ve Gemini modellerini tek arayüzde kullandıran, sohbet geçmi�
 
 - 💬 **Düzenli sohbet çalışma alanı:** Sidebar'ın üstünde arama, yeni sohbet, zaman damgalı ve gruplandırılmış geçmiş, sabitleme, yeniden adlandırma, silme ve beş saniyelik geri alma.
 - 🧭 **Gerçek Sidebar:** 240–400 piksel arasında sürüklenerek veya klavyeyle yeniden boyutlandırılan geniş görünüm; daraltılmış ikon şeridi ve mobil çekmece.
-- 🔀 **Sağlayıcı yönlendirme:** `Otomatik`, `OpenAI` ve `Gemini`; otomatik modda kontrollü sağlayıcı geçişi.
-- 🧠 **Akıl yürütme ve durum:** Hızlı, orta ve yüksek düzeyler; bekleme, düşünme, araç ve hata durumları sohbet içinde görünür.
-- 🧩 **Yapılandırılmış yanıtlar:** Kod farkları, kaynak bağlantıları, görev adımları ve araç sonuçları uygun bileşenlerle gösterilir.
-- ⚙️ **Ayrıntılı Ayarlar:** Genel, Yapay zekâ, Görünüm, Bulut verileri ve Hakkında bölümleri; değişiklikler gerçek tercih durumuna bağlıdır.
-- 📎 **Dosya ve klasör bağlamı:** Windows sürükle-bırak, klasörleri güvenli biçimde dolaşma, tür/adet/boyut sınırı ve metin önizlemesi.
+- 🔀 **Sağlayıcı yönlendirme:** Kullanıcının eklediği desteklenen API bağlantılarını doğrular; otomatik modda yalnız çalıştığı doğrulanan bağlantılar arasında kontrollü geçiş yapar.
+- 🧠 **Akıl yürütme ve durum:** Hızlı, orta ve yüksek düzeyler; istek hazırlama, gerçek sağlayıcı/model/deneme, artifact aktarım miktarı ve hata durumları sohbet içinde görünür.
+- 🧩 **Gerçek artifact çalışma alanı:** Kod ve güvenli SVG çıktıları sohbet metnine dökülmeden KOD, ÖNİZLE ve indirme yüzeylerine gider; DIFF sekmesi önceki kararlı artifact ile güncel dosyayı provider'dan bağımsız olarak yerelde karşılaştırır.
+- ⚙️ **İşlevsel Ayarlar:** Genel, içe/dışa aktarma, yapay zekâ, görünüm, kişiselleştirme, kısayollar, tarayıcı, bulut verileri, arşiv ve hakkında bölümleri; kontroller gerçek uygulama durumuna bağlıdır.
+- 🌐 **Gerçek Chrome köprüsü:** Chrome'u başlatma/durdurma, etkin sayfayı okuma, URL açma, geri gitme, yenileme, tıklama ve yazma komutları native CDP köprüsü üzerinden çalışır.
+- 📎 **Dosya, klasör ve arşiv bağlamı:** Windows sürükle-bırak; klasörleri güvenli dolaşma; ZIP, RAR, 7z, TAR ve sıkıştırılmış TAR ailesini diske çıkarmadan okuma; içerik tabanlı metin/ikili algılama.
+- 👍 **İnsancıl geri bildirim:** Asistan yanıtlarına beğen/beğenme tepkisi, işlem durumları ve geri alınabilir arşivleme akışı.
 - ⌨️ **`+` komut paneli:** Görünür bir ek düğme olmadan sağlayıcı, akıl yürütme, Truth Mode ve ek dosya komutlarına hızlı erişim.
 - 🔎 **Hızlı komut merkezi:** `Ctrl+K` ile sohbetleri, ayarları, sağlayıcıyı, akıl yürütmeyi ve temayı tek arama alanından yönetme.
 - 🛡️ **Truth Mode:** Varsayılan açık doğruluk disiplini; doğrulanmamış sonucu tamamlanmış gibi göstermeyi engelleyen sistem talimatı.
@@ -116,21 +118,22 @@ pnpm tauri:build
 
 Çıktı `src-tauri/target/release/line-ai.exe` yolunda oluşur. Dağıtımdaki çalıştırılabilir dosya imzalanmamışsa Windows bunu bilinmeyen yayıncı olarak gösterebilir; yayın öncesinde güvenilir bir Authenticode sertifikasıyla imzalanması önerilir.
 
-Doğrulama, Rust testleri, native derleme, masaüstü EXE kopyası ve temiz Git kaynak ZIP'i tek komutla üretilebilir:
+Doğrulama, Rust testleri, native derleme ve masaüstü EXE kopyası tek komutla üretilebilir:
 
 ```powershell
 pnpm release:desktop
 ```
 
-Komut masaüstünde `Line AI.exe` ile `line-ai-src.zip` teslim dosyalarını günceller. Kaynak ZIP, Git'teki doğrulanmış `HEAD` içeriğinden üretildiği için `node_modules`, `target`, `.git`, ortam dosyaları ve yerel secret'ları içermez.
+Komut masaüstünde yalnız `Line AI.exe` teslim dosyasını günceller. GitHub Release indirmelerinde de tek özel varlık aynı doğrulanmış EXE'dir.
 
 ## Dosya ve klasör sınırları
 
 - Tek işlemde en fazla **30 dosya**.
 - Dosya başına en fazla **512 MiB**.
 - Model bağlamı için dosya başına en fazla 64 KiB, toplamda en fazla 2 MiB metin önizlemesi okunur; dosyanın kendisi değiştirilmez.
-- Metin/kod dosyaları yalnız uzantı listesine göre değil, gerçek içeriklerine göre algılanır. Yaygın `txt`, `md`, `json`, `csv`, `ts`, `tsx`, `js`, `jsx`, `py`, `rs`, `html`, `css`, `toml`, `yaml`, `yml` türleri ve metin içeren diğer uzantılar kabul edilir.
+- Dosyalar yalnız uzantı beyaz listesine göre değil, gerçek içeriklerine göre algılanır. Metin/kod türleri, uzantısız metinler ve bilinmeyen metin uzantıları kabul edilir; ikili içerikler güvenli metadata olarak eklenir.
 - Bırakılan klasörler alt klasörleriyle güvenli biçimde taranır; sembolik bağlantılar izlenmez.
+- `zip`, `rar`, `7z`, `tar`, `tar.gz`, `tgz`, `tar.bz2`, `tbz2`, `tar.xz`, `txz`, `gz`, `bz2`, `xz`, `cab` ve `cpio` arşivleri diske açılmadan güvenli biçimde okunur. Arşiv içindeki dosyalar da aynı adet ve boyut sınırlarına tabidir.
 - İkili dosyalar belleğe metin gibi alınmaz; güvenli dosya metadatasıyla açıkça işaretlenir.
 - Bırakılan içerik güvenilmeyen kullanıcı verisi kabul edilir; dosyadaki talimatlar sistem talimatı sayılmaz.
 
@@ -178,13 +181,13 @@ pnpm -C cloud check
 pnpm -C cloud smoke:production
 ```
 
-Üretim sağlık uç noktası: [`https://lineai-eta.vercel.app/api/health`](https://lineai-eta.vercel.app/api/health)
+Üretim sağlık uç noktası: [`https://lineaicloud.vercel.app/api/v1/health`](https://lineaicloud.vercel.app/api/v1/health)
 
 ## Türkçe sürüm ve görsel güncelleme standardı
 
 - Kullanıcıya görünen her değişiklik [CHANGELOG.md](./CHANGELOG.md) içinde Türkçe kaydedilir.
 - Arayüz değişikliklerinden sonra gerçek uygulamadan açık/koyu görüntüler ve tanıtım GIF'i yenilenir.
-- Her yayın öncesinde doğrulama zinciri çalıştırılır; GitHub sürümüne aynı doğrulanmış EXE ve kaynak ZIP yüklenir.
+- Her yayın öncesinde doğrulama zinciri çalıştırılır; GitHub sürümüne yalnız aynı doğrulanmış EXE yüklenir.
 - CI; lint, TypeScript, React testleri, production build ve Rust testlerini Windows üzerinde yeniden çalıştırır.
 
 ## Lisans ve atıf

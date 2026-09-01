@@ -1,6 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
-const baseUrl = (process.env.LINE_AI_CLOUD_URL ?? "https://lineai-eta.vercel.app").replace(/\/$/, "");
+const baseUrl = (process.env.LINE_AI_CLOUD_URL ?? "https://lineaicloud.vercel.app").replace(/\/$/, "");
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -27,10 +27,43 @@ const request = async (path, init = {}) => {
   return { body, response };
 };
 
+const requestRaw = (path, init = {}) => fetch(`${baseUrl}${path}`, init);
+
 let credentials = null;
 let installationDeleted = false;
 
 try {
+	const landing = await requestRaw("/");
+	const landingHtml = await landing.text();
+	assert(landing.status === 200, "Landing sayfası yüklenemedi.");
+	assert(
+		landingHtml.includes("/media/line-ai-gercek-kodlama.mp4") &&
+			landingHtml.includes("/media/line-ai-gercek-kodlama-poster.png"),
+		"Landing doğrulanmış gerçek kodlama kaydını kullanmıyor.",
+	);
+
+	const evidenceResponse = await requestRaw(
+		"/media/line-ai-gercek-kodlama.evidence.json",
+	);
+	const evidence = await evidenceResponse.json();
+	assert(evidenceResponse.status === 200, "Capture evidence JSON yayınlanmıyor.");
+	assert(
+		evidence?.artifact?.fileName === "line-ai-logo.svg" &&
+			evidence?.artifact?.conversation?.artifactTurns === 2 &&
+			evidence?.artifact?.chatSourceHiddenVerified === true,
+		"Production capture evidence iki gerçek, sızıntısız SVG turunu doğrulamıyor.",
+	);
+
+	const videoResponse = await requestRaw("/media/line-ai-gercek-kodlama.mp4");
+	const videoBytes = Buffer.from(await videoResponse.arrayBuffer());
+	const videoHash = createHash("sha256").update(videoBytes).digest("hex");
+	assert(videoResponse.status === 200, "Gerçek kodlama videosu yayınlanmıyor.");
+	assert(
+		videoHash === evidence?.video?.sha256,
+		"Production videosu ile evidence SHA-256 özeti eşleşmiyor.",
+	);
+	console.log("landingRealCapture=PASS");
+
   const health = await request("/api/v1/health");
   assert(health.response.status === 200, "Health endpoint başarısız.");
   assert(health.body?.status === "ok" && health.body?.database === "ready", "Health yanıtı hazır değil.");

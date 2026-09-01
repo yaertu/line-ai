@@ -2,6 +2,33 @@
 
 Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir. Sürümleme [SemVer](https://semver.org/lang/tr/) yaklaşımını izler.
 
+## [0.4.0] - 2026-08-31
+
+### Eklendi
+
+- 🌐 Chrome'u native CDP köprüsüyle başlatan, etkin sayfayı okuyan ve açık kullanıcı komutuyla gezinme, yenileme, geri dönme, tıklama ve yazma işlemlerini çalıştıran gerçek tarayıcı araçları.
+- 🧩 KOD ve ÖNİZLE yanında her zaman görünür DIFF sekmesi; ilk artifact boş durumu ve sonraki kararlı sürümlerde eski/yeni satır numaralı yerel karşılaştırma.
+- 🎨 Logo istekleri için sohbeti kaynak kodla doldurmayan gerçek SVG artifact, güvenli görsel önizleme ve `image/svg+xml` indirme akışı.
+- 🗜️ ZIP, RAR, 7z, TAR, sıkıştırılmış TAR, CAB ve CPIO arşivlerini diske çıkarmadan; yol, adet, boyut ve içerik sınırlarıyla okuyan arşiv bağlamı.
+- 🗃️ Sohbet arşivleme, Ayarlar içinden geri yükleme/kalıcı silme ve asistan yanıtlarında kalıcı beğen/beğenme geri bildirimi.
+- ⚙️ On işlevsel Ayarlar bölümü: Genel, içe/dışa aktarma, yapay zekâ, görünüm, kişiselleştirme, kısayollar, tarayıcı, bulut verileri, arşiv ve hakkında.
+- ✨ Dokuz arayüz kaynağından uyarlanan; tool-state, thinking, diff, dosya yükleme, geri alma, tepki ve ayar akışlarını tanıtan yeni responsive web deneyimi.
+
+### Değiştirildi
+
+- 📁 Dosya kabulü uzantı listesine bağlı olmaktan çıkarıldı; bilinmeyen dosyalar gerçek içeriğine göre metin veya ikili olarak güvenli biçimde sınıflandırılıyor.
+- 🧠 Canlı işlem ve Chrome araç durumu; gerçek sağlayıcı, model, deneme ve aktarılan artifact miktarını açıkça gösteren yapılandırılmış akışa bağlandı.
+- ☁️ Line AI web yüzü açık/koyu tema, azaltılmış hareket, klavye erişimi, gerçek bulut sağlık durumu ve geniş ekranı kullanan tam sayfa sinematik düzenle baştan tasarlandı.
+- 🌍 Tanıtım sitesi ile Line AI Cloud API'si tek ve kalıcı `lineaicloud.vercel.app` adresinde birleştirildi.
+- 📦 Masaüstü ve GitHub sürüm teslimatı tek `Line AI.exe` varlığına indirildi; özel kaynak arşivi kaldırıldı.
+
+### Doğrulama
+
+- Frontend lint, TypeScript, React testleri ve production build zinciri geçti.
+- Rust testleri ve gerçek izole Chrome CDP testi geçti.
+- Native Tauri/WebView2 üzerinde iki gerçek Gemini turu, SVG önizleme/indirme ve ikinci sürüm DIFF'i fiziksel olarak doğrulandı.
+- Line AI Cloud üretim smoke zinciri geçti; landing, video/evidence hash'i ve Cloud CRUD akışı üretimde doğrulandı.
+
 ## [0.3.0] - 2026-08-30
 
 ### Eklendi

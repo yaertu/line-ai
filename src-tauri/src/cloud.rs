@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{env, time::Duration};
 
-const DEFAULT_CLOUD_ROOT: &str = "https://lineai-eta.vercel.app/api/v1";
+const DEFAULT_CLOUD_ROOT: &str = "https://lineaicloud.vercel.app/api/v1";
 const KEYRING_SERVICE: &str = "app.lineai.desktop";
 const KEYRING_USER: &str = "cloud-installation-v1";
 const MAX_CONVERSATION_BYTES: usize = 512 * 1024;
@@ -64,8 +64,8 @@ fn normalize_cloud_root(value: &str) -> Result<String, String> {
     let trimmed = value.trim().trim_end_matches('/');
     let mut url = Url::parse(trimmed)
         .map_err(|_| "Line AI Cloud adresi geçerli bir HTTPS adresi değil.".to_owned())?;
-    let allowed_http = url.scheme() == "http"
-        && matches!(url.host_str(), Some("127.0.0.1" | "localhost" | "::1"));
+    let allowed_http =
+        url.scheme() == "http" && matches!(url.host_str(), Some("127.0.0.1" | "localhost" | "::1"));
     if url.scheme() != "https" && !allowed_http {
         return Err("Line AI Cloud bağlantısı HTTPS kullanmalıdır.".to_owned());
     }
@@ -102,7 +102,9 @@ fn load_credentials_sync() -> Result<Option<CloudCredentials>, String> {
     match entry.get_password() {
         Ok(raw) => serde_json::from_str::<CloudCredentials>(&raw)
             .map(Some)
-            .map_err(|_| "Windows Credential Manager içindeki Line AI Cloud kaydı bozuk.".to_owned()),
+            .map_err(|_| {
+                "Windows Credential Manager içindeki Line AI Cloud kaydı bozuk.".to_owned()
+            }),
         Err(KeyringError::NoEntry) => Ok(None),
         Err(_) => Err("Windows Credential Manager kaydı okunamadı.".to_owned()),
     }
@@ -119,7 +121,9 @@ fn save_credentials_sync(credentials: &CloudCredentials) -> Result<(), String> {
 fn delete_credentials_sync() -> Result<(), String> {
     match credential_entry()?.delete_credential() {
         Ok(()) | Err(KeyringError::NoEntry) => Ok(()),
-        Err(_) => Err("Line AI Cloud kimliği Windows Credential Manager'dan silinemedi.".to_owned()),
+        Err(_) => {
+            Err("Line AI Cloud kimliği Windows Credential Manager'dan silinemedi.".to_owned())
+        }
     }
 }
 
@@ -223,15 +227,8 @@ async fn send_authenticated(
     body: Option<&Value>,
 ) -> Result<Response, String> {
     let mut credentials = credentials_or_register(client, root).await?;
-    let mut response = send_authenticated_once(
-        client,
-        root,
-        method.clone(),
-        path,
-        body,
-        &credentials,
-    )
-    .await?;
+    let mut response =
+        send_authenticated_once(client, root, method.clone(), path, body, &credentials).await?;
     if response.status() == StatusCode::UNAUTHORIZED {
         delete_credentials().await?;
         credentials = register_installation(client, root).await?;
@@ -340,14 +337,8 @@ pub async fn upsert_cloud_conversation(conversation: Value) -> Result<(), String
     let root = cloud_root()?;
     let client = cloud_client()?;
     let body = json!({ "conversation": conversation });
-    let response = send_authenticated(
-        &client,
-        &root,
-        Method::PUT,
-        "conversations",
-        Some(&body),
-    )
-    .await?;
+    let response =
+        send_authenticated(&client, &root, Method::PUT, "conversations", Some(&body)).await?;
     if !response.status().is_success() {
         return Err(read_api_error(response, "Sohbet buluta kaydedilemedi").await);
     }
@@ -367,14 +358,7 @@ pub async fn delete_cloud_conversation(id: String) -> Result<(), String> {
     let root = cloud_root()?;
     let client = cloud_client()?;
     let path = format!("conversations?id={id}");
-    let response = send_authenticated(
-        &client,
-        &root,
-        Method::DELETE,
-        &path,
-        None,
-    )
-    .await?;
+    let response = send_authenticated(&client, &root, Method::DELETE, &path, None).await?;
     if !response.status().is_success() {
         return Err(read_api_error(response, "Sohbet buluttan silinemedi").await);
     }

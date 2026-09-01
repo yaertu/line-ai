@@ -1,0 +1,50 @@
+{
+  "artifact": {
+    "artifactType": "svg-logo",
+    "chatSourceHiddenVerified": true,
+    "conversation": {
+      "artifactTurns": 2,
+      "artifactFileNames": [
+        "line-ai-logo.svg",
+        "line-ai-logo.svg"
+      ],
+      "chatLeaksSvgSource": false
+    },
+    "diff": {
+      "added": 24,
+      "context": 64,
+      "removed": 24,
+      "newNumbered": 88,
+      "oldNumbered": 88,
+      "firstVersionEmptyStateVerified": true,
+      "secondVersionComparedLocally": true
+    },
+    "fileName": "line-ai-logo.svg",
+    "initialPreviewCharacters": 7106,
+    "previewVerified": true,
+    "revisedPreviewCharacters": 7657,
+    "secondTurnMemoryVerified": true
+  },
+  "capture": {
+    "cleanup": {
+      "cloudExamined": 18,
+      "cloudRemoved": 1,
+      "cloudRetained": 17,
+      "legacyExamined": 0,
+      "legacyRemoved": 0,
+      "legacyRetained": 0
+    },
+    "durationSeconds": 135.146,
+    "frameCount": 358,
+    "messageControlsVerified": true,
+    "sidebarAutoCollapseReopenVerified": true,
+    "source": "native-tauri-webview2-cdp"
+  },
+  "generatedAt": "2026-09-01T09:59:35.191Z",
+  "promptSha256": "355bfc054adce7703bfaca8c223ffc429848dba2841a87157fe8684527844384",
+  "revisionPromptSha256": "eae39d795a67225063eec719b44ad35bc4d4e8442cf329a9c8ba5a0b465d3660",
+  "video": {
+    "fileName": "line-ai-gercek-kodlama.mp4",
+    "sha256": "447bbcfeee83a2e314e7d4b8e4dae086f891a69b3ec5d868dbbc26268ba54972"
+  }
+}

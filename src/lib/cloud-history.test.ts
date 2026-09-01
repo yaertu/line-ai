@@ -51,7 +51,7 @@ describe("Line AI Cloud sohbet geçmişi", () => {
 		];
 
 		expect(normalizeConversationHistory(input)).toEqual([
-			{ ...valid, pinned: false },
+			{ ...valid, archived: false, pinned: false },
 		]);
 	});
 
@@ -83,18 +83,18 @@ describe("Line AI Cloud sohbet geçmişi", () => {
 		);
 		invoke.mockResolvedValueOnce({
 			conversations: [valid, { title: "kimliksiz" }],
-			endpoint: "https://lineai-eta.vercel.app/api/v1",
+			endpoint: "https://lineaicloud.vercel.app/api/v1",
 		});
 
 		await expect(loadCloudHistory()).resolves.toEqual({
-			conversations: [{ ...valid, pinned: false }],
-			endpoint: "https://lineai-eta.vercel.app/api/v1",
+			conversations: [{ ...valid, archived: false, pinned: false }],
+			endpoint: "https://lineaicloud.vercel.app/api/v1",
 		});
 
 		invoke.mockResolvedValueOnce(undefined);
 		await saveCloudConversation(valid);
 		expect(invoke).toHaveBeenLastCalledWith("upsert_cloud_conversation", {
-			conversation: { ...valid, pinned: false },
+			conversation: { ...valid, archived: false, pinned: false },
 		});
 	});
 });

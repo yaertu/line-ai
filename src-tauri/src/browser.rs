@@ -80,9 +80,7 @@ pub struct BrowserToolResult {
 }
 
 #[tauri::command]
-pub async fn get_browser_status(
-    state: State<'_, BrowserRuntime>,
-) -> Result<BrowserStatus, String> {
+pub async fn get_browser_status(state: State<'_, BrowserRuntime>) -> Result<BrowserStatus, String> {
     state.status().await
 }
 
@@ -150,14 +148,18 @@ impl BrowserRuntime {
         }
 
         self.stop();
-        let chrome = find_chrome_executable()
-            .ok_or_else(|| "Google Chrome bu bilgisayarda bulunamadı.".to_owned())?;
         let profile = app
             .path()
             .app_local_data_dir()
             .map_err(|_| "Line AI tarayıcı profili konumu oluşturulamadı.".to_owned())?
             .join("chrome-profile");
-        fs::create_dir_all(&profile)
+        self.start_with_profile(&profile).await
+    }
+
+    async fn start_with_profile(&self, profile: &Path) -> Result<BrowserStatus, String> {
+        let chrome = find_chrome_executable()
+            .ok_or_else(|| "Google Chrome bu bilgisayarda bulunamadı.".to_owned())?;
+        fs::create_dir_all(profile)
             .map_err(|_| "İzole Chrome profili oluşturulamadı.".to_owned())?;
         let port = reserve_loopback_port()?;
 
@@ -224,12 +226,7 @@ impl BrowserRuntime {
             "read_page" => read_page(&tab).await,
             "open_url" => {
                 let url = validate_web_url(request.url.as_deref())?;
-                cdp_command(
-                    &tab,
-                    "Page.navigate",
-                    json!({ "url": url }),
-                )
-                .await?;
+                cdp_command(&tab, "Page.navigate", json!({ "url": url })).await?;
                 Ok(BrowserToolResult {
                     action: request.action.clone(),
                     message: "Chrome sekmesi belirtilen adrese gitti.".to_owned(),
@@ -468,7 +465,14 @@ fn required_bounded<'a>(
 
 #[cfg(test)]
 mod tests {
-    use super::{required_bounded, validate_web_url};
+    use super::{required_bounded, validate_web_url, BrowserRuntime, BrowserToolRequest};
+    use std::{
+        fs,
+        io::{Read, Write},
+        net::TcpListener,
+        thread,
+        time::{Duration, SystemTime, UNIX_EPOCH},
+    };
 
     #[test]
     fn accepts_only_http_and_https_navigation() {
@@ -484,5 +488,68 @@ mod tests {
     fn rejects_empty_and_oversized_tool_arguments() {
         assert!(required_bounded(Some("  "), "Değer", 10).is_err());
         assert!(required_bounded(Some("12345678901"), "Değer", 10).is_err());
+    }
+
+    #[test]
+    #[ignore = "kurulu gerçek Chrome süreci gerektirir"]
+    fn real_chrome_cdp_bridge_opens_and_reads_a_page() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0_u8; 1024];
+            let _ = stream.read(&mut request);
+            let body = "<!doctype html><title>Line AI CDP testi</title><main>Gerçek Chrome köprüsü çalışıyor.</main>";
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(response.as_bytes()).unwrap();
+        });
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let profile = std::env::temp_dir().join(format!("line-ai-chrome-test-{nonce}"));
+        let runtime = BrowserRuntime::default();
+
+        tauri::async_runtime::block_on(async {
+            let status = runtime.start_with_profile(&profile).await.unwrap();
+            assert!(status.connected);
+            assert!(status.isolated_profile);
+            runtime
+                .execute(&BrowserToolRequest {
+                    action: "open_url".to_owned(),
+                    selector: None,
+                    text: None,
+                    url: Some(format!("http://127.0.0.1:{port}/")),
+                })
+                .await
+                .unwrap();
+
+            let mut page_text = String::new();
+            for _ in 0..30 {
+                if let Ok(result) = runtime
+                    .execute(&BrowserToolRequest {
+                        action: "read_page".to_owned(),
+                        selector: None,
+                        text: None,
+                        url: None,
+                    })
+                    .await
+                {
+                    page_text = result.page_text.unwrap_or_default();
+                    if page_text.contains("Gerçek Chrome köprüsü çalışıyor") {
+                        break;
+                    }
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            }
+            assert!(page_text.contains("Gerçek Chrome köprüsü çalışıyor"));
+        });
+
+        runtime.stop();
+        server.join().unwrap();
+        let _ = fs::remove_dir_all(profile);
     }
 }

@@ -12,6 +12,7 @@ const MAX_CONVERSATION_BYTES = 512 * 1024;
 const CONVERSATION_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
 type ConversationPayload = {
+  archived?: boolean;
   id: string;
   pinned?: boolean;
   title: string;

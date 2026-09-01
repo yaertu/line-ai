@@ -1,0 +1,18 @@
+{
+  "build": {
+    "beforeDevCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+		"additionalBrowserArgs": "--remote-debugging-port=9225 --remote-debugging-address=127.0.0.1",
+        "center": true,
+        "height": 900,
+        "label": "main",
+        "title": "Line AI",
+        "visible": false,
+        "width": 1440
+      }
+    ]
+  }
+}

@@ -9,7 +9,12 @@ export default defineConfig({
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
   clearScreen: false,
-  server: { strictPort: true },
+  server: {
+    strictPort: true,
+    watch: {
+      ignored: ["**/src-tauri/target/**", "**/dist/**"],
+    },
+  },
   test: {
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",

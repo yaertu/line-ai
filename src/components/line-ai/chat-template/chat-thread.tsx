@@ -34,9 +34,21 @@ import AIPromptInput, {
 import AIResponse from "@/components/line-ai/ai-response";
 import AISources, { type AISource } from "@/components/line-ai/ai-sources";
 import AISuggestions from "@/components/line-ai/ai-suggestions";
+import AIToolCall from "@/components/line-ai/ai-tool-call";
+import ChromeMark from "@/components/line-ai/chrome-mark";
 import CodeWorkspace from "@/components/line-ai/code-workspace";
 import SiriOrb from "@/components/line-ai/siri-orb";
-import { extractCodeArtifact } from "@/lib/code-artifacts";
+import {
+	executeBrowserTool,
+	parseBrowserIntent,
+	readBrowserStatus,
+	startBrowserSession,
+	stopBrowserSession,
+} from "@/lib/browser";
+import {
+	extractCodeArtifact,
+	extractStreamingCodeArtifact,
+} from "@/lib/code-artifacts";
 import {
 	type DesktopDroppedTextFile,
 	isTauriDesktop,
@@ -55,6 +67,7 @@ import {
 	type ProviderChoice,
 	type ReasoningLevel,
 	STARTER_SUGGESTIONS,
+	type ToolActivity,
 	type WebSource,
 } from "./chat-data";
 
@@ -64,7 +77,7 @@ const MAX_FILES = 30;
 type DraftFile = AIPromptAttachment & PromptAttachment;
 type NoticeTone = "error" | "info" | "success";
 type Notice = { id: string; text: string; tone: NoticeTone };
-type LivePhase = "thinking" | "searching" | "writing";
+type LivePhase = "browser" | "thinking" | "searching" | "writing";
 type LiveProgress = {
 	label: string;
 	phase: LivePhase;
@@ -73,7 +86,7 @@ type LiveProgress = {
 };
 
 const initialLiveProgress = (): LiveProgress => ({
-	label: "Düşünüyor",
+	label: "İstek hazırlanıyor",
 	phase: "thinking",
 	sources: [],
 	streamedText: "",
@@ -93,8 +106,10 @@ export type ChatThreadProps = {
 	className?: string;
 	executePrompt: PromptExecutor;
 	onAppendTurn: (turn: ChatTurn) => void;
+	onCodeWorkspaceOpen?: () => void;
 	onDeleteTurn: (turnId: string) => void;
 	onOpenSidebar?: () => void;
+	onVoteTurn: (turnId: string, vote: "up" | "down") => void;
 	onProviderChange: (provider: ProviderChoice) => void;
 	onReasoningChange: (reasoning: ReasoningLevel) => void;
 	onTruthModeChange: (enabled: boolean) => void;
@@ -103,14 +118,19 @@ export type ChatThreadProps = {
 	title: string;
 	truthMode: boolean;
 	turns: ChatTurn[];
+	browserTools: boolean;
+	customInstructions: string;
+	responseStyle: ExecutePromptRequest["responseStyle"];
 };
 
 export const ChatThread = ({
 	className,
 	executePrompt,
 	onAppendTurn,
+	onCodeWorkspaceOpen,
 	onDeleteTurn,
 	onOpenSidebar,
+	onVoteTurn,
 	onProviderChange,
 	onReasoningChange,
 	onTruthModeChange,
@@ -119,14 +139,21 @@ export const ChatThread = ({
 	title,
 	truthMode,
 	turns,
+	browserTools,
+	customInstructions,
+	responseStyle,
 }: ChatThreadProps) => {
 	const [draft, setDraft] = useState("");
 	const [draftFiles, setDraftFiles] = useState<DraftFile[]>([]);
 	const [isBusy, setIsBusy] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
-	const [liveProgress, setLiveProgress] = useState<LiveProgress>(initialLiveProgress);
+	const [liveProgress, setLiveProgress] =
+		useState<LiveProgress>(initialLiveProgress);
 	const [notice, setNotice] = useState<Notice | null>(null);
 	const [openArtifactId, setOpenArtifactId] = useState<string | null>(null);
+	const [liveArtifactDismissed, setLiveArtifactDismissed] = useState(false);
+	const liveArtifactDismissedRef = useRef(false);
+	const codeWorkspaceAutoOpenedRef = useRef(false);
 	const [turnMenu, setTurnMenu] = useState<{
 		turnId: string;
 		x: number;
@@ -139,6 +166,10 @@ export const ChatThread = ({
 	const shouldReduceMotion = useReducedMotion();
 
 	useEffect(() => {
+		// React StrictMode intentionally runs setup -> cleanup -> setup in
+		// development. Restore the mounted flag in setup so a real native stream
+		// is not discarded after the StrictMode lifecycle probe.
+		mountedRef.current = true;
 		return () => {
 			mountedRef.current = false;
 		};
@@ -149,13 +180,47 @@ export const ChatThread = ({
 	}, [draftFiles]);
 
 	const allTurns = turns;
-	const openArtifact = useMemo(() => {
+	const storedOpenArtifact = useMemo(() => {
 		const turn = allTurns.find(
 			(candidate) =>
-				candidate.from === "assistant" && candidate.artifact?.id === openArtifactId,
+				candidate.from === "assistant" &&
+				candidate.artifact?.id === openArtifactId,
 		);
 		return turn?.from === "assistant" ? turn.artifact : undefined;
 	}, [allTurns, openArtifactId]);
+	const streamingArtifact = useMemo(
+		() =>
+			isBusy && !liveArtifactDismissed
+				? extractStreamingCodeArtifact(liveProgress.streamedText)
+				: undefined,
+		[isBusy, liveArtifactDismissed, liveProgress.streamedText],
+	);
+	const openArtifact = streamingArtifact ?? storedOpenArtifact;
+	const previousArtifact = useMemo(() => {
+		const currentIndex = streamingArtifact
+			? allTurns.length
+			: allTurns.findIndex(
+					(turn) =>
+						turn.from === "assistant" &&
+						turn.artifact?.id === openArtifact?.id,
+				);
+		if (currentIndex < 0) return undefined;
+		for (let index = currentIndex - 1; index >= 0; index -= 1) {
+			const turn = allTurns[index];
+			if (turn?.from === "assistant" && turn.artifact) return turn.artifact;
+		}
+		return undefined;
+	}, [allTurns, openArtifact?.id, streamingArtifact]);
+
+	useEffect(() => {
+		if (!streamingArtifact) {
+			codeWorkspaceAutoOpenedRef.current = false;
+			return;
+		}
+		if (codeWorkspaceAutoOpenedRef.current) return;
+		codeWorkspaceAutoOpenedRef.current = true;
+		onCodeWorkspaceOpen?.();
+	}, [onCodeWorkspaceOpen, streamingArtifact]);
 	const usedTokens = useMemo(
 		() =>
 			Math.ceil(
@@ -378,6 +443,31 @@ export const ChatThread = ({
 		});
 	};
 
+	const focusComposer = () => {
+		window.requestAnimationFrame(() => {
+			document
+				.querySelector<HTMLTextAreaElement>(
+					'textarea[aria-label="Line AI\'ya mesaj gönder"]',
+				)
+				?.focus();
+		});
+	};
+
+	const editUserTurn = (turnId: string) => {
+		const turn = allTurns.find(
+			(candidate) => candidate.id === turnId && candidate.from === "user",
+		);
+		if (!turn || turn.from !== "user") return;
+		setDraft(turn.text);
+		focusComposer();
+		showNotice(
+			turn.attachments?.length
+				? "Mesaj düzenleyiciye alındı. Dosyaları yeniden ekleyip gönderebilirsiniz."
+				: "Mesaj düzenleyiciye alındı.",
+			"success",
+		);
+	};
+
 	const send = async (value: string) => {
 		const prompt = value.trim();
 		if (!prompt || isBusy) return;
@@ -386,6 +476,8 @@ export const ChatThread = ({
 			showNotice("Komutu göndermek yerine açılan listeden bir ayar seçin.");
 			return;
 		}
+		liveArtifactDismissedRef.current = false;
+		setLiveArtifactDismissed(false);
 		setDraft("");
 
 		const files = draftFiles;
@@ -408,21 +500,201 @@ export const ChatThread = ({
 		setLiveProgress(initialLiveProgress());
 		setIsBusy(true);
 		const startedAt = performance.now();
+		const browserIntent = parseBrowserIntent(prompt);
+		const activities: ToolActivity[] = [];
+		const browserAttachments: PromptAttachment[] = [];
+
+		const appendDirectBrowserResult = (
+			text: string,
+			tone: "normal" | "error" = "normal",
+		) => {
+			onAppendTurn({
+				activities,
+				durationMs: Math.max(1, Math.round(performance.now() - startedAt)),
+				from: "assistant",
+				id: crypto.randomUUID(),
+				text,
+				timestamp: formatClock(new Date()),
+				tone,
+				truthMode,
+			});
+		};
+
+		if (browserIntent.kind !== "none") {
+			setLiveProgress({
+				label: "Chrome bağlantısını hazırlıyorum",
+				phase: "browser",
+				sources: [],
+				streamedText: "",
+			});
+			if (!browserTools) {
+				activities.push({
+					detail: "Ayarlar > Tarayıcı bölümünden etkinleştirin.",
+					kind: "browser",
+					label: "Chrome entegrasyonu kapalı",
+					status: "failed",
+				});
+				appendDirectBrowserResult(
+					"Chrome entegrasyonu kapalı. Ayarlar > Tarayıcı bölümünden etkinleştirebilirsiniz.",
+					"error",
+				);
+				setIsBusy(false);
+				return;
+			}
+			try {
+				if (browserIntent.kind === "invalid") {
+					throw new Error(browserIntent.message);
+				}
+				if (browserIntent.kind === "status") {
+					const status = await readBrowserStatus();
+					activities.push({
+						detail: status.connected
+							? `${status.tabCount} sekme · izole profil`
+							: "Bağlantı kapalı",
+						kind: "browser",
+						label: "Chrome durumu doğrulandı",
+						status: "completed",
+					});
+					appendDirectBrowserResult(
+						status.connected
+							? `Chrome bağlantısı açık. ${status.tabCount} sekme, izole Line AI profili ve yalnız 127.0.0.1 sınırı kullanılıyor.`
+							: "Chrome bağlantısı şu anda kapalı.",
+					);
+					setIsBusy(false);
+					return;
+				}
+				if (browserIntent.kind === "start") {
+					const status = await startBrowserSession();
+					activities.push({
+						detail: `${status.tabCount} sekme · izole profil`,
+						kind: "browser",
+						label: "Chrome bağlantısı kuruldu",
+						status: "completed",
+					});
+					appendDirectBrowserResult(
+						"Chrome bağlantısı güvenli izole profilde başlatıldı.",
+					);
+					setIsBusy(false);
+					return;
+				}
+				if (browserIntent.kind === "stop") {
+					await stopBrowserSession();
+					activities.push({
+						kind: "browser",
+						label: "Chrome bağlantısı durduruldu",
+						status: "completed",
+					});
+					appendDirectBrowserResult(
+						"Chrome bağlantısı ve izole tarayıcı süreci durduruldu.",
+					);
+					setIsBusy(false);
+					return;
+				}
+
+				if (browserIntent.kind !== "tool") {
+					throw new Error("Desteklenmeyen Chrome komutu.");
+				}
+				const status = await readBrowserStatus().catch(() => null);
+				if (!status?.connected) await startBrowserSession();
+				const firstResult = await executeBrowserTool(browserIntent.request);
+				let contextResult = firstResult;
+				if (
+					!browserIntent.direct &&
+					browserIntent.request.action === "open_url"
+				) {
+					await new Promise((resolve) => window.setTimeout(resolve, 650));
+					contextResult = await executeBrowserTool({ action: "read_page" });
+				}
+				activities.push({
+					detail: contextResult.message,
+					kind: "browser",
+					label: "Chrome entegrasyonu kullanıldı · komutlar çalıştırıldı",
+					status: "completed",
+					title: contextResult.title,
+					url: contextResult.url,
+				});
+
+				if (browserIntent.direct) {
+					const detail = contextResult.pageText
+						? `${contextResult.pageText.length.toLocaleString("tr-TR")} karakter görünür metin okundu.`
+						: contextResult.message;
+					appendDirectBrowserResult(
+						`${contextResult.title ? `${contextResult.title}\n` : ""}${detail}${contextResult.url ? `\n${contextResult.url}` : ""}`,
+					);
+					setIsBusy(false);
+					return;
+				}
+
+				if (contextResult.pageText) {
+					if (draftFiles.length >= MAX_FILES) {
+						activities.push({
+							detail:
+								"Sayfa okundu ancak 30 dosya sınırı dolu olduğu için model bağlamına eklenemedi.",
+							kind: "browser",
+							label: "Chrome sayfa bağlamı eklenemedi",
+							status: "failed",
+						});
+						appendDirectBrowserResult(
+							"Chrome sayfası okundu; ancak bu istekte 30 dosya bulunduğu için sayfa içeriği sağlayıcıya güvenli biçimde eklenemedi.",
+							"error",
+						);
+						setIsBusy(false);
+						return;
+					}
+					const pagePreview = contextResult.pageText.slice(0, 15_000);
+					const content = [
+						`Chrome sayfa başlığı: ${contextResult.title ?? "Bilinmiyor"}`,
+						`Adres: ${contextResult.url ?? "Bilinmiyor"}`,
+						"",
+						pagePreview,
+					].join("\n");
+					browserAttachments.push({
+						content,
+						contentKind: "text",
+						mimeType: "text/plain",
+						name: `Chrome · ${contextResult.title ?? "aktif sayfa"}.txt`,
+						size: new TextEncoder().encode(content).byteLength,
+						truncated: pagePreview.length < contextResult.pageText.length,
+					});
+				}
+			} catch (error) {
+				const message =
+					error instanceof Error
+						? error.message
+						: "Chrome işlemi tamamlanamadı.";
+				activities.push({
+					detail: message,
+					kind: "browser",
+					label: "Chrome entegrasyonu tamamlanamadı",
+					status: "failed",
+				});
+				if (browserIntent.direct) {
+					appendDirectBrowserResult(message, "error");
+					setIsBusy(false);
+					return;
+				}
+			}
+		}
 
 		const request: ExecutePromptRequest = {
-			attachments: files.map(
-				({ content, contentKind, mimeType, name, size, truncated }) => ({
-					content,
-					contentKind,
-					mimeType,
-					name,
-					size: size ?? 0,
-					truncated,
-				}),
-			),
+			attachments: [
+				...files.map(
+					({ content, contentKind, mimeType, name, size, truncated }) => ({
+						content,
+						contentKind,
+						mimeType,
+						name,
+						size: size ?? 0,
+						truncated,
+					}),
+				),
+				...browserAttachments,
+			],
+			customInstructions,
 			prompt,
 			provider,
 			reasoning,
+			responseStyle,
 			transcript: allTurns.map((turn) => ({
 				role: turn.from,
 				content:
@@ -467,19 +739,32 @@ export const ChatThread = ({
 					return;
 				}
 				if (event.kind === "text_delta") {
-					setLiveProgress((current) => ({
-						...current,
-						label: "Yanıtı yazıyor",
-						phase: "writing",
-						streamedText: current.streamedText + event.text,
-					}));
+					setLiveProgress((current) => {
+						const streamedText = current.streamedText + event.text;
+						const artifact = extractStreamingCodeArtifact(streamedText);
+						const activeFile = artifact?.files.at(-1);
+						const activeFileBytes = activeFile
+							? new TextEncoder().encode(activeFile.content).byteLength
+							: 0;
+						return {
+							...current,
+							label: activeFile
+								? `${activeFile.name} yazılıyor · ${formatBytes(activeFileBytes)}`
+								: "Yanıtı yazıyor",
+							phase: "writing",
+							streamedText,
+						};
+					});
 				}
 			};
 			const result = await executePrompt(request, handleEvent);
 			if (!mountedRef.current) return;
 			const extracted = extractCodeArtifact(result.message);
-			if (extracted.artifact) setOpenArtifactId(extracted.artifact.id);
+			if (extracted.artifact && !liveArtifactDismissedRef.current) {
+				setOpenArtifactId(extracted.artifact.id);
+			}
 			onAppendTurn({
+				activities,
 				artifact: extracted.artifact,
 				durationMs: Math.max(1, Math.round(performance.now() - startedAt)),
 				from: "assistant",
@@ -498,6 +783,7 @@ export const ChatThread = ({
 				error instanceof Error ? error.message : "Yanıt alınamadı.";
 			showNotice(message, "error");
 			onAppendTurn({
+				activities,
 				durationMs: Math.max(1, Math.round(performance.now() - startedAt)),
 				from: "assistant",
 				id: crypto.randomUUID(),
@@ -512,376 +798,431 @@ export const ChatThread = ({
 		}
 	};
 
+	const retryAssistantTurn = (turnId: string) => {
+		if (isBusy) return;
+		const assistantIndex = allTurns.findIndex(
+			(turn) => turn.id === turnId && turn.from === "assistant",
+		);
+		if (assistantIndex < 1) return;
+		const source = [...allTurns.slice(0, assistantIndex)]
+			.reverse()
+			.find((turn) => turn.from === "user");
+		if (!source || source.from !== "user") return;
+		if (source.attachments?.length) {
+			setDraft(source.text);
+			focusComposer();
+			showNotice(
+				"Bu istekte dosya vardı. Aynı dosyaları yeniden ekleyip göndermeniz gerekiyor.",
+				"info",
+			);
+			return;
+		}
+		void send(source.text);
+	};
+
 	const contentKey = `${allTurns.length}-${isBusy ? "busy" : "idle"}`;
 
 	return (
 		<div className="relative flex min-h-0 min-w-0 flex-1">
-		<section className={cn("flex min-w-0 flex-1 flex-col", className)}>
-			<header className="flex h-14 shrink-0 items-center gap-3 border-border/60 border-b px-3 sm:px-5">
-				<button
-					aria-label="Sohbet listesini aç"
-					className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
-					onClick={onOpenSidebar}
-					type="button"
-				>
-					<PanelLeftOpen aria-hidden="true" size={17} />
-				</button>
-				<div className="min-w-0 flex-1">
-					<h1 className="truncate font-medium text-sm">{title}</h1>
-					<p className="text-muted-foreground text-[0.68rem]">
-						OpenAI ve Gemini · anahtarlar yalnız masaüstü işleminde
-					</p>
-				</div>
-				<span className="hidden items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-primary text-xs sm:flex">
-					<ShieldCheck aria-hidden="true" size={13} />
-					Truth Mode {truthMode ? "açık" : "kapalı"}
-				</span>
-			</header>
+			<section className={cn("flex min-w-0 flex-1 flex-col", className)}>
+				<header className="flex h-14 shrink-0 items-center gap-3 border-border/60 border-b px-3 sm:px-5">
+					<button
+						aria-label="Sohbet listesini aç"
+						className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
+						onClick={onOpenSidebar}
+						type="button"
+					>
+						<PanelLeftOpen aria-hidden="true" size={17} />
+					</button>
+					<div className="min-w-0 flex-1">
+						<h1 className="truncate font-medium text-sm">{title}</h1>
+						<p className="text-muted-foreground text-[0.68rem]">
+							API bağlantılarınız · anahtarlar yalnız masaüstü işleminde
+						</p>
+					</div>
+					<span className="hidden items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-primary text-xs sm:flex">
+						<ShieldCheck aria-hidden="true" size={13} />
+						Truth Mode {truthMode ? "açık" : "kapalı"}
+					</span>
+				</header>
 
-			<section
-				aria-label="Dosya bırakma ve sohbet alanı"
-				className={cn("relative min-h-0 flex-1", isDragging && "bg-primary/5")}
-				onDragEnter={(event) => {
-					event.preventDefault();
-					setIsDragging(true);
-				}}
-				onDragLeave={(event) => {
-					if (!event.currentTarget.contains(event.relatedTarget as Node))
+				<section
+					aria-label="Dosya bırakma ve sohbet alanı"
+					className={cn(
+						"relative min-h-0 flex-1",
+						isDragging && "bg-primary/5",
+					)}
+					onDragEnter={(event) => {
+						event.preventDefault();
+						setIsDragging(true);
+					}}
+					onDragLeave={(event) => {
+						if (!event.currentTarget.contains(event.relatedTarget as Node))
+							setIsDragging(false);
+					}}
+					onDragOver={(event) => event.preventDefault()}
+					onDrop={(event) => {
+						event.preventDefault();
 						setIsDragging(false);
-				}}
-				onDragOver={(event) => event.preventDefault()}
-				onDrop={(event) => {
-					event.preventDefault();
-					setIsDragging(false);
-					if (!isTauriDesktop()) void addFiles(event.dataTransfer.files);
-				}}
-			>
-				<AnimatePresence>
-					{isDragging ? (
-						<motion.div
-							animate={{ opacity: 1, scale: 1 }}
-							className="pointer-events-none absolute inset-3 z-20 flex items-center justify-center overflow-hidden rounded-3xl border border-primary/70 bg-primary/12 p-6 shadow-2xl shadow-primary/10 backdrop-blur-md sm:inset-5"
-							exit={
-								shouldReduceMotion
-									? { opacity: 0 }
-									: { opacity: 0, scale: 0.985 }
-							}
-							initial={
-								shouldReduceMotion
-									? { opacity: 0 }
-									: { opacity: 0, scale: 0.985 }
-							}
-							transition={
-								shouldReduceMotion
-									? { duration: 0 }
-									: { bounce: 0, duration: 0.18, type: "spring" }
-							}
-						>
-							<div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--color-primary),transparent_64%)] opacity-[0.07]" />
-							<div className="relative flex max-w-md flex-col items-center text-center">
-								<motion.span
-									animate={shouldReduceMotion ? undefined : { y: [0, -5, 0] }}
-									className="mb-4 flex size-16 items-center justify-center rounded-2xl border border-primary/25 bg-background/90 text-primary shadow-lg shadow-primary/10"
-									transition={{
-										duration: 1.4,
-										ease: "easeInOut",
-										repeat: Number.POSITIVE_INFINITY,
-									}}
+						if (!isTauriDesktop()) void addFiles(event.dataTransfer.files);
+					}}
+				>
+					<AnimatePresence>
+						{isDragging ? (
+							<motion.div
+								animate={{ opacity: 1, scale: 1 }}
+								className="pointer-events-none absolute inset-3 z-20 flex items-center justify-center overflow-hidden rounded-3xl border border-primary/70 bg-primary/12 p-6 shadow-2xl shadow-primary/10 backdrop-blur-md sm:inset-5"
+								exit={
+									shouldReduceMotion
+										? { opacity: 0 }
+										: { opacity: 0, scale: 0.985 }
+								}
+								initial={
+									shouldReduceMotion
+										? { opacity: 0 }
+										: { opacity: 0, scale: 0.985 }
+								}
+								transition={
+									shouldReduceMotion
+										? { duration: 0 }
+										: { bounce: 0, duration: 0.18, type: "spring" }
+								}
+							>
+								<div className="absolute inset-0 bg-[radial-gradient(circle_at_center,var(--color-primary),transparent_64%)] opacity-[0.07]" />
+								<div className="relative flex max-w-md flex-col items-center text-center">
+									<motion.span
+										animate={shouldReduceMotion ? undefined : { y: [0, -5, 0] }}
+										className="mb-4 flex size-16 items-center justify-center rounded-2xl border border-primary/25 bg-background/90 text-primary shadow-lg shadow-primary/10"
+										transition={{
+											duration: 1.4,
+											ease: "easeInOut",
+											repeat: Number.POSITIVE_INFINITY,
+										}}
+									>
+										<UploadCloud aria-hidden="true" size={30} />
+									</motion.span>
+									<strong className="text-lg">
+										Eklemek için buraya bırakın
+									</strong>
+									<span className="mt-1.5 text-muted-foreground text-sm">
+										Dosyalar ve klasörler güvenli biçimde taranır
+									</span>
+									<span className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
+										<span className="flex items-center gap-1.5 rounded-full border border-border/70 bg-background/75 px-3 py-1.5">
+											<Files size={13} /> En fazla 30 dosya
+										</span>
+										<span className="flex items-center gap-1.5 rounded-full border border-border/70 bg-background/75 px-3 py-1.5">
+											<FolderTree size={13} /> Klasör desteği
+										</span>
+										<span className="rounded-full border border-border/70 bg-background/75 px-3 py-1.5">
+											Dosya başına 512 MiB
+										</span>
+									</span>
+								</div>
+							</motion.div>
+						) : null}
+					</AnimatePresence>
+
+					<AIConversation className="h-full" contentKey={contentKey}>
+						<div className="mx-auto flex min-h-full w-full max-w-[52rem] flex-col px-4 py-7 sm:px-7 sm:py-9">
+							{allTurns.length === 0 && !isBusy ? (
+								<div className="m-auto flex w-full max-w-2xl flex-col items-center gap-6 py-12 text-center">
+									<SiriOrb size="96px" state="idle" />
+									<div>
+										<h2 className="font-semibold text-2xl tracking-tight sm:text-3xl">
+											Bugün ne üzerinde çalışıyoruz?
+										</h2>
+										<p className="mt-2 text-muted-foreground text-sm">
+											API’nizi ekleyin, isteğinizi yazın; Line AI doğrulanan
+											bağlantının gerçek yanıtını burada gösterir.
+										</p>
+									</div>
+									<AISuggestions
+										className="items-center"
+										onSelect={(suggestion) => setDraft(suggestion.label)}
+										suggestions={STARTER_SUGGESTIONS}
+									/>
+								</div>
+							) : (
+								<div
+									aria-label="Sohbet mesajları"
+									className="flex flex-col gap-7"
+									role="log"
 								>
-									<UploadCloud aria-hidden="true" size={30} />
-								</motion.span>
-								<strong className="text-lg">Eklemek için buraya bırakın</strong>
-								<span className="mt-1.5 text-muted-foreground text-sm">
-									Dosyalar ve klasörler güvenli biçimde taranır
-								</span>
-								<span className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs">
-									<span className="flex items-center gap-1.5 rounded-full border border-border/70 bg-background/75 px-3 py-1.5">
-										<Files size={13} /> En fazla 30 dosya
-									</span>
-									<span className="flex items-center gap-1.5 rounded-full border border-border/70 bg-background/75 px-3 py-1.5">
-										<FolderTree size={13} /> Klasör desteği
-									</span>
-									<span className="rounded-full border border-border/70 bg-background/75 px-3 py-1.5">
-										Dosya başına 512 MiB
-									</span>
-								</span>
-							</div>
-						</motion.div>
+									{allTurns.map((turn) => (
+										<ChatTurnView
+											key={turn.id}
+											onEdit={editUserTurn}
+											onOpenArtifact={setOpenArtifactId}
+											onOpenContextMenu={openTurnMenu}
+											onRetry={retryAssistantTurn}
+											onVote={onVoteTurn}
+											turn={turn}
+										/>
+									))}
+									{isBusy ? (
+										<LiveAssistantResponse progress={liveProgress} />
+									) : null}
+								</div>
+							)}
+						</div>
+					</AIConversation>
+				</section>
+
+				<footer className="shrink-0 bg-gradient-to-t from-background via-background to-transparent px-3 pb-3 sm:px-6 sm:pb-5">
+					<div className="mx-auto w-full max-w-3xl">
+						<input
+							className="hidden"
+							multiple
+							onChange={(event) => {
+								if (event.target.files) void addFiles(event.target.files);
+								event.target.value = "";
+							}}
+							ref={fileInputRef}
+							type="file"
+						/>
+						<div className="relative">
+							<ComposerCommandMenu
+								filesAttached={draftFiles.length > 0}
+								onClearFiles={() => {
+									setDraftFiles([]);
+									draftFilesRef.current = [];
+									setDraft("");
+									showNotice("Ekler temizlendi.", "success");
+								}}
+								onProvider={(next) => {
+									onProviderChange(next);
+									setDraft("");
+									showNotice(
+										`Sağlayıcı ${PROVIDERS.find((item) => item.id === next)?.label ?? next} olarak ayarlandı.`,
+										"success",
+									);
+								}}
+								onReasoning={(next) => {
+									onReasoningChange(next);
+									setDraft("");
+									showNotice(
+										`Akıl yürütme ${REASONING_OPTIONS.find((item) => item.id === next)?.label ?? next} olarak ayarlandı.`,
+										"success",
+									);
+								}}
+								onTruth={(next) => {
+									setTruth(next);
+									setDraft("");
+									showNotice(
+										`Truth Mode ${next ? "açıldı" : "kapatıldı"}.`,
+										"success",
+									);
+								}}
+								provider={provider}
+								query={draft.startsWith("+") ? draft.slice(1) : null}
+								reasoning={reasoning}
+								truthMode={truthMode}
+							/>
+							<AIPromptInput
+								ariaLabel="Line AI'ya mesaj gönder"
+								attachments={draftFiles}
+								attachLabel="Dosya veya arşiv ekle"
+								disabled={isBusy}
+								maxLength={32_000}
+								onAttach={() => fileInputRef.current?.click()}
+								onRemoveAttachment={(id) =>
+									setDraftFiles((current) => {
+										const next = current.filter((file) => file.id !== id);
+										draftFilesRef.current = next;
+										return next;
+									})
+								}
+								onSubmit={(value) => void send(value)}
+								onValueChange={setDraft}
+								placeholder="Line AI'ya bir görev veya soru yazın…"
+								state={isBusy ? "thinking" : "idle"}
+								stopLabel="Yanıtı durdur"
+								submitLabel="Mesajı gönder"
+								value={draft}
+							>
+								<ProviderPicker onSelect={onProviderChange} value={provider} />
+								<ReasoningPicker
+									onSelect={onReasoningChange}
+									value={reasoning}
+								/>
+								<button
+									aria-label={`Truth Mode ${truthMode ? "açık" : "kapalı"}`}
+									aria-pressed={truthMode}
+									className={cn(
+										"flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs transition-colors",
+										truthMode
+											? "bg-primary/10 text-primary"
+											: "text-muted-foreground hover:bg-muted",
+									)}
+									onClick={() => setTruth(!truthMode)}
+									title="/truthmode"
+									type="button"
+								>
+									<ShieldCheck aria-hidden="true" size={13} />
+									<span className="hidden lg:inline">Truth</span>
+								</button>
+								<AIContextMeter
+									className="hidden sm:inline-block"
+									limit={CONTEXT_LIMIT}
+									used={usedTokens}
+								/>
+							</AIPromptInput>
+						</div>
+						<p className="mt-1.5 text-center text-muted-foreground text-[0.66rem]">
+							Enter gönderir · Shift+Enter yeni satır · /truthmode durumu
+							yönetir
+						</p>
+					</div>
+				</footer>
+
+				<AnimatePresence>
+					{notice ? (
+						<StatusNotice
+							key={notice.id}
+							notice={notice}
+							onClose={() => setNotice(null)}
+						/>
 					) : null}
 				</AnimatePresence>
 
-				<AIConversation className="h-full" contentKey={contentKey}>
-					<div className="mx-auto flex min-h-full w-full max-w-[52rem] flex-col px-4 py-7 sm:px-7 sm:py-9">
-						{allTurns.length === 0 && !isBusy ? (
-							<div className="m-auto flex w-full max-w-2xl flex-col items-center gap-6 py-12 text-center">
-								<SiriOrb size="96px" state="idle" />
-								<div>
-									<h2 className="font-semibold text-2xl tracking-tight sm:text-3xl">
-										Bugün ne üzerinde çalışıyoruz?
-									</h2>
-									<p className="mt-2 text-muted-foreground text-sm">
-										Sağlayıcıyı seçin, isteğinizi yazın; Line AI gerçek API
-										yanıtını burada gösterir.
-									</p>
-								</div>
-								<AISuggestions
-									className="items-center"
-									onSelect={(suggestion) => setDraft(suggestion.label)}
-									suggestions={STARTER_SUGGESTIONS}
-								/>
-							</div>
-						) : (
-							<div
-								aria-label="Sohbet mesajları"
-								className="flex flex-col gap-7"
-								role="log"
-							>
-								{allTurns.map((turn) => (
-									<ChatTurnView
-										key={turn.id}
-										onOpenArtifact={setOpenArtifactId}
-										onOpenContextMenu={openTurnMenu}
-										turn={turn}
-									/>
-								))}
-								{isBusy ? <LiveAssistantResponse progress={liveProgress} /> : null}
-							</div>
-						)}
-					</div>
-				</AIConversation>
-			</section>
-
-			<footer className="shrink-0 bg-gradient-to-t from-background via-background to-transparent px-3 pb-3 sm:px-6 sm:pb-5">
-				<div className="mx-auto w-full max-w-3xl">
-					<input
-						className="hidden"
-						multiple
-						onChange={(event) => {
-							if (event.target.files) void addFiles(event.target.files);
-							event.target.value = "";
-						}}
-						ref={fileInputRef}
-						type="file"
-					/>
-					<div className="relative">
-						<ComposerCommandMenu
-							filesAttached={draftFiles.length > 0}
-							onClearFiles={() => {
-								setDraftFiles([]);
-								draftFilesRef.current = [];
-								setDraft("");
-								showNotice("Ekler temizlendi.", "success");
-							}}
-							onProvider={(next) => {
-								onProviderChange(next);
-								setDraft("");
-								showNotice(
-									`Sağlayıcı ${PROVIDERS.find((item) => item.id === next)?.label ?? next} olarak ayarlandı.`,
-									"success",
+				{turnMenu ? (
+					<div
+						aria-label="Mesaj işlemleri"
+						className="fixed z-50 w-52 rounded-xl border border-border/70 bg-popover p-1.5 text-popover-foreground shadow-black/15 shadow-xl"
+						onPointerDown={(event) => event.stopPropagation()}
+						role="menu"
+						style={{ left: turnMenu.x, top: turnMenu.y }}
+					>
+						<TurnMenuAction
+							icon={<Copy aria-hidden="true" size={15} />}
+							label="Metni kopyala"
+							onClick={() => {
+								const turn = allTurns.find(
+									(item) => item.id === turnMenu.turnId,
 								);
+								if (turn) {
+									void navigator.clipboard
+										.writeText(turn.text)
+										.catch(() =>
+											showNotice("Mesaj panoya kopyalanamadı.", "error"),
+										);
+								}
+								setTurnMenu(null);
 							}}
-							onReasoning={(next) => {
-								onReasoningChange(next);
-								setDraft("");
-								showNotice(
-									`Akıl yürütme ${REASONING_OPTIONS.find((item) => item.id === next)?.label ?? next} olarak ayarlandı.`,
-									"success",
-								);
-							}}
-							onTruth={(next) => {
-								setTruth(next);
-								setDraft("");
-								showNotice(
-									`Truth Mode ${next ? "açıldı" : "kapatıldı"}.`,
-									"success",
-								);
-							}}
-							provider={provider}
-							query={draft.startsWith("+") ? draft.slice(1) : null}
-							reasoning={reasoning}
-							truthMode={truthMode}
 						/>
-						<AIPromptInput
-							ariaLabel="Line AI'ya mesaj gönder"
-							attachments={draftFiles}
-							attachLabel="Metin veya kod dosyası ekle"
-							disabled={isBusy}
-							maxLength={32_000}
-							onAttach={() => fileInputRef.current?.click()}
-							onRemoveAttachment={(id) =>
-								setDraftFiles((current) => {
-									const next = current.filter((file) => file.id !== id);
-									draftFilesRef.current = next;
-									return next;
-								})
-							}
-							onSubmit={(value) => void send(value)}
-							onValueChange={setDraft}
-							placeholder="Line AI'ya bir görev veya soru yazın…"
-							state={isBusy ? "thinking" : "idle"}
-							stopLabel="Yanıtı durdur"
-							submitLabel="Mesajı gönder"
-							value={draft}
-						>
-							<ProviderPicker onSelect={onProviderChange} value={provider} />
-							<ReasoningPicker onSelect={onReasoningChange} value={reasoning} />
-							<button
-								aria-label={`Truth Mode ${truthMode ? "açık" : "kapalı"}`}
-								aria-pressed={truthMode}
-								className={cn(
-									"flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs transition-colors",
-									truthMode
-										? "bg-primary/10 text-primary"
-										: "text-muted-foreground hover:bg-muted",
-								)}
-								onClick={() => setTruth(!truthMode)}
-								title="/truthmode"
-								type="button"
-							>
-								<ShieldCheck aria-hidden="true" size={13} />
-								<span className="hidden lg:inline">Truth</span>
-							</button>
-							<AIContextMeter
-								className="hidden sm:inline-block"
-								limit={CONTEXT_LIMIT}
-								used={usedTokens}
-							/>
-						</AIPromptInput>
+						<TurnMenuAction
+							icon={<Quote aria-hidden="true" size={15} />}
+							label="Mesajı alıntıla"
+							onClick={() => {
+								const turn = allTurns.find(
+									(item) => item.id === turnMenu.turnId,
+								);
+								if (turn) {
+									const quoted = turn.text
+										.split("\n")
+										.map((line) => `> ${line}`)
+										.join("\n");
+									setDraft((current) => `${quoted}\n\n${current}`);
+								}
+								setTurnMenu(null);
+							}}
+						/>
+						<TurnMenuAction
+							destructive
+							icon={<Trash2 aria-hidden="true" size={15} />}
+							label="Mesajı sil"
+							onClick={() => {
+								setDeleteTurnId(turnMenu.turnId);
+								setTurnMenu(null);
+							}}
+						/>
 					</div>
-					<p className="mt-1.5 text-center text-muted-foreground text-[0.66rem]">
-						Enter gönderir · Shift+Enter yeni satır · /truthmode durumu yönetir
-					</p>
-				</div>
-			</footer>
+				) : null}
 
+				{deleteTurnId ? (
+					<div
+						className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/25 p-4 backdrop-blur-[2px]"
+						role="presentation"
+					>
+						<div
+							aria-label="Mesajı sil"
+							aria-modal="true"
+							className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-black/20 shadow-2xl"
+							role="dialog"
+						>
+							<div className="mb-3 flex items-center justify-between gap-3">
+								<h2 className="font-semibold text-base">Mesaj silinsin mi?</h2>
+								<button
+									aria-label="Pencereyi kapat"
+									className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
+									onClick={() => setDeleteTurnId(null)}
+									type="button"
+								>
+									<X aria-hidden="true" size={16} />
+								</button>
+							</div>
+							<p className="text-muted-foreground text-sm">
+								Bu mesaj, Line AI Cloud sohbet geçmişinden kalıcı olarak
+								silinecek.
+							</p>
+							<div className="mt-4 flex justify-end gap-2">
+								<button
+									className="rounded-xl border border-border px-3 py-2 font-medium text-sm hover:bg-muted"
+									onClick={() => setDeleteTurnId(null)}
+									type="button"
+								>
+									Vazgeç
+								</button>
+								<button
+									className="rounded-xl border border-destructive/30 bg-destructive px-3 py-2 font-medium text-destructive-foreground text-sm hover:bg-destructive/90"
+									onClick={() => {
+										onDeleteTurn(deleteTurnId);
+										setDeleteTurnId(null);
+									}}
+									type="button"
+								>
+									Mesajı sil
+								</button>
+							</div>
+						</div>
+					</div>
+				) : null}
+			</section>
 			<AnimatePresence>
-				{notice ? (
-					<StatusNotice
-						key={notice.id}
-						notice={notice}
-						onClose={() => setNotice(null)}
+				{openArtifact ? (
+					<CodeWorkspace
+						artifact={openArtifact}
+						isStreaming={Boolean(streamingArtifact)}
+						onClose={() => {
+							if (streamingArtifact) {
+								liveArtifactDismissedRef.current = true;
+								setLiveArtifactDismissed(true);
+								return;
+							}
+							setOpenArtifactId(null);
+						}}
+						previousArtifact={previousArtifact}
 					/>
 				) : null}
 			</AnimatePresence>
-
-			{turnMenu ? (
-				<div
-					aria-label="Mesaj işlemleri"
-					className="fixed z-50 w-52 rounded-xl border border-border/70 bg-popover p-1.5 text-popover-foreground shadow-black/15 shadow-xl"
-					onPointerDown={(event) => event.stopPropagation()}
-					role="menu"
-					style={{ left: turnMenu.x, top: turnMenu.y }}
-				>
-					<TurnMenuAction
-						icon={<Copy aria-hidden="true" size={15} />}
-						label="Metni kopyala"
-						onClick={() => {
-							const turn = allTurns.find((item) => item.id === turnMenu.turnId);
-							if (turn) {
-								void navigator.clipboard
-									.writeText(turn.text)
-									.catch(() =>
-										showNotice("Mesaj panoya kopyalanamadı.", "error"),
-									);
-							}
-							setTurnMenu(null);
-						}}
-					/>
-					<TurnMenuAction
-						icon={<Quote aria-hidden="true" size={15} />}
-						label="Mesajı alıntıla"
-						onClick={() => {
-							const turn = allTurns.find((item) => item.id === turnMenu.turnId);
-							if (turn) {
-								const quoted = turn.text
-									.split("\n")
-									.map((line) => `> ${line}`)
-									.join("\n");
-								setDraft((current) => `${quoted}\n\n${current}`);
-							}
-							setTurnMenu(null);
-						}}
-					/>
-					<TurnMenuAction
-						destructive
-						icon={<Trash2 aria-hidden="true" size={15} />}
-						label="Mesajı sil"
-						onClick={() => {
-							setDeleteTurnId(turnMenu.turnId);
-							setTurnMenu(null);
-						}}
-					/>
-				</div>
-			) : null}
-
-			{deleteTurnId ? (
-				<div
-					className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/25 p-4 backdrop-blur-[2px]"
-					role="presentation"
-				>
-					<div
-						aria-label="Mesajı sil"
-						aria-modal="true"
-						className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-black/20 shadow-2xl"
-						role="dialog"
-					>
-						<div className="mb-3 flex items-center justify-between gap-3">
-							<h2 className="font-semibold text-base">Mesaj silinsin mi?</h2>
-							<button
-								aria-label="Pencereyi kapat"
-								className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
-								onClick={() => setDeleteTurnId(null)}
-								type="button"
-							>
-								<X aria-hidden="true" size={16} />
-							</button>
-						</div>
-						<p className="text-muted-foreground text-sm">
-							Bu mesaj, Line AI Cloud sohbet geçmişinden kalıcı olarak silinecek.
-						</p>
-						<div className="mt-4 flex justify-end gap-2">
-							<button
-								className="rounded-xl border border-border px-3 py-2 font-medium text-sm hover:bg-muted"
-								onClick={() => setDeleteTurnId(null)}
-								type="button"
-							>
-								Vazgeç
-							</button>
-							<button
-								className="rounded-xl border border-destructive/30 bg-destructive px-3 py-2 font-medium text-destructive-foreground text-sm hover:bg-destructive/90"
-								onClick={() => {
-									onDeleteTurn(deleteTurnId);
-									setDeleteTurnId(null);
-								}}
-								type="button"
-							>
-								Mesajı sil
-							</button>
-						</div>
-					</div>
-				</div>
-			) : null}
-		</section>
-		<AnimatePresence>
-			{openArtifact ? (
-				<CodeWorkspace
-					artifact={openArtifact}
-					key={openArtifact.id}
-					onClose={() => setOpenArtifactId(null)}
-				/>
-			) : null}
-		</AnimatePresence>
 		</div>
 	);
 };
 
 const ChatTurnView = ({
+	onEdit,
 	onOpenArtifact,
 	onOpenContextMenu,
+	onRetry,
+	onVote,
 	turn,
 }: {
+	onEdit: (turnId: string) => void;
 	onOpenArtifact: (artifactId: string) => void;
 	onOpenContextMenu: (turnId: string, x: number, y: number) => void;
+	onRetry: (turnId: string) => void;
+	onVote: (turnId: string, vote: "up" | "down") => void;
 	turn: ChatTurn;
 }) => {
 	const contextProps = {
@@ -909,7 +1250,12 @@ const ChatTurnView = ({
 	if (turn.from === "user") {
 		return (
 			<article aria-label="Kullanıcı mesajı işlemleri" {...contextProps}>
-				<AIMessage copyText={turn.text} from="user" timestamp={turn.timestamp}>
+				<AIMessage
+					copyText={turn.text}
+					from="user"
+					onEdit={() => onEdit(turn.id)}
+					timestamp={turn.timestamp}
+				>
 					<span className="flex flex-col gap-2">
 						<span>{turn.text}</span>
 						{turn.attachments?.length ? (
@@ -933,12 +1279,12 @@ const ChatTurnView = ({
 	}
 
 	const rendered = splitAssistantResponse(turn.text);
-	const sources = (turn.sources?.length
-		? turn.sources.map< AISource >((source) => ({
-			...source,
-			favicon: <SourceFavicon url={source.url} />,
-		}))
-		: extractSources(turn.text));
+	const sources = turn.sources?.length
+		? turn.sources.map<AISource>((source) => ({
+				...source,
+				favicon: <SourceFavicon url={source.url} />,
+			}))
+		: extractSources(turn.text);
 	const providerLabel =
 		turn.provider === "openai"
 			? "OpenAI"
@@ -952,6 +1298,9 @@ const ChatTurnView = ({
 				bubble={false}
 				copyText={turn.text}
 				from="assistant"
+				onRetry={() => onRetry(turn.id)}
+				onVote={(vote) => onVote(turn.id, vote)}
+				selectedVote={turn.feedback ?? null}
 				timestamp={turn.timestamp}
 			>
 				<div
@@ -960,6 +1309,43 @@ const ChatTurnView = ({
 						turn.tone === "error" && "text-destructive",
 					)}
 				>
+					{turn.activities?.map((activity, index) => (
+						<AIToolCall
+							className={
+								activity.status === "failed"
+									? "border-destructive/30"
+									: "border-border/70"
+							}
+							defaultOpen={activity.status === "failed"}
+							key={`${activity.kind}-${activity.label}-${index}`}
+							name={activity.label}
+							result={
+								<div className="flex min-w-0 items-center gap-2">
+									<ChromeMark
+										aria-hidden="true"
+										className="shrink-0"
+										size={14}
+									/>
+									<span className="min-w-0 flex-1 leading-relaxed">
+										{activity.detail ?? "Chrome işlemi tamamlandı."}
+									</span>
+									{activity.url ? (
+										<a
+											className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-background"
+											href={activity.url}
+											rel="noreferrer"
+											target="_blank"
+											title={activity.title ?? activity.url}
+										>
+											<SourceFavicon url={activity.url} />
+										</a>
+									) : null}
+								</div>
+							}
+							status={activity.status === "completed" ? "success" : "error"}
+							summary={activity.title}
+						/>
+					))}
 					{rendered.text ? <AIResponse text={rendered.text} /> : null}
 					{rendered.diffs.map((diff) => (
 						<AIDiff key={diff.id} lines={diff.lines} title={diff.title} />
@@ -977,14 +1363,18 @@ const ChatTurnView = ({
 							type="button"
 						>
 							<Code2 aria-hidden="true" size={14} />
-							KOD · ÖNİZLE
-							<span className="text-muted-foreground">{turn.artifact.files.length} dosya</span>
+							KOD · ÖNİZLE · DIFF
+							<span className="text-muted-foreground">
+								{turn.artifact.files.length} dosya
+							</span>
 						</button>
 					) : null}
 					{turn.provider || turn.durationMs ? (
 						<p className="text-[0.7rem] text-muted-foreground tracking-[-0.005em]">
 							{turn.model ?? providerLabel}
-							{turn.durationMs ? ` · ${(turn.durationMs / 1000).toFixed(1)} sn` : ""}
+							{turn.durationMs
+								? ` · ${(turn.durationMs / 1000).toFixed(1)} sn`
+								: ""}
 						</p>
 					) : null}
 				</div>
@@ -1015,8 +1405,10 @@ const splitAssistantResponse = (
 					(line) => line.startsWith("--- ") && !line.endsWith("/dev/null"),
 				);
 			const title =
-				titleLine?.slice(4).trim().replace(/^[ab]\//, "") ||
-				`Değişiklik ${diffs.length + 1}`;
+				titleLine
+					?.slice(4)
+					.trim()
+					.replace(/^[ab]\//, "") || `Değişiklik ${diffs.length + 1}`;
 			const lines = rawLines
 				.filter(
 					(line) =>
@@ -1101,9 +1493,7 @@ const LiveAssistantResponse = ({ progress }: { progress: LiveProgress }) => {
 	return (
 		<div className="flex min-w-0 flex-col gap-3">
 			<BusyResponse progress={progress} />
-			{streamedText ? (
-				<AIResponse isStreaming text={streamedText} />
-			) : null}
+			{streamedText ? <AIResponse isStreaming text={streamedText} /> : null}
 		</div>
 	);
 };
@@ -1111,11 +1501,13 @@ const LiveAssistantResponse = ({ progress }: { progress: LiveProgress }) => {
 const BusyResponse = ({ progress }: { progress: LiveProgress }) => {
 	const shouldReduceMotion = useReducedMotion();
 	const StatusIcon =
-		progress.phase === "searching"
-			? Globe2
-			: progress.phase === "writing"
-				? Sparkles
-				: BrainCircuit;
+		progress.phase === "browser"
+			? ChromeMark
+			: progress.phase === "searching"
+				? Globe2
+				: progress.phase === "writing"
+					? Sparkles
+					: BrainCircuit;
 	return (
 		<div
 			aria-label="Canlı yapay zekâ akışı"
@@ -1130,7 +1522,11 @@ const BusyResponse = ({ progress }: { progress: LiveProgress }) => {
 						animate={{ opacity: [0.15, 0.8, 0.15], scale: [0.7, 1.1, 0.7] }}
 						aria-hidden="true"
 						className="absolute -right-0.5 -bottom-0.5 size-1.5 rounded-full bg-primary"
-						transition={{ duration: 1.25, ease: "easeInOut", repeat: Number.POSITIVE_INFINITY }}
+						transition={{
+							duration: 1.25,
+							ease: "easeInOut",
+							repeat: Number.POSITIVE_INFINITY,
+						}}
 					/>
 				)}
 			</span>
@@ -1147,7 +1543,9 @@ const BusyResponse = ({ progress }: { progress: LiveProgress }) => {
 					))}
 				</span>
 			) : null}
-			<span className="shrink-0 font-medium text-muted-foreground/95">{progress.label}</span>
+			<span className="shrink-0 font-medium text-muted-foreground/95">
+				{progress.label}
+			</span>
 			{progress.sources.length ? (
 				<span className="truncate text-[0.72rem] opacity-75">
 					{progress.sources

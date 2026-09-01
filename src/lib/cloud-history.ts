@@ -57,6 +57,7 @@ const normalizeConversation = (value: unknown): ChatConversation | null => {
 	}
 
 	return {
+		archived: conversation.archived === true,
 		id: conversation.id as string,
 		pinned: conversation.pinned === true,
 		title: conversation.title.trim().slice(0, MAX_TITLE_LENGTH),
@@ -104,8 +105,7 @@ export const mergeConversationHistories = (
 	return sortConversations([...merged.values()]).slice(0, MAX_CONVERSATIONS);
 };
 
-export const readCloudStatus = () =>
-	invoke<CloudStatus>("get_cloud_status");
+export const readCloudStatus = () => invoke<CloudStatus>("get_cloud_status");
 
 export const loadCloudHistory = async (): Promise<CloudHistory> => {
 	const payload = await invoke<{ conversations: unknown; endpoint: unknown }>(

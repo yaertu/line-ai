@@ -65,6 +65,7 @@
     --line-ai-ui-font-size: 14px;
     --line-ai-chat-font-size: 14px;
     --line-ai-composer-font-size: 15px;
+    --line-ai-code-font-size: 13px;
     --accent: oklch(0.75 0.17 47.65);
     --accent-foreground: oklch(1 0 0);
     --background: oklch(0.99 0 0);
@@ -167,4 +168,15 @@ input,
 textarea,
 select {
     font: inherit;
+}
+
+html[data-motion="reduce"] *,
+html[data-motion="reduce"] *::before,
+html[data-motion="reduce"] *::after {
+    scroll-behavior: auto !important;
+    animation-delay: 0ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-delay: 0ms !important;
+    transition-duration: 1ms !important;
 }

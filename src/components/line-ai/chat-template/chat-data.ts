@@ -5,12 +5,30 @@ import type { FileContentKind } from "@/lib/file-content";
 export type ProviderChoice = "auto" | "openai" | "gemini";
 export type ReasoningLevel = "low" | "medium" | "high";
 export type ThemeChoice = "system" | "light" | "dark";
+export type MotionChoice = "system" | "reduce";
+export type ResponseStyle = "balanced" | "concise" | "detailed";
 
 export type AppPreferences = {
 	provider: ProviderChoice;
 	reasoning: ReasoningLevel;
 	theme: ThemeChoice;
 	truthMode: boolean;
+	browserTools: boolean;
+	chatFontSize: number;
+	codeFontSize: number;
+	customInstructions: string;
+	motion: MotionChoice;
+	responseStyle: ResponseStyle;
+	uiFontSize: number;
+};
+
+export type ToolActivity = {
+	detail?: string;
+	kind: "browser";
+	label: string;
+	status: "completed" | "failed";
+	title?: string;
+	url?: string;
 };
 
 export type ProviderStatus = {
@@ -57,6 +75,7 @@ export type ChatTurn =
 	  }
 	| {
 			artifact?: CodeArtifact;
+			feedback?: "up" | "down";
 			from: "assistant";
 			id: string;
 			model?: string;
@@ -68,9 +87,11 @@ export type ChatTurn =
 			text: string;
 			timestamp: string;
 			tone?: "normal" | "error";
+			activities?: ToolActivity[];
 	  };
 
 export type ChatConversation = {
+	archived?: boolean;
 	id: string;
 	/** Pinned conversations stay above chronological history groups. */
 	pinned?: boolean;
@@ -101,6 +122,8 @@ export type ExecutePromptRequest = {
 	reasoning: ReasoningLevel;
 	transcript: PromptTranscriptTurn[];
 	truthMode: boolean;
+	customInstructions?: string;
+	responseStyle?: ResponseStyle;
 };
 
 export type ExecutePromptResult = {
@@ -122,6 +145,13 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
 	reasoning: "medium",
 	theme: "system",
 	truthMode: true,
+	browserTools: true,
+	chatFontSize: 15,
+	codeFontSize: 13,
+	customInstructions: "",
+	motion: "system",
+	responseStyle: "balanced",
+	uiFontSize: 14,
 };
 
 export const STARTER_SUGGESTIONS: AISuggestion[] = [
