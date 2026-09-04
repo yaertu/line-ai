@@ -11,6 +11,7 @@ import type {
 	ExecutePromptResult,
 	PromptExecutor,
 } from "@/components/line-ai/chat-template/chat-data";
+import themeStyles from "@/index.css?raw";
 import LineAiApp from "@/LineAiApp";
 
 const cloud = vi.hoisted(() => ({
@@ -613,8 +614,35 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		const deleteDialog = screen.getByRole("dialog", {
 			name: "Sohbet silinsin mi?",
 		});
+		expect(themeStyles).toContain(
+			"--color-destructive-foreground: var(--destructive-foreground);",
+		);
+		expect(within(deleteDialog).getByText("Silinecek sohbet")).toBeVisible();
+		expect(
+			within(deleteDialog).getByLabelText("Silinecek sohbet başlığı"),
+		).toHaveTextContent("Yeni başlık");
+		expect(deleteDialog).toHaveTextContent(
+			"Bu sohbetin 1 mesajı Line AI Cloud geçmişinden kaldırılacak.",
+		);
+		expect(
+			within(deleteDialog).getByRole("button", { name: "Vazgeç" }),
+		).toHaveFocus();
+		await user.keyboard("{Escape}");
+		expect(
+			screen.queryByRole("dialog", { name: "Sohbet silinsin mi?" }),
+		).not.toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Yeni başlık" })).toHaveFocus();
+
+		fireEvent.contextMenu(screen.getByRole("button", { name: "Yeni başlık" }), {
+			clientX: 80,
+			clientY: 120,
+		});
+		await user.click(screen.getByRole("menuitem", { name: "Sohbeti sil" }));
+		const reopenedDeleteDialog = screen.getByRole("dialog", {
+			name: "Sohbet silinsin mi?",
+		});
 		await user.click(
-			within(deleteDialog).getByRole("button", { name: "Sohbeti sil" }),
+			within(reopenedDeleteDialog).getByRole("button", { name: "Sohbeti sil" }),
 		);
 
 		expect(screen.getByText("Henüz sohbet yok")).toBeInTheDocument();

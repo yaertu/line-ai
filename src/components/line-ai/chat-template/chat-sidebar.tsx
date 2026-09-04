@@ -20,7 +20,7 @@ import {
 	X,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
 	type ChatConversation,
@@ -128,6 +128,7 @@ export const ChatSidebar = ({
 	);
 	const [isResizing, setIsResizing] = useState(false);
 	const [renameValue, setRenameValue] = useState("");
+	const contextTriggerRef = useRef<HTMLButtonElement | null>(null);
 	const searchRef = useRef<HTMLInputElement>(null);
 	const shouldReduceMotion = useReducedMotion();
 
@@ -193,7 +194,9 @@ export const ChatSidebar = ({
 		conversation: ChatConversation,
 		x: number,
 		y: number,
+		trigger: HTMLButtonElement,
 	) => {
+		contextTriggerRef.current = trigger;
 		setContextMenu({
 			id: conversation.id,
 			x: Math.min(x, Math.max(8, window.innerWidth - 216)),
@@ -384,6 +387,7 @@ export const ChatSidebar = ({
 												conversation,
 												event.clientX,
 												event.clientY,
+												event.currentTarget,
 											);
 										}}
 										onKeyDown={(event) => {
@@ -398,6 +402,7 @@ export const ChatSidebar = ({
 													conversation,
 													bounds.left + 24,
 													bounds.top + bounds.height,
+													event.currentTarget,
 												);
 											}
 										}}
@@ -533,6 +538,7 @@ export const ChatSidebar = ({
 			{renameTarget ? (
 				<DialogShell
 					onClose={() => setRenameTarget(null)}
+					returnFocusTo={() => contextTriggerRef.current}
 					title="Sohbeti yeniden adlandır"
 				>
 					<form
@@ -571,14 +577,28 @@ export const ChatSidebar = ({
 			{deleteTarget ? (
 				<DialogShell
 					onClose={() => setDeleteTarget(null)}
+					returnFocusTo={() => contextTriggerRef.current}
 					title="Sohbet silinsin mi?"
 				>
-					<p className="text-muted-foreground text-sm">
-						“{deleteTarget.title}” ve içindeki mesajlar Line AI Cloud
-						geçmişinden silinecek. İşlemi kısa süre içinde geri alabilirsiniz.
+					<div className="rounded-xl border border-border/70 bg-muted/50 p-3">
+						<span className="block font-medium text-muted-foreground text-xs">
+							Silinecek sohbet
+						</span>
+						<strong
+							aria-label="Silinecek sohbet başlığı"
+							className="mt-1 block break-words font-medium text-foreground text-sm leading-5"
+						>
+							{deleteTarget.title}
+						</strong>
+					</div>
+					<p className="mt-3 text-foreground/80 text-sm leading-6">
+						Bu sohbetin {deleteTarget.turns.length} mesajı Line AI Cloud
+						geçmişinden kaldırılacak. İşlemi kısa süre içinde geri
+						alabilirsiniz.
 					</p>
 					<div className="mt-4 flex justify-end gap-2">
 						<DialogButton
+							autoFocus
 							label="Vazgeç"
 							onClick={() => setDeleteTarget(null)}
 						/>
@@ -663,45 +683,104 @@ const ContextAction = ({
 const DialogShell = ({
 	children,
 	onClose,
+	returnFocusTo,
 	title,
 }: {
 	children: React.ReactNode;
 	onClose: () => void;
+	returnFocusTo?: () => HTMLElement | null;
 	title: string;
-}) => (
-	<div
-		className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/25 p-4 backdrop-blur-[2px]"
-		role="presentation"
-	>
+}) => {
+	const titleId = useId();
+	const dialogRef = useRef<HTMLDivElement>(null);
+	const onCloseRef = useRef(onClose);
+	const returnFocusToRef = useRef(returnFocusTo);
+
+	useEffect(() => {
+		onCloseRef.current = onClose;
+	}, [onClose]);
+
+	useEffect(() => {
+		const returnFocus =
+			returnFocusToRef.current?.() ??
+			(document.activeElement instanceof HTMLElement
+				? document.activeElement
+				: null);
+		dialogRef.current
+			?.querySelector<HTMLElement>('[data-dialog-initial-focus="true"]')
+			?.focus();
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				event.preventDefault();
+				onCloseRef.current();
+				return;
+			}
+			if (event.key !== "Tab") return;
+
+			const focusable = Array.from(
+				dialogRef.current?.querySelectorAll<HTMLElement>(
+					'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+				) ?? [],
+			);
+			if (focusable.length === 0) return;
+			const first = focusable[0];
+			const last = focusable[focusable.length - 1];
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus();
+			}
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => {
+			document.removeEventListener("keydown", handleKeyDown);
+			returnFocus?.focus();
+		};
+	}, []);
+
+	return (
 		<div
-			aria-label={title}
-			aria-modal="true"
-			className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-black/20 shadow-2xl"
-			role="dialog"
+			className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/25 p-4 backdrop-blur-[2px]"
+			role="presentation"
 		>
-			<div className="mb-4 flex items-center justify-between gap-3">
-				<h2 className="font-semibold text-base">{title}</h2>
-				<button
-					aria-label="Pencereyi kapat"
-					className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
-					onClick={onClose}
-					type="button"
-				>
-					<X aria-hidden="true" size={16} />
-				</button>
+			<div
+				aria-labelledby={titleId}
+				aria-modal="true"
+				className="w-full max-w-sm rounded-2xl border border-border bg-background p-5 shadow-black/20 shadow-2xl"
+				ref={dialogRef}
+				role="dialog"
+			>
+				<div className="mb-4 flex items-center justify-between gap-3">
+					<h2 className="font-semibold text-base" id={titleId}>
+						{title}
+					</h2>
+					<button
+						aria-label="Pencereyi kapat"
+						className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted"
+						onClick={onClose}
+						type="button"
+					>
+						<X aria-hidden="true" size={16} />
+					</button>
+				</div>
+				{children}
 			</div>
-			{children}
 		</div>
-	</div>
-);
+	);
+};
 
 const DialogButton = ({
+	autoFocus = false,
 	destructive = false,
 	label,
 	onClick,
 	primary = false,
 	submit = false,
 }: {
+	autoFocus?: boolean;
 	destructive?: boolean;
 	label: string;
 	onClick?: () => void;
@@ -709,6 +788,7 @@ const DialogButton = ({
 	submit?: boolean;
 }) => (
 	<button
+		autoFocus={autoFocus}
 		className={cn(
 			"rounded-xl border border-border px-3 py-2 font-medium text-sm transition-colors hover:bg-muted",
 			primary &&
@@ -716,6 +796,7 @@ const DialogButton = ({
 			destructive &&
 				"border-destructive/30 bg-destructive text-destructive-foreground hover:bg-destructive/90",
 		)}
+		data-dialog-initial-focus={autoFocus ? "true" : undefined}
 		onClick={onClick}
 		type={submit ? "submit" : "button"}
 	>
