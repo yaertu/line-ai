@@ -33,6 +33,7 @@ Line AI; desteklenen sağlayıcı API'lerini tek arayüzde kullandıran, sohbet 
 
 ## Öne çıkan özellikler
 
+- 🗑️ **Tüm sohbetleri sil:** Sidebar'dan onaylı toplu silme; arşivler dahil, gerçek mesaj/sohbet sayısı, bulut yanıtını bekleyen durum ve hatada yeniden deneme. API anahtarları ve tercihler korunur.
 - 💬 **Düzenli sohbet çalışma alanı:** Sidebar'ın üstünde arama, yeni sohbet, zaman damgalı ve gruplandırılmış geçmiş, sabitleme, yeniden adlandırma, tam başlık/mesaj sayılı erişilebilir silme onayı ve beş saniyelik geri alma.
 - 🧭 **Gerçek Sidebar:** 240–400 piksel arasında sürüklenerek veya klavyeyle yeniden boyutlandırılan geniş görünüm; daraltılmış ikon şeridi ve mobil çekmece.
 - 🔀 **Sağlayıcı yönlendirme:** Kullanıcının eklediği desteklenen API bağlantılarını doğrular; otomatik modda yalnız çalıştığı doğrulanan bağlantılar arasında kontrollü geçiş yapar.

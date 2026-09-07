@@ -1,0 +1,40 @@
+{
+  "date": "2026-09-07T03:20:37.637Z",
+  "scope": "native WebView2 with isolated HTTP contract fixture; NOT production",
+  "checks": [
+    "light-dialog-keyboard",
+    "dark-dialog-keyboard",
+    "collapsed-sidebar",
+    "mobile-dialog",
+    "native-http-error-visible",
+    "native-http-retry-clears-archive-and-current",
+    "reload-remains-empty"
+  ],
+  "calls": [
+    {
+      "method": "GET",
+      "path": "/api/v1/conversations",
+      "all": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/conversations",
+      "all": null
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/conversations",
+      "all": null
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/conversations",
+      "all": "true"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/conversations",
+      "all": "true"
+    }
+  ]
+}

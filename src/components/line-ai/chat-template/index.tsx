@@ -21,12 +21,14 @@ import {
 	DEFAULT_PREFERENCES,
 	type PromptExecutor,
 } from "./chat-data";
-import ChatSidebar from "./chat-sidebar";
+import ChatSidebar, { DialogButton, DialogShell } from "./chat-sidebar";
 import ChatThread from "./chat-thread";
 import CommandPalette from "./command-palette";
 import SettingsPanel from "./settings-panel";
 
 const CHAT_STORE_KEY = "line-ai.conversations.v1";
+const CLEAR_PENDING_KEY = "line-ai.history-clear-pending.v1";
+const hasPendingClear = () => localStorage.getItem(CLEAR_PENDING_KEY) === "1";
 const PREFERENCES_STORE_KEY = "line-ai.preferences.v1";
 const SIDEBAR_WIDTH_STORE_KEY = "line-ai.sidebar-width.v1";
 const DRAWER_SPRING = { bounce: 0, duration: 0.3, type: "spring" as const };
@@ -34,6 +36,13 @@ const SCRIM_FADE = { duration: 0.2 };
 
 const createConversationId = () => crypto.randomUUID();
 const nowIso = () => new Date().toISOString();
+// A rejected write must not release the sync barrier while sibling writes can
+// still finish and recreate history after a retried clear.
+const settleCloudOperations = async (operations: Promise<unknown>[]) => {
+	const results = await Promise.allSettled(operations);
+	const failed = results.find((result) => result.status === "rejected");
+	if (failed?.status === "rejected") throw failed.reason;
+};
 const boundedNumber = (
 	value: unknown,
 	fallback: number,
@@ -188,7 +197,7 @@ const ChatTemplate = ({
 	executePrompt,
 }: ChatTemplateProps) => {
 	const [conversationItems, setConversationItems] = useState(() =>
-		loadConversations(conversations),
+		hasPendingClear() ? [] : loadConversations(conversations),
 	);
 	const [activeId, setActiveId] = useState(
 		() =>
@@ -200,6 +209,9 @@ const ChatTemplate = ({
 	const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 	const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 	const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+	const [confirmClear, setConfirmClear] = useState(false);
+	const [clearState, setClearState] = useState<"idle" | "pending" | "done" | "error">(() => hasPendingClear() ? "pending" : "idle");
+	const clearTriggerRef = useRef<HTMLButtonElement | null>(null);
 	const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 	const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
 	const [deletedConversation, setDeletedConversation] = useState<{
@@ -217,7 +229,8 @@ const ChatTemplate = ({
 	const cloudHydratedRef = useRef(false);
 	const hydrateStartedRef = useRef(false);
 	const lastSyncedRef = useRef(new Map<string, string>());
-	const pendingClearRef = useRef(false);
+	const pendingClearRef = useRef(hasPendingClear());
+	const clearGenerationRef = useRef(0);
 	const syncInFlightRef = useRef(false);
 	const syncRequestedRef = useRef(false);
 	const visibleConversations = conversationItems.filter(
@@ -239,6 +252,7 @@ const ChatTemplate = ({
 		try {
 			do {
 				syncRequestedRef.current = false;
+				const generation = clearGenerationRef.current;
 				const snapshot = conversationItemsRef.current;
 				const nextMap = new Map(
 					snapshot.map((conversation) => [
@@ -249,30 +263,36 @@ const ChatTemplate = ({
 
 				if (pendingClearRef.current) {
 					await clearCloudHistory();
+					if (generation !== clearGenerationRef.current) continue;
+					localStorage.removeItem(CLEAR_PENDING_KEY);
 					pendingClearRef.current = false;
 					lastSyncedRef.current = new Map();
+					setClearState("done");
 				} else {
 					const deletedIds = [...lastSyncedRef.current.keys()].filter(
 						(id) => !nextMap.has(id),
 					);
-					await Promise.all(
+					await settleCloudOperations(
 						deletedIds.map((id) => removeCloudConversation(id)),
 					);
 				}
 
+				if (generation !== clearGenerationRef.current) continue;
 				const changed = snapshot.filter(
 					(conversation) =>
 						lastSyncedRef.current.get(conversation.id) !==
 						nextMap.get(conversation.id),
 				);
-				await Promise.all(
+				await settleCloudOperations(
 					changed.map((conversation) => saveCloudConversation(conversation)),
 				);
+				if (generation !== clearGenerationRef.current) continue;
 				lastSyncedRef.current = nextMap;
 				setCloudState("connected");
 				setCloudMessage("Sohbet geçmişi Line AI Cloud ile eşitlendi.");
-			} while (syncRequestedRef.current);
+			} while (syncRequestedRef.current || pendingClearRef.current);
 		} catch (error) {
+			if (pendingClearRef.current) setClearState("error");
 			setCloudState("unsynced");
 			setCloudMessage(
 				error instanceof Error
@@ -287,11 +307,14 @@ const ChatTemplate = ({
 	const hydrateCloud = useCallback(async () => {
 		if (hydrateStartedRef.current) return;
 		hydrateStartedRef.current = true;
-		setCloudState("connecting");
-		setCloudMessage("Line AI Cloud bağlantısı hazırlanıyor.");
 
 		try {
 			const remote = await loadCloudHistory();
+			if (pendingClearRef.current) {
+				cloudHydratedRef.current = true;
+				await runCloudSync();
+				return;
+			}
 			const merged = mergeConversationHistories(
 				remote.conversations,
 				conversationItemsRef.current,
@@ -306,11 +329,16 @@ const ChatTemplate = ({
 				(conversation) =>
 					remoteMap.get(conversation.id) !== JSON.stringify(conversation),
 			);
-			await Promise.all(
+			await settleCloudOperations(
 				migrations.map((conversation) => saveCloudConversation(conversation)),
 			);
 
 			const status = await readCloudStatus().catch(() => null);
+			if (pendingClearRef.current) {
+				cloudHydratedRef.current = true;
+				await runCloudSync();
+				return;
+			}
 			lastSyncedRef.current = new Map(
 				merged.map((conversation) => [
 					conversation.id,
@@ -327,6 +355,7 @@ const ChatTemplate = ({
 			);
 		} catch (error) {
 			hydrateStartedRef.current = false;
+			if (pendingClearRef.current) setClearState("error");
 			setCloudState("offline");
 			setCloudMessage(
 				error instanceof Error
@@ -334,20 +363,25 @@ const ChatTemplate = ({
 					: "Line AI Cloud erişilemiyor; açık oturum bellekte çalışmaya devam ediyor.",
 			);
 		}
-	}, []);
+	}, [runCloudSync]);
 
 	const retryCloud = useCallback(() => {
+		if (pendingClearRef.current) setClearState("pending");
+		setCloudState("connecting");
 		if (!cloudHydratedRef.current) {
 			void hydrateCloud();
 			return;
 		}
-		setCloudState("connecting");
 		syncRequestedRef.current = true;
 		void runCloudSync();
 	}, [hydrateCloud, runCloudSync]);
 
 	useEffect(() => {
-		void hydrateCloud();
+		let cancelled = false;
+		void Promise.resolve().then(() => {
+			if (!cancelled) void hydrateCloud();
+		});
+		return () => { cancelled = true; };
 	}, [hydrateCloud]);
 
 	useEffect(() => {
@@ -483,12 +517,12 @@ const ChatTemplate = ({
 		const deleted = conversationItems[deletedIndex];
 		if (!deleted) return;
 		const remaining = conversationItems.filter(
-			(conversation) => !conversation.archived && conversation.id !== id,
+			(conversation) => conversation.id !== id,
 		);
 		setConversationItems(remaining);
 		setDeletedConversation({ conversation: deleted, index: deletedIndex });
 		if (activeId === id) {
-			setActiveId(remaining[0]?.id ?? createConversationId());
+			setActiveId(remaining.find((conversation) => !conversation.archived)?.id ?? createConversationId());
 			setNewChatVersion((version) => version + 1);
 		}
 		setIsDrawerOpen(false);
@@ -555,11 +589,29 @@ const ChatTemplate = ({
 	};
 
 	const clearHistory = () => {
+		try {
+			localStorage.setItem(CLEAR_PENDING_KEY, "1");
+			localStorage.removeItem(CHAT_STORE_KEY);
+		} catch {
+			setCloudMessage("Silme isteği bu cihazda kaydedilemedi. Depolama erişimini kontrol edin.");
+			setClearState("error");
+			return;
+		}
+		clearGenerationRef.current += 1;
 		pendingClearRef.current = true;
+		syncRequestedRef.current = true;
+		conversationItemsRef.current = [];
+		setClearState("pending");
+		setConfirmClear(false);
 		setConversationItems([]);
 		setDeletedConversation(null);
 		setActiveId(createConversationId());
 		setNewChatVersion((version) => version + 1);
+		if (!cloudHydratedRef.current) void hydrateCloud();
+	};
+	const requestClear = (trigger: HTMLButtonElement) => {
+		clearTriggerRef.current = trigger;
+		setConfirmClear(true);
 	};
 
 	const exportData = () => {
@@ -685,6 +737,8 @@ const ChatTemplate = ({
 				className="hidden md:flex"
 				collapsed={!isSidebarOpen}
 				conversations={visibleConversations}
+				clearDisabled={clearState === "pending" || (conversationItems.length === 0 && cloudState === "connected")}
+				onRequestClear={requestClear}
 				onArchive={archiveConversation}
 				onDelete={deleteConversation}
 				onNewChat={newChat}
@@ -729,6 +783,8 @@ const ChatTemplate = ({
 								activeId={activeId}
 								className="h-full bg-background shadow-black/10 shadow-xl"
 								conversations={visibleConversations}
+								clearDisabled={clearState === "pending" || (conversationItems.length === 0 && cloudState === "connected")}
+								onRequestClear={requestClear}
 								onArchive={archiveConversation}
 								onDelete={deleteConversation}
 								onNewChat={newChat}
@@ -745,6 +801,27 @@ const ChatTemplate = ({
 				) : null}
 			</AnimatePresence>
 
+			{confirmClear && (
+				<DialogShell title="Tüm sohbetler silinsin mi?" onClose={() => setConfirmClear(false)} returnFocusTo={() => clearTriggerRef.current}>
+					<p className="rounded-xl border border-border bg-muted/50 p-3 font-medium text-foreground">
+						{conversationItems.length} sohbet · {conversationItems.reduce((total, item) => total + item.turns.length, 0)} mesaj
+					</p>
+					<p className="mt-3 text-sm leading-6">Bu kurulumun tüm sohbet geçmişi cihazdan ve Line AI Cloud’dan silinecek. Arşivlenen sohbetler de dahildir. Bu işlem geri alınamaz.</p>
+					{cloudState !== "connected" && <p className="mt-2 text-sm">Bulut bağlantısı hazır değil; yukarıdaki sayı yalnız bu oturumda yüklenen sohbetleri gösterir. Silme isteği bağlantı sağlandığında tamamlanır.</p>}
+					<p className="mt-2 text-sm text-muted-foreground">API anahtarları ve uygulama tercihleri korunur.</p>
+					<div className="mt-4 flex justify-end gap-2">
+						<DialogButton autoFocus label="Vazgeç" onClick={() => setConfirmClear(false)} />
+						<DialogButton destructive label="Tümünü sil" onClick={clearHistory} />
+					</div>
+				</DialogShell>
+			)}
+			{clearState !== "idle" && (
+				<div role={clearState === "error" ? "alert" : "status"} className="fixed bottom-4 left-1/2 z-[65] w-[min(30rem,calc(100vw-2rem))] -translate-x-1/2 rounded-xl border border-border bg-popover p-4 text-sm text-popover-foreground shadow-xl">
+					<p>{clearState === "pending" ? "Sohbetler bu cihazda temizlendi. Buluttan silme bekleniyor…" : clearState === "done" ? "Tüm sohbetler buluttan silindi." : `Buluttan silinemedi. ${cloudMessage}`}</p>
+					{clearState === "error" && <button type="button" className="mt-2 rounded-lg border border-border px-3 py-2" onClick={() => pendingClearRef.current ? retryCloud() : clearHistory()}>Silmeyi yeniden dene</button>}
+					{clearState === "done" && <button type="button" className="mt-2 rounded-lg border border-border px-3 py-2" onClick={() => setClearState("idle")}>Bildirimi kapat</button>}
+				</div>
+			)}
 			<ChatThread
 				browserTools={preferences.browserTools}
 				customInstructions={preferences.customInstructions}

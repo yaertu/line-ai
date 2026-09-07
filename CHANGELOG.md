@@ -2,6 +2,25 @@
 
 Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir. Sürümleme [SemVer](https://semver.org/lang/tr/) yaklaşımını izler.
 
+## [0.4.1] - 2026-09-07
+
+### Eklendi
+
+- Geniş, daraltılmış ve mobil sidebar'da görünür **Tüm sohbetleri sil** eylemi. Onay; sohbet/mesaj sayısını, arşiv kapsamını ve geri alınamazlık uyarısını gösterir. API anahtarları ve tercihler korunur.
+- Bulut silme isteği için bekleme, hata, yeniden deneme ve sunucu onaylı başarı bildirimi. Tamamlanmamış silme isteği içerik taşımayan yerel işaretle yeniden açılışta sürdürülür.
+
+### Düzeltildi
+
+- Tek bir sohbet silinirken diğer arşivli sohbetlerin de silinmesi önlendi.
+- İlk bulut yüklemesinin veya devam eden kayıtların toplu silinmiş geçmişi yeniden getirmesi önlendi.
+- Paralel bulut işlemlerinden biri hata verdiğinde diğer işlemler sonuçlanmadan silme tekrarının başlaması önlendi.
+
+### Kanıt kapsamı
+
+- Sekiz silme regresyon testi dahil 50 frontend testi, lint, TypeScript ve production build geçti. Rust: 22 başarılı, iki dış ortama bağlı test atlandı.
+- Native Tauri/WebView2 doğrulaması izole yerel HTTP test verileriyle yapılır; gerçek kullanıcı geçmişi silinmez. Üretim bulutunda toplu silme veya yeni provider/video doğrulaması anlamına gelmez.
+- Vercel deployment beklemede. Ayrıntılar: `docs/AUDIT-v0.4.1.md`.
+
 ## [0.4.0] - 2026-08-31
 
 ### Eklendi

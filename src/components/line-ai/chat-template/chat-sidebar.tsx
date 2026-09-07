@@ -33,6 +33,8 @@ export type ChatSidebarProps = {
 	className?: string;
 	collapsed?: boolean;
 	conversations: ChatConversation[];
+	clearDisabled: boolean;
+	onRequestClear: (trigger: HTMLButtonElement) => void;
 	onDelete: (id: string) => void;
 	onArchive: (id: string) => void;
 	onNewChat: () => void;
@@ -101,6 +103,8 @@ export const ChatSidebar = ({
 	className,
 	collapsed = false,
 	conversations,
+	clearDisabled,
+	onRequestClear,
 	onDelete,
 	onArchive,
 	onNewChat,
@@ -131,6 +135,19 @@ export const ChatSidebar = ({
 	const contextTriggerRef = useRef<HTMLButtonElement | null>(null);
 	const searchRef = useRef<HTMLInputElement>(null);
 	const shouldReduceMotion = useReducedMotion();
+	const clearButton = (
+		<button
+			aria-label="Tüm sohbetleri sil"
+			className={cn("flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-destructive hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-not-allowed disabled:opacity-50", collapsed && "justify-center")}
+			disabled={clearDisabled}
+			onClick={(event) => onRequestClear(event.currentTarget)}
+			title="Tüm sohbetleri sil"
+			type="button"
+		>
+			<Trash2 aria-hidden="true" size={16} />
+			{!collapsed && <span>Tüm sohbetleri sil</span>}
+		</button>
+	);
 
 	const groups = useMemo(() => {
 		const needle = query.trim().toLocaleLowerCase("tr-TR");
@@ -235,6 +252,7 @@ export const ChatSidebar = ({
 					onClick={onNewChat}
 				/>
 				<div className="mt-auto flex flex-col items-center gap-2">
+					{clearButton}
 					<span
 						aria-label={`Truth Mode ${truthMode ? "açık" : "kapalı"}`}
 						className={truthMode ? "text-primary" : "text-muted-foreground"}
@@ -435,6 +453,7 @@ export const ChatSidebar = ({
 				))}
 			</nav>
 
+			{clearButton}
 			<div className="flex items-center gap-2 border-border/60 border-t pt-3">
 				<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
 					<ShieldCheck aria-hidden="true" size={16} />
@@ -680,7 +699,7 @@ const ContextAction = ({
 	</button>
 );
 
-const DialogShell = ({
+export const DialogShell = ({
 	children,
 	onClose,
 	returnFocusTo,
@@ -772,7 +791,7 @@ const DialogShell = ({
 	);
 };
 
-const DialogButton = ({
+export const DialogButton = ({
 	autoFocus = false,
 	destructive = false,
 	label,

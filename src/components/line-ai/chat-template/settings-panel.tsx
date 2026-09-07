@@ -1049,7 +1049,7 @@ const SettingsPanel = ({
 								<div className="space-y-4">
 									<SettingsGroup
 										description="Windows için açık kaynak yapay zekâ çalışma alanı."
-										title="Line AI 0.4.0"
+										title="Line AI 0.4.1"
 									>
 										<p className="text-muted-foreground text-sm leading-relaxed">
 											OpenAI ve Gemini sağlayıcılarına doğrudan bağlanır;

@@ -1,0 +1,8 @@
+{
+  "build": { "devUrl": "http://127.0.0.1:1431", "beforeDevCommand": "" },
+  "app": { "windows": [{
+    "label": "main", "title": "Line AI", "width": 1280, "height": 820,
+    "visible": false,
+    "additionalBrowserArgs": "--remote-debugging-port=9225 --remote-debugging-address=127.0.0.1"
+  }] }
+}
