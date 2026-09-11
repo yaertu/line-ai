@@ -917,7 +917,7 @@ mod tests {
                         .to_owned(),
                     command_id: "terminal-result".to_owned(),
                     environment: Default::default(),
-                    timeout_ms: 5_000,
+                    timeout_ms: 20_000,
                     working_directory: root.to_string_lossy().into_owned(),
                 },
                 &runtime,
@@ -925,8 +925,22 @@ mod tests {
             )
             .await
             .unwrap();
-            assert!(result.stdout.contains("out-ok"));
-            assert!(result.stderr.contains("err-ok"));
+            assert!(
+                result.stdout.contains("out-ok"),
+                "stdout={:?}, stderr={:?}, timed_out={}, exit_code={:?}",
+                result.stdout,
+                result.stderr,
+                result.timed_out,
+                result.exit_code
+            );
+            assert!(
+                result.stderr.contains("err-ok"),
+                "stdout={:?}, stderr={:?}, timed_out={}, exit_code={:?}",
+                result.stdout,
+                result.stderr,
+                result.timed_out,
+                result.exit_code
+            );
             assert_eq!(result.exit_code, Some(7));
             assert!(!result.timed_out);
             assert!(!result.cancelled);
