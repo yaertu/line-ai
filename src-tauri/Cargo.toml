@@ -1,6 +1,6 @@
 [package]
 name = "line-ai"
-version = "0.5.0-rc.2"
+version = "0.5.0-rc.3"
 description = "OpenAI ve Gemini destekli Windows yapay zeka çalışma alanı"
 authors = ["yaertu"]
 edition = "2021"

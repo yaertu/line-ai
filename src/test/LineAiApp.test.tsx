@@ -108,6 +108,33 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		);
 	});
 
+	it("Hakkında ekranında güncel sürümü ve eklenen çalışma alanı altyapısını açıklar", async () => {
+		const user = userEvent.setup();
+		render(<LineAiApp executePrompt={vi.fn()} />);
+
+		await user.click(screen.getByRole("button", { name: "Ayarları aç" }));
+		const settings = screen.getByRole("dialog", { name: "Line AI ayarları" });
+		await user.click(
+			within(settings).getByRole("button", { name: "Hakkında" }),
+		);
+
+		expect(
+			within(settings).getByRole("heading", { name: "Line AI v0.5.0-rc.3" }),
+		).toBeInTheDocument();
+		expect(
+			within(settings).getByRole("heading", {
+				name: "Yenilikler · v0.5.0",
+			}),
+		).toBeInTheDocument();
+		expect(within(settings).getByText("İşlem izi ve kanıt")).toBeInTheDocument();
+		expect(
+			within(settings).getByText("Yerel çalışma alanı altyapısı"),
+		).toBeInTheDocument();
+		expect(
+			within(settings).getByText(/bağlanma çalışması sürüyor/i),
+		).toBeInTheDocument();
+	});
+
 	it("mesajı seçilen ortam API sağlayıcısına gönderir ve yanıtı gösterir", async () => {
 		const user = userEvent.setup();
 		const executePrompt = vi.fn().mockResolvedValue({

@@ -68,6 +68,12 @@ type SectionItem = {
 	label: string;
 };
 
+type ReleaseHighlight = {
+	description: string;
+	icon: SectionItem["icon"];
+	title: string;
+};
+
 export type SettingsPanelProps = {
 	cloudMessage: string;
 	cloudState: CloudConnectionState;
@@ -122,6 +128,27 @@ const EMPTY_STATUS: ProviderStatus = {
 	openAiConfigured: false,
 	openAiModel: "Denetleniyor",
 };
+
+const RELEASE_HIGHLIGHTS: ReadonlyArray<ReleaseHighlight> = [
+	{
+		description:
+			"Sıralı işlem olayları, gizli değerlerden arındırılmış kanıtlar ve gerçek kriterlere dayalı sonuç hesabı eklendi.",
+		icon: ShieldCheck,
+		title: "İşlem izi ve kanıt",
+	},
+	{
+		description:
+			"Oturumlar yerelde korunur; kesilen işler işaretlenir ve SHA-256 kontrollü proof bundle ile taşınabilir.",
+		icon: ArchiveRestore,
+		title: "Dayanıklı oturumlar",
+	},
+	{
+		description:
+			"Native terminal çıktısı, salt-okunur Git özeti ve açık onaylı checkpoint geri yükleme altyapısı eklendi.",
+		icon: BrainCircuit,
+		title: "Yerel çalışma alanı altyapısı",
+	},
+];
 
 const updatePreference = <K extends keyof AppPreferences>(
 	preferences: AppPreferences,
@@ -1048,14 +1075,50 @@ const SettingsPanel = ({
 							{section === "about" ? (
 								<div className="space-y-4">
 									<SettingsGroup
-										description="Windows için açık kaynak yapay zekâ çalışma alanı."
-										title="Line AI 0.4.1"
+										description="Denetlenebilir Windows yapay zekâ çalışma alanı · aday sürüm"
+										title="Line AI v0.5.0-rc.3"
 									>
 										<p className="text-muted-foreground text-sm leading-relaxed">
-											OpenAI ve Gemini sağlayıcılarına doğrudan bağlanır;
-											sohbet, dosya bağlamı, gerçek Chrome araçları, sağlayıcı
-											yönlendirme ve çalışma durumlarını tek masaüstü arayüzünde
-											birleştirir.
+											Line AI; sohbet, dosya bağlamı ve Chrome araçlarının yanına
+											yaptığı işlemleri kanıtlamaya yönelik çalışma alanı çekirdeğini
+											ekler.
+										</p>
+									</SettingsGroup>
+									<SettingsGroup
+										description="Bu aday sürümde eklenen gerçek altyapılar."
+										title="Yenilikler · v0.5.0"
+									>
+										<ul
+											aria-label="v0.5.0 yenilikleri"
+											className="space-y-3"
+										>
+											{RELEASE_HIGHLIGHTS.map((highlight) => {
+												const HighlightIcon = highlight.icon;
+												return (
+													<li
+														className="flex gap-3 border-border/60 border-t pt-3 first:border-t-0 first:pt-0"
+														key={highlight.title}
+													>
+														<span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+															<HighlightIcon aria-hidden="true" size={16} />
+														</span>
+														<span className="min-w-0">
+															<span className="block font-medium text-sm">
+																{highlight.title}
+															</span>
+															<span className="mt-1 block text-muted-foreground text-xs leading-relaxed">
+																{highlight.description}
+															</span>
+														</span>
+													</li>
+												);
+											})}
+										</ul>
+										<p className="mt-4 rounded-xl border border-dashed border-primary/35 bg-primary/5 p-3 text-muted-foreground text-xs leading-relaxed">
+											<span className="font-medium text-foreground">Arayüz durumu: </span>
+											Mission Control, replay, Jury ve yerel model ekranlarına bağlanma
+											çalışması sürüyor; bu altyapılar henüz uygulama içinden tek tek
+											başlatılamaz.
 										</p>
 									</SettingsGroup>
 									<SettingsGroup

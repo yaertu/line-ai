@@ -17,7 +17,7 @@
   <img alt="Lisans: MIT" src="https://img.shields.io/badge/Lisans-MIT-2EA44F">
 </p>
 
-Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0-rc.2; gerçek işlem izlerini, kanıtları ve yerel çalışma alanı işlemlerini belgeleyen çekirdeği aday olarak ekler. Bu sürümde Trace, Checkpoint, Verification, Workflow ve hafıza çekirdeği ile Rust terminal/Git runtime'ı kaynakta ve testlerde vardır; bunları kullanan Mission Control, replay, Jury ve yerel model arayüzleri henüz uygulamaya bağlanmış değildir.
+Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0-rc.3; gerçek işlem izlerini, kanıtları ve yerel çalışma alanı işlemlerini belgeleyen çekirdeği aday olarak ekler. Bu sürümde Trace, Checkpoint, Verification, Workflow ve hafıza çekirdeği ile Rust terminal/Git runtime'ı kaynakta ve testlerde vardır; bunları kullanan Mission Control, replay, Jury ve yerel model arayüzleri henüz uygulamaya bağlanmış değildir.
 
 <p align="center">
   <a href="https://lineai-eta.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
@@ -33,13 +33,14 @@ Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0-rc.2;
 
 ## Öne çıkan özellikler
 
-### v0.5.0-rc.2 çekirdeği
+### v0.5.0-rc.3 çekirdeği
 
 - **Trace ve Evidence:** Sıralı olaylar, gizli değerlerden arındırılmış kanıtlar ve katı `VERIFIED`, `PARTIALLY_VERIFIED`, `UNVERIFIED`, `FAILED`, `BLOCKED` sonuç hesabı.
 - **Yerel dayanıklılık:** Oturumlar cihazda saklanır; açık kalan oturumlar sonraki açılışta kesildi olarak işaretlenir. SHA-256 bütünlük değerli proof bundle dışa/içe aktarımı bulunur.
 - **Workflow ve proje hafızası:** v1 workflow JSON doğrulaması, adım durum hesabı ve kanıt kimliği olmadan yazılamayan hafıza kayıtları vardır.
 - **Native çalışma alanı runtime'ı:** Tauri IPC üzerinden terminal stdout/stderr/çıkış kodu/süre aşımı/iptal, çıktı redaksiyonu, Git durum okuması ve onaylı checkpoint oluşturma–inceleme–geri yükleme çalışır.
 - **Arayüz durumu:** Bu yeni çekirdeğin Mission Control, replay, yerel sağlayıcı/model veya Jury kullanıcı arayüzü henüz yoktur. UI'da olmayan işlemler kullanıcıya tamamlanmış iş olarak gösterilmez.
+- **Uygulama içi yenilikler:** Ayarlar → Hakkında içindeki **Yenilikler** kartı, gelen altyapıyı ve henüz arayüze bağlanmamış yüzeyleri açıkça gösterir.
 
 - 🗑️ **Tüm sohbetleri sil:** Sidebar'dan onaylı toplu silme; arşivler dahil, gerçek mesaj/sohbet sayısı, bulut yanıtını bekleyen durum ve hatada yeniden deneme. API anahtarları ve tercihler korunur.
 - 💬 **Düzenli sohbet çalışma alanı:** Sidebar'ın üstünde arama, yeni sohbet, zaman damgalı ve gruplandırılmış geçmiş, sabitleme, yeniden adlandırma, tam başlık/mesaj sayılı erişilebilir silme onayı ve beş saniyelik geri alma.

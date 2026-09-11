@@ -2,6 +2,16 @@
 
 Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir. Sürümleme [SemVer](https://semver.org/lang/tr/) yaklaşımını izler.
 
+## [0.5.0-rc.3] - 2026-09-11
+
+### Eklendi
+
+- Ayarlar → Hakkında ekranına **Yenilikler · v0.5.0** kartı eklendi. İşlem izi/kanıt, dayanıklı oturumlar ve yerel çalışma alanı altyapısı anlaşılır biçimde listelenir; kullanıcı arayüzüne henüz bağlanmayan Mission Control, replay, Jury ve local model yüzeyleri açıkça belirtilir.
+
+### Düzeltildi
+
+- Hakkında ekranındaki eski `Line AI 0.4.1` metni güncel `Line AI v0.5.0-rc.3` sürümüyle değiştirildi.
+
 ## [0.5.0-rc.2] - 2026-09-11
 
 ### Düzeltildi

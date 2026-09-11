@@ -2,7 +2,7 @@
 
 ## ACTIVE
 
-- v0.5.0-rc.2 kaynak çekirdeği: TypeScript Trace/Evidence/Verification, yerel oturum saklama/kesinti recovery, SHA-256 proof bundle, v1 workflow ve evidence-backed memory; Rust terminal/Git/checkpoint runtime'ı ve TypeScript IPC wrapper'ları uygulanmıştır.
+- v0.5.0-rc.3 kaynak çekirdeği: TypeScript Trace/Evidence/Verification, yerel oturum saklama/kesinti recovery, SHA-256 proof bundle, v1 workflow ve evidence-backed memory; Rust terminal/Git/checkpoint runtime'ı ve TypeScript IPC wrapper'ları uygulanmıştır.
 - v0.5.0 kapsam sınırı: Local provider, Jury, Mission Control UI ve replay UI uygulanmamıştır. Bu bileşenler kullanıcıya hazır gibi gösterilmez.
 
 - Marka ve ürün adı: **Line AI**.
@@ -31,7 +31,7 @@
 
 ## KANIT DURUMU
 
-- v0.5.0-rc.2 dokümantasyon/metadata hazırlığı: root `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` ve `cloud/package.json` sürümü eşitlendi. Bu kayıt aday paketin kaynak kapsamını belirtir; dağıtım kanıtı ayrıca üretilmelidir.
+- v0.5.0-rc.3 dokümantasyon/metadata hazırlığı: root `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` ve `cloud/package.json` sürümü eşitlendi. Bu kayıt aday paketin kaynak kapsamını belirtir; dağıtım kanıtı ayrıca üretilmelidir.
 
 - Başlangıç HEAD: `898720e38fa63e3d0c20d12f8546d4fc6a1b6970`; çalışma ağacı temizdi.
 - Marka göçü tamamlandı: kaynak, Tauri, test, doküman ve dağıtım adları `Line AI` / `line-ai` olarak güncellendi.
@@ -58,7 +58,8 @@
 - `004938c` commit'inden yerel `Line AI.exe` üretildi; ancak canlı işlem geçmişi kaynak değişikliği nedeniyle bu EXE artık `STALE_REVERIFY` ve güncel kaynakla yeniden derlenecek.
 - Önceki `PAUSED` Vercel talimatı, kullanıcının güncel "site, GitHub, ZIP ve masaüstü kısayolunu güncelle" talimatıyla geçersizdir. Güncel kaynak için yeni production kanıtı henüz üretilmemiştir.
 - v0.5.0-rc.1 EXE, masaüstü kaynak ZIP'i, kısayol ve EXE-only GitHub aday sürümü üretildi; eski varsayılan Cloud kökünü kullandığı için `STALE_REVERIFY` durumundadır.
+- v0.5.0-rc.2 güncel Cloud köküyle üretildi; Hakkında ekranındaki eski sürüm metni nedeniyle kullanıcıya dönük teslim için `STALE_REVERIFY` durumundadır.
 
 ## EXACT NEXT ACTION
 
-Temiz commit'te frontend/Rust/cloud doğrulamasını tamamla; güncel Windows EXE'yi derle, masaüstüne kopyala ve hash doğrula. Aynı commit'ten build/cache/secret içermeyen yerel `Line AI v0.5.0-rc.2 Source.zip` üret, `Line AI.lnk` kısayolunu güncelle, GitHub'a push ederek EXE-only `v0.5.0-rc.2` aday sürümünü oluştur ve public indirme/hash doğrulamasını yap. Ardından production siteyi dağıtıp doğrula; sonra Mission Control UI ve kalan v0.5.0 işiyle devam et.
+Temiz commit'te frontend/Rust/cloud doğrulamasını tamamla; güncel Windows EXE'yi derle, masaüstüne kopyala ve hash doğrula. Aynı commit'ten build/cache/secret içermeyen yerel `Line AI v0.5.0-rc.3 Source.zip` üret, `Line AI.lnk` kısayolunu güncelle, GitHub'a push ederek EXE-only `v0.5.0-rc.3` aday sürümünü oluştur ve public indirme/hash doğrulamasını yap. Ardından production siteyi dağıtıp doğrula; sonra Mission Control UI ve kalan v0.5.0 işiyle devam et.
