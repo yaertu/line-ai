@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11T17:46:12.102Z",
+  "source": {
+    "kind": "vite-source-ui-playwright",
+    "url": "http://127.0.0.1:1430",
+    "viewport": "1440x900",
+    "surface": "Yeni sohbet > dosya bağlamı ekleme"
+  },
+  "capture": {
+    "method": "playwright-recording-trim",
+    "publishedDurationSeconds": 5,
+    "removedLeadSeconds": 5.5,
+    "startupFramesPublished": false,
+    "verification": "React workspace and requested surface were awaited before the retained segment and poster capture."
+  },
+  "claims": {
+    "shown": [
+      "boş yeni sohbet çalışma alanı",
+      "gerçek dosya seçici üzerinden eklenmiş metin eki",
+      "gönderilmemiş taslakta ek kaldırma denetimi"
+    ],
+    "notShown": [
+      "dosyanın sağlayıcıya gönderilmesi veya model yanıtı",
+      "üretilmiş kod Artifact'i; bunun için yapılandırılmış bir sağlayıcı gerekir",
+      "kullanıcının yerel dosyaları veya sohbet geçmişi"
+    ]
+  },
+  "poster": {
+    "fileName": "line-ai-dosya-baglami-turu-poster.png",
+    "sha256": "988d579ff67ab2cf4b6405e4c15a52b8ac498663fac6d01292e0e2904de11fb3"
+  },
+  "video": {
+    "fileName": "line-ai-dosya-baglami-turu.mp4",
+    "sha256": "f07614d9ed6b48e5e9f67256e28fa5278ad3b586a8467a29bd5d61dd4c6838a0"
+  }
+}

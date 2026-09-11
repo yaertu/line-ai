@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11T17:45:57.193Z",
+  "source": {
+    "kind": "vite-source-ui-playwright",
+    "url": "http://127.0.0.1:1430",
+    "viewport": "1440x900",
+    "surface": "Ayarlar > Tarayıcı"
+  },
+  "capture": {
+    "method": "playwright-recording-trim",
+    "publishedDurationSeconds": 5,
+    "removedLeadSeconds": 5.5,
+    "startupFramesPublished": false,
+    "verification": "React workspace and requested surface were awaited before the retained segment and poster capture."
+  },
+  "claims": {
+    "shown": [
+      "Line AI ayarları iletişim kutusu",
+      "Tarayıcı sekmesi",
+      "izole Chrome oturumu durum ve bağlantı denetimleri"
+    ],
+    "notShown": [
+      "açık web sayfası içeriği veya tarayıcı sekme verisi",
+      "sağlayıcı anahtarları veya gizli değerler",
+      "sohbet mesajı içeriği"
+    ]
+  },
+  "poster": {
+    "fileName": "line-ai-tarayici-turu-poster.png",
+    "sha256": "1671105cb7b15a3c35835f8f7570bd5528b4fb6c9074021ed00014b4a2d40478"
+  },
+  "video": {
+    "fileName": "line-ai-tarayici-turu.mp4",
+    "sha256": "2ef675db2475c9faef77995a8f621c5f4f5c59551003fe199ab13f90c221ba61"
+  }
+}

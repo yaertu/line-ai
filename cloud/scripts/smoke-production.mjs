@@ -29,6 +29,23 @@ const request = async (path, init = {}) => {
 
 const requestRaw = (path, init = {}) => fetch(`${baseUrl}${path}`, init);
 
+const sourceUiTours = [
+	{ id: "line-ai-baslangic-turu", surface: "Yeni sohbet ana ekranı" },
+	{ id: "line-ai-dosya-baglami-turu", surface: "Yeni sohbet > dosya bağlamı ekleme" },
+	{ id: "line-ai-bulut-veri-turu", surface: "Ayarlar > Bulut verileri" },
+	{ id: "line-ai-gorunum-turu", surface: "Ayarlar > Görünüm" },
+	{ id: "line-ai-tarayici-turu", surface: "Ayarlar > Tarayıcı" },
+];
+
+const requestAndHash = async (path) => {
+	const response = await requestRaw(path);
+	const bytes = Buffer.from(await response.arrayBuffer());
+	return {
+		response,
+		sha256: createHash("sha256").update(bytes).digest("hex"),
+	};
+};
+
 let credentials = null;
 let installationDeleted = false;
 
@@ -36,6 +53,16 @@ try {
 	const landing = await requestRaw("/");
 	const landingHtml = await landing.text();
 	assert(landing.status === 200, "Landing sayfası yüklenemedi.");
+	assert(
+		landingHtml.includes("Bir şey yaz.") &&
+		landingHtml.includes('id="tour-video"') &&
+		sourceUiTours.every(
+			({ id }) =>
+				landingHtml.includes(`/media/${id}.mp4`) &&
+				landingHtml.includes(`/media/${id}-poster.png`),
+		),
+		"Landing yeni, basit video turunu ve tüm kısa kaynak UI kayıtlarını sunmuyor.",
+	);
 	assert(
 		landingHtml.includes("/media/line-ai-gercek-kodlama.mp4") &&
 			landingHtml.includes("/media/line-ai-gercek-kodlama-poster.png"),
@@ -91,6 +118,33 @@ try {
 		"v0.5.0 kaynak arayüz videosu ile evidence SHA-256 özeti eşleşmiyor.",
 	);
 	console.log("landingV050SourceUi=PASS");
+
+	for (const tour of sourceUiTours) {
+		const evidenceResponse = await requestRaw(`/media/${tour.id}.evidence.json`);
+		const evidence = await evidenceResponse.json();
+		assert(evidenceResponse.status === 200, `${tour.id} evidence JSON yayınlanmıyor.`);
+		assert(
+			evidence?.source?.kind === "vite-source-ui-playwright" &&
+			evidence?.source?.surface === tour.surface &&
+				evidence?.video?.fileName === `${tour.id}.mp4` &&
+				evidence?.poster?.fileName === `${tour.id}-poster.png` &&
+				evidence?.capture?.publishedDurationSeconds === 5 &&
+				evidence?.capture?.startupFramesPublished === false &&
+				Array.isArray(evidence?.claims?.shown) &&
+				evidence.claims.shown.length > 0,
+			`${tour.id} gerçek kaynak arayüz kapsamını doğrulamıyor.`,
+		);
+
+		const [video, poster] = await Promise.all([
+			requestAndHash(`/media/${tour.id}.mp4`),
+			requestAndHash(`/media/${tour.id}-poster.png`),
+		]);
+		assert(video.response.status === 200, `${tour.id} videosu yayınlanmıyor.`);
+		assert(poster.response.status === 200, `${tour.id} poster görseli yayınlanmıyor.`);
+		assert(video.sha256 === evidence.video.sha256, `${tour.id} videosu evidence özetiyle eşleşmiyor.`);
+		assert(poster.sha256 === evidence.poster.sha256, `${tour.id} poster görseli evidence özetiyle eşleşmiyor.`);
+	}
+	console.log("landingFeatureSourceUiTours=PASS");
 
   const health = await request("/api/v1/health");
   assert(health.response.status === 200, "Health endpoint başarısız.");

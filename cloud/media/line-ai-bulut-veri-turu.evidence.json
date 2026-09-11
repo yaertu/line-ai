@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11T17:44:05.369Z",
+  "source": {
+    "kind": "vite-source-ui-playwright",
+    "url": "http://127.0.0.1:1430",
+    "viewport": "1440x900",
+    "surface": "Ayarlar > Bulut verileri"
+  },
+  "capture": {
+    "method": "source-ui-frame-sequence",
+    "publishedDurationSeconds": 5,
+    "removedLeadSeconds": 0,
+    "startupFramesPublished": false,
+    "verification": "React workspace and requested surface were awaited before the retained segment and poster capture."
+  },
+  "claims": {
+    "shown": [
+      "Line AI Cloud durum kartı",
+      "kurulum kimliğine bağlı sohbet senkronizasyonu açıklaması",
+      "sohbet ve mesaj sayaçları"
+    ],
+    "notShown": [
+      "Cloud erişim secret değeri",
+      "tek tek sohbet veya mesaj içerikleri",
+      "kalıcı temizleme onay akışı"
+    ]
+  },
+  "poster": {
+    "fileName": "line-ai-bulut-veri-turu-poster.png",
+    "sha256": "82b9aba86928a479190d812ceea028ec702b30cbcb553d0268676fe4450d6c34"
+  },
+  "video": {
+    "fileName": "line-ai-bulut-veri-turu.mp4",
+    "sha256": "32abe4bedfb049b5346ac248163c52bddbec28b03639ad0cbf2228d9eccc10c8"
+  }
+}

@@ -14,6 +14,7 @@
 		"docs:showcase": "node scripts/capture-showcase.mjs",
 		"docs:v050-showcase": "node scripts/capture-v050-highlights.mjs",
 		"docs:real-coding": "node scripts/capture-real-coding.mjs",
+		"docs:feature-tours": "node scripts/capture-feature-tours.mjs",
 		"release:desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-desktop.ps1",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
