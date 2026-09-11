@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{env, time::Duration};
 
-const DEFAULT_CLOUD_ROOT: &str = "https://lineaicloud.vercel.app/api/v1";
+const DEFAULT_CLOUD_ROOT: &str = "https://lineai-eta.vercel.app/api/v1";
 const KEYRING_SERVICE: &str = "app.lineai.desktop";
 const KEYRING_USER: &str = "cloud-installation-v1";
 const MAX_CONVERSATION_BYTES: usize = 512 * 1024;
@@ -422,6 +422,11 @@ mod tests {
         );
         assert!(normalize_cloud_root("http://lineai.example").is_err());
         assert!(normalize_cloud_root("http://127.0.0.1:3000").is_ok());
+    }
+
+    #[test]
+    fn uses_the_current_production_cloud_root() {
+        assert_eq!(DEFAULT_CLOUD_ROOT, "https://lineai-eta.vercel.app/api/v1");
     }
 
     #[test]

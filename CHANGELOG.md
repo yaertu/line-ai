@@ -2,6 +2,13 @@
 
 Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir. Sürümleme [SemVer](https://semver.org/lang/tr/) yaklaşımını izler.
 
+## [0.5.0-rc.2] - 2026-09-11
+
+### Düzeltildi
+
+- Varsayılan Line AI Cloud kökü, güncel üretim adresi olan `https://lineai-eta.vercel.app/api/v1` olarak düzeltildi; masaüstü uygulaması, README ve production smoke testi aynı kanonik adrese yönelir.
+- Tanıtım sitesinin aday EXE indirme bağlantısı, GitHub'ın yayımladığı gerçek asset yolu olan `Line.AI.exe` ile eşitlendi.
+
 ## [0.5.0-rc.1] - 2026-09-11
 
 ### Eklendi

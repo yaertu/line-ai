@@ -2,7 +2,7 @@
 
 ## ACTIVE
 
-- v0.5.0-rc.1 kaynak çekirdeği: TypeScript Trace/Evidence/Verification, yerel oturum saklama/kesinti recovery, SHA-256 proof bundle, v1 workflow ve evidence-backed memory; Rust terminal/Git/checkpoint runtime'ı ve TypeScript IPC wrapper'ları uygulanmıştır.
+- v0.5.0-rc.2 kaynak çekirdeği: TypeScript Trace/Evidence/Verification, yerel oturum saklama/kesinti recovery, SHA-256 proof bundle, v1 workflow ve evidence-backed memory; Rust terminal/Git/checkpoint runtime'ı ve TypeScript IPC wrapper'ları uygulanmıştır.
 - v0.5.0 kapsam sınırı: Local provider, Jury, Mission Control UI ve replay UI uygulanmamıştır. Bu bileşenler kullanıcıya hazır gibi gösterilmez.
 
 - Marka ve ürün adı: **Line AI**.
@@ -31,7 +31,7 @@
 
 ## KANIT DURUMU
 
-- v0.5.0-rc.1 dokümantasyon/metadata hazırlığı: root `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` ve `cloud/package.json` sürümü eşitlendi. Bu kayıt aday paketin kaynak kapsamını belirtir; dağıtım kanıtı ayrıca üretilmelidir.
+- v0.5.0-rc.2 dokümantasyon/metadata hazırlığı: root `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` ve `cloud/package.json` sürümü eşitlendi. Bu kayıt aday paketin kaynak kapsamını belirtir; dağıtım kanıtı ayrıca üretilmelidir.
 
 - Başlangıç HEAD: `898720e38fa63e3d0c20d12f8546d4fc6a1b6970`; çalışma ağacı temizdi.
 - Marka göçü tamamlandı: kaynak, Tauri, test, doküman ve dağıtım adları `Line AI` / `line-ai` olarak güncellendi.
@@ -43,7 +43,7 @@
 - Güncel gerçek uygulama görselleri: `line-ai-acik-tema.png`, `line-ai-koyu-tema.png`, `line-ai-tanitim.gif`.
 - Line AI Cloud: üretim sağlık, yetkisiz istek reddi, kurulum oluşturma, konuşma yazma/okuma/silme, kurulum silme ve silinmiş kimlik reddi `PASS`; geçici duman testi verisi temizlendi.
 - Bulut veritabanı tabloları/RLS, anonim ve authenticated tablo yetkilerinin kapalı olması ve daraltılmış service-role fonksiyon yetkileri `PASS`.
-- Vercel proje adı ve üretim adresi: `lineaicloud` / `https://lineaicloud.vercel.app`; `/` tam genişlikte ürün sitesini, `/api/v1/*` Line AI Cloud API uçlarını sunar.
+- Vercel proje adı ve güncel üretim adresi: `lineaicloud` / `https://lineai-eta.vercel.app`; `/` tam genişlikte ürün sitesini, `/api/v1/*` Line AI Cloud API uçlarını sunar. Eski `lineaicloud.vercel.app` adresi güncel landing içeriğini sunmaz ve yeni dağıtımlarda kullanılmaz.
 - Önceki v0.1.0 yayın/paket kanıtları marka ve dosya değişikliğinden sonra `STALE_REVERIFY`.
 - Yerel DIFF motoru ve gerçek DIFF sekmesi kaynakta uygulandı (`E1 SOURCE_IMPLEMENTED`); yeni bağımlılık eklenmedi.
 - TDD kırmızı kanıtı: DIFF regresyon testleri önce sekme olmadığı için; SVG preview/chat ayrımı ve tam SVG backend yeterlilik testleri de ilgili davranışlar uygulanmadan önce beklenen nedenle `FAIL` oldu. Minimal uygulama sonrası tam `pnpm verify`: lint, TypeScript, `42/42 PASS`, Vite production build `PASS` (`E3 SELF_TEST_PASSED`).
@@ -51,14 +51,14 @@
 - Gerçek SVG logo artifact desteği, güvenli data-image ÖNİZLE, `image/svg+xml` download, HTML'den ayrı SVG bütünlük/güvenlik kapısı ve kullanıcıya gerçek provider/model/deneme/artifact KB ilerlemesi kaynakta ve testte doğrulandı. Yeni bağımlılık eklenmedi.
 - Native Tauri/WebView2 CDP doğrulaması: iki gerçek Gemini turunda iki `line-ai-logo.svg`; kaynak sohbet metnine sızmadı. İlk DIFF boş durumu; ikinci sürümde `24 added / 24 removed / 64 context` ve eski/yeni numaralar; KOD/ÖNİZLE/download/diagnostics, sidebar kapat-aç ve mesaj copy/edit/retry/vote `PASS` (`E4 RUNTIME_VERIFIED_ISOLATED`, `E5 INTEGRATION_VERIFIED`, `E6 PHYSICALLY_VERIFIED_PREVIEW`).
 - Temiz gerçek capture: `cloud/media/line-ai-gercek-kodlama.mp4`, 1440×900 H.264, 135.133 s, SHA-256 `447bbcfeee83a2e314e7d4b8e4dae086f891a69b3ec5d868dbbc26268ba54972`; poster ve evidence JSON aynı native koşudan üretildi. Capture-only Tauri/WebView2 CDP ve Vite süreçleri doğrulama sonrası kapatıldı.
-- Landing preview aynı artifact üzerinde tam smoke `PASS` olduktan sonra production'a promote edildi. `https://lineaicloud.vercel.app` doğrulanmış `dpl_5en4T8nDFrYBJ6gQUU2GER2pvtYH` deployment'ına yönlendirildi; public landing/video/evidence hash, health, auth reddi, Cloud konuşma yaz/oku/sil ve silinen kimliği reddetme `PASS`; geçici smoke verisi temizlendi (`E7 PRODUCTION_VERIFIED`).
+- Önceki `https://lineaicloud.vercel.app` production kanıtı tarihsel kaldı; güncel production URL ve kanıt `https://lineai-eta.vercel.app` için yeniden üretilmelidir.
 - Production error-log taramasında işlevsel hata görülmedi; başarılı DELETE fonksiyon çağrısında Node/Supabase zincirinden gelen bir `url.parse()` deprecation uyarısı kaldı.
 - Gerçek canlı işlem geçmişi için regresyon testi önce erişilebilir adım listesi bulunmadığından beklenen nedenle `FAIL` oldu; minimal uygulamadan sonra odaklı test ve tam `pnpm verify` zinciri `42/42 PASS` verdi. Liste yalnız native provider event'lerinden oluşur; yapay süre/yüzde üretmez (`E3 SELF_TEST_PASSED`).
 - Güncel native Tauri/WebView2 CDP tekrar koşusunda iki gerçek SVG artifact, güvenli preview/download, sohbetten SVG kaynak saklama ve ikinci sürüm yerel DIFF `PASS`; DIFF `29 added / 29 removed / 63 context`, eski/yeni numaralı toplam `121/121` satır gösterdi. Canlı adım listesinde gerçek OpenAI kredi reddi, Gemini model/anahtar denemeleri ve `line-ai-logo.svg` KB aktarımı birlikte gözlendi (`E4 RUNTIME_VERIFIED_ISOLATED`, `E5 INTEGRATION_VERIFIED`, `E6 PHYSICALLY_VERIFIED_PREVIEW`).
 - `004938c` commit'inden yerel `Line AI.exe` üretildi; ancak canlı işlem geçmişi kaynak değişikliği nedeniyle bu EXE artık `STALE_REVERIFY` ve güncel kaynakla yeniden derlenecek.
 - Önceki `PAUSED` Vercel talimatı, kullanıcının güncel "site, GitHub, ZIP ve masaüstü kısayolunu güncelle" talimatıyla geçersizdir. Güncel kaynak için yeni production kanıtı henüz üretilmemiştir.
-- Güncel EXE, masaüstü temiz kaynak ZIP'i ve GitHub EXE-only release henüz yeniden üretilip doğrulanmadı.
+- v0.5.0-rc.1 EXE, masaüstü kaynak ZIP'i, kısayol ve EXE-only GitHub aday sürümü üretildi; eski varsayılan Cloud kökünü kullandığı için `STALE_REVERIFY` durumundadır.
 
 ## EXACT NEXT ACTION
 
-Temiz commit'te frontend/Rust/cloud doğrulamasını tamamla; güncel Windows EXE'yi derle, masaüstüne kopyala ve hash doğrula. Aynı commit'ten build/cache/secret içermeyen yerel `Line AI v0.5.0-rc.1 Source.zip` üret, `Line AI.lnk` kısayolunu güncelle, GitHub'a push ederek EXE-only `v0.5.0-rc.1` aday sürümünü oluştur ve public indirme/hash doğrulamasını yap. Ardından production siteyi dağıtıp doğrula; sonra Mission Control UI ve kalan v0.5.0 işiyle devam et.
+Temiz commit'te frontend/Rust/cloud doğrulamasını tamamla; güncel Windows EXE'yi derle, masaüstüne kopyala ve hash doğrula. Aynı commit'ten build/cache/secret içermeyen yerel `Line AI v0.5.0-rc.2 Source.zip` üret, `Line AI.lnk` kısayolunu güncelle, GitHub'a push ederek EXE-only `v0.5.0-rc.2` aday sürümünü oluştur ve public indirme/hash doğrulamasını yap. Ardından production siteyi dağıtıp doğrula; sonra Mission Control UI ve kalan v0.5.0 işiyle devam et.

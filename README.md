@@ -17,10 +17,10 @@
   <img alt="Lisans: MIT" src="https://img.shields.io/badge/Lisans-MIT-2EA44F">
 </p>
 
-Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0-rc.1; gerçek işlem izlerini, kanıtları ve yerel çalışma alanı işlemlerini belgeleyen çekirdeği aday olarak ekler. Bu sürümde Trace, Checkpoint, Verification, Workflow ve hafıza çekirdeği ile Rust terminal/Git runtime'ı kaynakta ve testlerde vardır; bunları kullanan Mission Control, replay, Jury ve yerel model arayüzleri henüz uygulamaya bağlanmış değildir.
+Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0-rc.2; gerçek işlem izlerini, kanıtları ve yerel çalışma alanı işlemlerini belgeleyen çekirdeği aday olarak ekler. Bu sürümde Trace, Checkpoint, Verification, Workflow ve hafıza çekirdeği ile Rust terminal/Git runtime'ı kaynakta ve testlerde vardır; bunları kullanan Mission Control, replay, Jury ve yerel model arayüzleri henüz uygulamaya bağlanmış değildir.
 
 <p align="center">
-  <a href="https://lineaicloud.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
+  <a href="https://lineai-eta.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
 </p>
 
 ## Uygulamadan görüntüler
@@ -33,7 +33,7 @@ Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0-rc.1;
 
 ## Öne çıkan özellikler
 
-### v0.5.0-rc.1 çekirdeği
+### v0.5.0-rc.2 çekirdeği
 
 - **Trace ve Evidence:** Sıralı olaylar, gizli değerlerden arındırılmış kanıtlar ve katı `VERIFIED`, `PARTIALLY_VERIFIED`, `UNVERIFIED`, `FAILED`, `BLOCKED` sonuç hesabı.
 - **Yerel dayanıklılık:** Oturumlar cihazda saklanır; açık kalan oturumlar sonraki açılışta kesildi olarak işaretlenir. SHA-256 bütünlük değerli proof bundle dışa/içe aktarımı bulunur.
@@ -190,7 +190,7 @@ pnpm -C cloud check
 pnpm -C cloud smoke:production
 ```
 
-Üretim sağlık uç noktası: [`https://lineaicloud.vercel.app/api/v1/health`](https://lineaicloud.vercel.app/api/v1/health)
+Üretim sağlık uç noktası: [`https://lineai-eta.vercel.app/api/v1/health`](https://lineai-eta.vercel.app/api/v1/health)
 
 ## Türkçe sürüm ve görsel güncelleme standardı
 

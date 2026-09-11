@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 
-const baseUrl = (process.env.LINE_AI_CLOUD_URL ?? "https://lineaicloud.vercel.app").replace(/\/$/, "");
+const baseUrl = (process.env.LINE_AI_CLOUD_URL ?? "https://lineai-eta.vercel.app").replace(/\/$/, "");
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
