@@ -119,7 +119,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		);
 
 		expect(
-			within(settings).getByRole("heading", { name: "Line AI v0.5.0-rc.3" }),
+			within(settings).getByRole("heading", { name: "Line AI v0.5.0" }),
 		).toBeInTheDocument();
 		expect(
 			within(settings).getByRole("heading", {

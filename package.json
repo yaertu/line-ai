@@ -12,6 +12,7 @@
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
 		"docs:screenshots": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gorselleri-guncelle.ps1",
 		"docs:showcase": "node scripts/capture-showcase.mjs",
+		"docs:v050-showcase": "node scripts/capture-v050-highlights.mjs",
 		"docs:real-coding": "node scripts/capture-real-coding.mjs",
 		"release:desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-desktop.ps1",
     "tauri": "tauri",

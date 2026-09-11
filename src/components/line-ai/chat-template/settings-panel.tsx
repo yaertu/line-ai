@@ -1161,8 +1161,8 @@ const SettingsPanel = ({
 							{section === "about" ? (
 								<div className="space-y-4">
 									<SettingsGroup
-										description="Denetlenebilir Windows yapay zekâ çalışma alanı · aday sürüm"
-										title="Line AI v0.5.0-rc.3"
+										description="Denetlenebilir Windows yapay zekâ çalışma alanı · final sürüm"
+										title="Line AI v0.5.0"
 									>
 										<p className="text-muted-foreground text-sm leading-relaxed">
 											Line AI; sohbet, dosya bağlamı ve Chrome araçlarının yanına
@@ -1171,7 +1171,7 @@ const SettingsPanel = ({
 										</p>
 									</SettingsGroup>
 									<SettingsGroup
-										description="Bu aday sürümde eklenen gerçek altyapılar."
+										description="Bu final sürümde eklenen gerçek altyapılar."
 										title="Yenilikler · v0.5.0"
 									>
 										<ul

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 
-const baseUrl = (process.env.LINE_AI_CLOUD_URL ?? "https://lineai-eta.vercel.app").replace(/\/$/, "");
+const baseUrl = (process.env.LINE_AI_CLOUD_URL ?? "https://lineaicloud.vercel.app").replace(/\/$/, "");
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -41,6 +41,12 @@ try {
 			landingHtml.includes("/media/line-ai-gercek-kodlama-poster.png"),
 		"Landing doğrulanmış gerçek kodlama kaydını kullanmıyor.",
 	);
+	assert(
+		landingHtml.includes("/media/line-ai-v050-yenilikler.mp4") &&
+			landingHtml.includes("/media/line-ai-v050-yenilikler-poster.png") &&
+			landingHtml.includes("releases/download/v0.5.0/Line.AI.exe"),
+		"Landing v0.5.0 kaynak arayüz kaydını veya sabit indirme bağlantısını kullanmıyor.",
+	);
 
 	const evidenceResponse = await requestRaw(
 		"/media/line-ai-gercek-kodlama.evidence.json",
@@ -63,6 +69,28 @@ try {
 		"Production videosu ile evidence SHA-256 özeti eşleşmiyor.",
 	);
 	console.log("landingRealCapture=PASS");
+
+	const sourceUiEvidenceResponse = await requestRaw(
+		"/media/line-ai-v050-yenilikler.evidence.json",
+	);
+	const sourceUiEvidence = await sourceUiEvidenceResponse.json();
+	assert(sourceUiEvidenceResponse.status === 200, "v0.5.0 kaynak arayüz evidence JSON yayınlanmıyor.");
+	assert(
+		sourceUiEvidence?.source?.kind === "vite-source-ui-playwright" &&
+			sourceUiEvidence?.source?.surface === "Ayarlar > Hakkında > Yenilikler · v0.5.0" &&
+			sourceUiEvidence?.claims?.notShownAsProductUi?.includes("Mission Control"),
+		"v0.5.0 kaynak arayüz kaydının kapsamı ve sınırı doğrulanamıyor.",
+	);
+
+	const sourceUiVideoResponse = await requestRaw("/media/line-ai-v050-yenilikler.mp4");
+	const sourceUiVideoBytes = Buffer.from(await sourceUiVideoResponse.arrayBuffer());
+	const sourceUiVideoHash = createHash("sha256").update(sourceUiVideoBytes).digest("hex");
+	assert(sourceUiVideoResponse.status === 200, "v0.5.0 kaynak arayüz videosu yayınlanmıyor.");
+	assert(
+		sourceUiVideoHash === sourceUiEvidence?.video?.sha256,
+		"v0.5.0 kaynak arayüz videosu ile evidence SHA-256 özeti eşleşmiyor.",
+	);
+	console.log("landingV050SourceUi=PASS");
 
   const health = await request("/api/v1/health");
   assert(health.response.status === 200, "Health endpoint başarısız.");

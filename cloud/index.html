@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Line AI; kendi API bağlantılarınızı, web kaynaklarını, Chrome araçlarını, dosyaları ve kod önizlemeyi tek Windows çalışma alanında birleştirir."
+      content="Line AI v0.5.0; Trace, kanıt, doğrulama, terminal, Git ve checkpoint çekirdeğini Windows AI çalışma alanına ekler. Gerçek ürün ve kaynak arayüz kayıtlarını izleyin."
     />
     <meta name="theme-color" content="#f7faff" />
     <title>Line AI — İz bırak. Kanıtla. Üret.</title>
@@ -2409,7 +2409,8 @@
         animation: cinema-aura 19s linear infinite;
       }
 
-      .scene-screen video {
+      .scene-screen video,
+      .scene-screen img {
         display: block;
         width: 100%;
         aspect-ratio: 16 / 10;
@@ -2520,6 +2521,7 @@
         .topbar { top: 8px; width: calc(100% - 16px); }
         .topbar .button { display: none; }
         .hero { min-height: 680px; padding-top: 130px; }
+        .hero-title { flex-wrap: wrap; justify-content: center; white-space: normal; }
         .hero p { font-size: 16px; }
         .product-stage { margin-top: -45px; }
         .app-window { min-height: 600px; }
@@ -2601,6 +2603,7 @@
       <nav class="nav-links" aria-label="Sayfa bölümleri">
         <a href="#canli-demo">Deneyim</a>
         <a href="#canli-demo">Canlı demo</a>
+        <a href="#v050">v0.5.0</a>
         <a href="#yetenekler">Yetenekler</a>
         <a href="#ayarlar">Ayarlar</a>
         <a href="#bulut">Bulut</a>
@@ -2670,6 +2673,61 @@
           <div class="film-proof"><strong>02 · Artifact</strong><span>Kaynak sohbete dökülmeden önizleme ve indirme</span></div>
           <div class="film-proof"><strong>03 · Yerel DIFF</strong><span>Eklenen, silinen ve bağlam satırları</span></div>
           <div class="film-proof"><strong>04 · Native kanıt</strong><span>Tauri · WebView2 · CDP kaydı</span></div>
+        </div>
+      </section>
+
+      <section class="motion-story shell" id="v050" aria-labelledby="v050-title">
+        <div class="motion-heading reveal">
+          <div>
+            <span class="kicker">v0.5.0 · Kaynak arayüz kaydı</span>
+            <h2 id="v050-title">Yeni çekirdeğin uygulama içindeki dürüst özeti.</h2>
+          </div>
+          <p>Bu kayıt, güncel kaynak sürümünde Ayarlar → Hakkında → Yenilikler yüzeyini gösterir. Çekirdeğin ne eklediğini ve hangi kullanıcı arayüzlerinin henüz gelmediğini aynı yerde açıkça ayırır.</p>
+        </div>
+        <div class="story-track">
+          <article class="story-scene reveal">
+            <div class="scene-copy">
+              <span class="scene-index">v0.5.0</span>
+              <h3>İz, kanıt ve güvenli çalışma alanı.</h3>
+              <p>Trace/Evidence/Verification, kesintiden toparlanan oturumlar, SHA-256 proof bundle, terminal çıktısı, salt-okunur Git özeti ve onaylı checkpoint altyapısı kaynakta ve testlerde bulunur.</p>
+              <ul class="scene-points">
+                <li>Gizli değerler kayda alınmadan arındırılır.</li>
+                <li>Terminal sonucu stdout, stderr, çıkış kodu ve süre aşımıyla kaydedilir.</li>
+                <li>Checkpoint geri yükleme açık onay gerektirir.</li>
+              </ul>
+              <div class="hero-actions">
+                <a class="button primary" href="https://github.com/yaertu/line-ai/releases/tag/v0.5.0" target="_blank" rel="noreferrer">v0.5.0 sürüm notları <span aria-hidden="true">↗</span></a>
+                <a class="button" href="https://github.com/yaertu/line-ai/tree/v0.5.0/src/features/mission-control" target="_blank" rel="noreferrer">Trace kaynağını incele <span aria-hidden="true">↗</span></a>
+              </div>
+            </div>
+            <div class="scene-screen" aria-label="Line AI v0.5.0 Hakkında ekranı video kaydı">
+              <span class="scene-label">Kaynak UI · 1440 × 900</span>
+              <video id="v050-showcase-video" autoplay muted loop playsinline preload="metadata" poster="/media/line-ai-v050-yenilikler-poster.png">
+                <source src="/media/line-ai-v050-yenilikler.mp4" type="video/mp4" />
+                Tarayıcınız MP4 video biçimini desteklemiyor.
+              </video>
+            </div>
+          </article>
+          <article class="story-scene reveal">
+            <div class="scene-copy">
+              <span class="scene-index">KANIT SINIRI</span>
+              <h3>Videonun gösterdiği ile göstermediği ayrıdır.</h3>
+              <p>Bu video, v0.5.0’ın uygulama içi sürüm bilgisini ve çekirdek özetini kaydeder. Mission Control, replay, Jury ve yerel model çalıştırma ekranları henüz kullanıcı arayüzüne bağlanmadı; bunları çalışan ürün yüzeyi gibi göstermiyoruz.</p>
+              <ul class="scene-points">
+                <li>Ürün videosu: gerçek Gemini → SVG artifact → yerel DIFF.</li>
+                <li>v0.5.0 videosu: güncel kaynak arayüzündeki sürüm ve sınır özeti.</li>
+                <li>GitHub: sürüm, kaynak kod ve değişiklik kaydı tek depo altında.</li>
+              </ul>
+              <div class="hero-actions">
+                <a class="button" href="https://github.com/yaertu/line-ai/blob/v0.5.0/CHANGELOG.md" target="_blank" rel="noreferrer">Değişiklik kaydını aç <span aria-hidden="true">↗</span></a>
+                <a class="button" href="https://github.com/yaertu/line-ai/blob/v0.5.0/src-tauri/src/workspace.rs" target="_blank" rel="noreferrer">Workspace runtime’ı <span aria-hidden="true">↗</span></a>
+              </div>
+            </div>
+            <div class="scene-screen" aria-label="Line AI v0.5.0 kaynak arayüz kaydı poster görüntüsü">
+              <span class="scene-label">Doğrulanmış kaynak kaydı</span>
+              <img src="/media/line-ai-v050-yenilikler-poster.png" alt="Line AI Ayarlar Hakkında bölümündeki v0.5.0 yenilikleri" loading="lazy" />
+            </div>
+          </article>
         </div>
       </section>
 
@@ -2800,7 +2858,7 @@
     <footer>
       <div class="footer-inner shell">
         <div class="footer-brand"><span class="brand-mark"></span><span>Line AI</span></div>
-        <div class="footer-links"><a href="#yetenekler">Yetenekler</a><a href="#ayarlar">Ayarlar</a><a href="https://github.com/yaertu/line-ai/releases">Sürümler</a></div>
+        <div class="footer-links"><a href="#v050">v0.5.0</a><a href="#yetenekler">Yetenekler</a><a href="#ayarlar">Ayarlar</a><a href="https://github.com/yaertu/line-ai/releases">Sürümler</a></div>
         <small>© 2026 Line AI</small>
       </div>
     </footer>

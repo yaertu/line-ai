@@ -17,15 +17,17 @@
   <img alt="Lisans: MIT" src="https://img.shields.io/badge/Lisans-MIT-2EA44F">
 </p>
 
-Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0-rc.3; gerçek işlem izlerini, kanıtları ve yerel çalışma alanı işlemlerini belgeleyen çekirdeği aday olarak ekler. Bu sürümde Trace, Checkpoint, Verification, Workflow ve hafıza çekirdeği ile Rust terminal/Git runtime'ı kaynakta ve testlerde vardır; bunları kullanan Mission Control, replay, Jury ve yerel model arayüzleri henüz uygulamaya bağlanmış değildir.
+Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0; gerçek işlem izlerini, kanıtları ve yerel çalışma alanı işlemlerini belgeleyen çekirdeği final kaynak sürümüne ekler. Bu sürümde Trace, Checkpoint, Verification, Workflow ve hafıza çekirdeği ile Rust terminal/Git runtime'ı kaynakta ve testlerde vardır; bunları kullanan Mission Control, replay, Jury ve yerel model arayüzleri henüz uygulamaya bağlanmış değildir.
 
 <p align="center">
-  <a href="https://lineai-eta.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
+  <a href="https://lineaicloud.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
 </p>
 
 ## Uygulamadan görüntüler
 
-![Line AI tanıtım](./docs/gorseller/line-ai-tanitim.gif)
+![Line AI v0.5.0 yenilikler](./docs/gorseller/line-ai-tanitim.gif)
+
+> Kayıt, güncel kaynak arayüzündeki **Ayarlar → Hakkında → Yenilikler · v0.5.0** yüzeyini gösterir. Mission Control, replay, Jury ve yerel model çalıştırma ekranlarının henüz bağlanmadığı bu kayıtta ayrıca belirtilir.
 
 | ☀️ Açık tema | 🌙 Koyu tema |
 | --- | --- |
@@ -33,7 +35,7 @@ Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0-rc.3;
 
 ## Öne çıkan özellikler
 
-### v0.5.0-rc.3 çekirdeği
+### v0.5.0 çekirdeği
 
 - **Trace ve Evidence:** Sıralı olaylar, gizli değerlerden arındırılmış kanıtlar ve katı `VERIFIED`, `PARTIALLY_VERIFIED`, `UNVERIFIED`, `FAILED`, `BLOCKED` sonuç hesabı.
 - **Yerel dayanıklılık:** Oturumlar cihazda saklanır; açık kalan oturumlar sonraki açılışta kesildi olarak işaretlenir. SHA-256 bütünlük değerli proof bundle dışa/içe aktarımı bulunur.

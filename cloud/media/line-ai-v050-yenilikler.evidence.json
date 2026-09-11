@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-11T17:10:01.088Z",
+  "source": {
+    "kind": "vite-source-ui-playwright",
+    "url": "http://127.0.0.1:1430",
+    "viewport": "1440x900",
+    "surface": "Ayarlar > Hakkında > Yenilikler · v0.5.0"
+  },
+  "claims": {
+    "shown": [
+      "Trace/Evidence/Verification çekirdek özeti",
+      "yerel oturum ve SHA-256 proof bundle özeti",
+      "terminal, Git ve checkpoint runtime özeti",
+      "yerel loopback model bağlantısı özeti"
+    ],
+    "notShownAsProductUi": [
+      "Mission Control",
+      "replay",
+      "Jury",
+      "yerel model çalıştırma yüzeyi"
+    ]
+  },
+  "video": {
+    "fileName": "line-ai-v050-yenilikler.mp4",
+    "sha256": "97ba66129aef52e933fd9ca19f1c6b8916985cd840a331a6a55ab0c17313a5e9"
+  }
+}
