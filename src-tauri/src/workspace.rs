@@ -876,8 +876,11 @@ mod tests {
         fs,
         path::PathBuf,
         process::Command,
+        sync::Mutex,
         time::{SystemTime, UNIX_EPOCH},
     };
+
+    static TERMINAL_TEST_LOCK: Mutex<()> = Mutex::new(());
 
     fn temp_root(label: &str) -> PathBuf {
         let nonce = SystemTime::now()
@@ -910,6 +913,7 @@ mod tests {
 
     #[test]
     fn returns_real_stdout_stderr_exit_code_and_timeout() {
+        let _terminal_test_guard = TERMINAL_TEST_LOCK.lock().unwrap();
         tauri::async_runtime::block_on(async {
             let root = temp_root("terminal");
             let runtime = WorkspaceRuntime::default();
@@ -970,6 +974,7 @@ mod tests {
 
     #[test]
     fn cancels_a_running_terminal_process_and_never_reports_success() {
+        let _terminal_test_guard = TERMINAL_TEST_LOCK.lock().unwrap();
         tauri::async_runtime::block_on(async {
             let root = temp_root("terminal-cancel");
             let runtime = std::sync::Arc::new(WorkspaceRuntime::default());
