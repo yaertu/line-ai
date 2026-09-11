@@ -2,6 +2,28 @@
 
 Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir. Sürümleme [SemVer](https://semver.org/lang/tr/) yaklaşımını izler.
 
+## [0.5.0] - 2026-09-11
+
+### Eklendi
+
+- Gerçek Trace oturumları, Evidence kayıtları ve kanıta dayalı `VERIFIED`, `PARTIALLY_VERIFIED`, `UNVERIFIED`, `FAILED`, `BLOCKED` sonuç hesabı.
+- SHA-256 bütünlük kontrollü Proof Bundle, Interrupted oturum kurtarma, v1 `.line` workflow doğrulaması ve evidence bağlı Project Memory çekirdeği.
+- Windows native terminal motoru: PowerShell komutu, stdout/stderr, exit code, timeout, iptal, risk sınıfı ve secret redaksiyonu.
+- Salt-okunur Git durum özeti ve cache klasörlerini dışarıda bırakan, onaylı restore destekli workspace checkpoint motoru.
+- Ollama, LM Studio ve loopback OpenAI-compatible yerel sağlayıcı desteği; yerel hata cloud sağlayıcıya sessizce yükseltilmez.
+- BUILD, FIX, RESEARCH, AUDIT ve AUTOMATE görev tanımları ile gerçek Trace olaylarına bağlı görev planı reducer'ı.
+
+### Doğrulama
+
+- Frontend: 11 test dosyası, 80/80 test; lint, TypeScript ve Vite production build başarılı.
+- Rust: 29 test, 27 başarılı, gerçek Chrome ve gerçek Gemini ağ/anahtar isteyen 2 test `ignored`.
+- Üretim build ana JavaScript çıktısı 523.34 kB; v0.4.1 baseline 518.23 kB.
+
+### Sınırlar
+
+- Mission Control panelleri ve replay ekranı bu teslimde çekirdek API ve test kapsamı olarak hazırlandı; tüm paneller sohbet ana akışına henüz bağlanmış değildir.
+- Cloud production deployment ve GitHub final release doğrulaması bu commit'in ardından yapılacaktır.
+
 ## [0.5.0-rc.3] - 2026-09-11
 
 ### Eklendi
