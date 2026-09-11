@@ -2,6 +2,23 @@
 
 Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir. Sürümleme [SemVer](https://semver.org/lang/tr/) yaklaşımını izler.
 
+## [0.5.0-rc.1] - 2026-09-11
+
+### Eklendi
+
+- TypeScript Trace/Evidence/Verification çekirdeği: sıralı Trace olayları, secret sanitization ve zorunlu kriter kanıtlarından hesaplanan `VERIFIED`, `PARTIALLY_VERIFIED`, `UNVERIFIED`, `FAILED`, `BLOCKED` sonuçları.
+- Tarayıcı yerel saklaması, beklenmedik kapanan oturumların recovery işareti, SHA-256 bütünlük kontrollü proof bundle, v1 workflow parser/adım durumları ve kanıt bağlı proje hafızası.
+- Rust native çalışma alanı runtime'ı ve TypeScript IPC sarmalayıcıları: terminal stdout/stderr/çıkış kodu/süre aşımı/iptal, secret redaksiyonu, salt-okunur Git durum özeti, checkpoint oluşturma/inceleme ve açık onaylı geri yükleme.
+
+### Sınırlar
+
+- Bu sürümde yeni çekirdekler kullanıcı arayüzüne bağlanmış değildir. Mission Control, replay, local provider/model ve Jury arayüzleri uygulanmadı; bu nedenle kullanıma hazır ürün yüzeyi olarak sunulmaz.
+- Bu kayıt, aday paketin kaynak ve test kapsamını anlatır. Yayın kanıtı yalnız aynı commit'ten üretilmiş EXE, kaynak ZIP'i ve production site doğrulandıktan sonra eklenir.
+
+### Dokümantasyon
+
+- Trace, checkpoint, doğrulama, workflow, izinler, replay, local models ve v0.5.0 release sınırları için `docs/` altında kaynak odaklı belgeler eklendi.
+
 ## [0.4.1] - 2026-09-07
 
 ### Eklendi

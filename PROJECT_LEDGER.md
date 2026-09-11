@@ -2,6 +2,9 @@
 
 ## ACTIVE
 
+- v0.5.0-rc.1 kaynak çekirdeği: TypeScript Trace/Evidence/Verification, yerel oturum saklama/kesinti recovery, SHA-256 proof bundle, v1 workflow ve evidence-backed memory; Rust terminal/Git/checkpoint runtime'ı ve TypeScript IPC wrapper'ları uygulanmıştır.
+- v0.5.0 kapsam sınırı: Local provider, Jury, Mission Control UI ve replay UI uygulanmamıştır. Bu bileşenler kullanıcıya hazır gibi gösterilmez.
+
 - Marka ve ürün adı: **Line AI**.
 - Windows masaüstü uygulaması; OpenAI ve Gemini ortam anahtarlarıyla native Tauri işleminden çalışır.
 - Sohbet geçmişi, kullanıcı hesabı gerektirmeyen kurulum bazlı Line AI Cloud alanında tutulur; kurulum gizli anahtarı Windows Credential Manager içindedir.
@@ -12,7 +15,7 @@
 - GitHub tanıtımı Türkçe, insan yazımı ürün diliyle tutulur; başka arayüz markaları tanıtım metninde öne çıkarılmaz.
 - Sağ çalışma alanında KOD ve ÖNİZLE yanında her zaman görünür gerçek bir DIFF sekmesi bulunur. DIFF provider çıktısına bağlı değildir; önceki kararlı artifact ile güncel gerçek dosya içeriğini yerel olarak karşılaştırır.
 - İlk kararlı artifact DIFF görünümünde karşılaştırılacak önceki sürüm olmadığı açıkça gösterilir; sonraki sürümlerde eklenen, silinen ve bağlam satırları eski/yeni satır numaralarıyla görünür.
-- Her kullanıcıya görünen değişiklikte ekran görüntüleri, özellik listesi, changelog, EXE ve GitHub Release birlikte yenilenir.
+- Yayımlanan her kullanıcıya dönük sürümde ekran görüntüleri, özellik listesi, changelog, EXE ve GitHub Release birlikte yenilenir.
 - Temiz kaynak ZIP yalnız masaüstünde yerel teslim olarak üretilir; GitHub Release'e kaynak ZIP konmaz ve GitHub Release EXE-only kalır.
 - Fake/demo/sahte/şablon/placeholder çıktı ve çalışmayan başarı gösterimi yasaktır. Görsel/logo isteğinde kaynak sohbet metnine dökülmez; desteklenen gerçek SVG artifact ÖNİZLE/indir yüzeyine gider, desteklenmeyen raster üretim sınırı açıkça söylenir.
 - Uzun provider işlemi yalnız “Düşünüyor” demez; gerçek native event'lerden gelen tamamlanmış son adımları, güncel adımı, provider/model/denemeyi ve alınan artifact byte ilerlemesini kullanıcıya gösterir. Sahte yüzde veya zamanlayıcı kullanılmaz.
@@ -27,6 +30,8 @@
 - Eski e-spor HTML capture ve onu güncel ürün kanıtı sayma: CANCELLED; ilgili eski video/evidence hash'i `STALE_REVERIFY`.
 
 ## KANIT DURUMU
+
+- v0.5.0-rc.1 dokümantasyon/metadata hazırlığı: root `package.json`, `src-tauri/Cargo.toml`, `src-tauri/tauri.conf.json` ve `cloud/package.json` sürümü eşitlendi. Bu kayıt aday paketin kaynak kapsamını belirtir; dağıtım kanıtı ayrıca üretilmelidir.
 
 - Başlangıç HEAD: `898720e38fa63e3d0c20d12f8546d4fc6a1b6970`; çalışma ağacı temizdi.
 - Marka göçü tamamlandı: kaynak, Tauri, test, doküman ve dağıtım adları `Line AI` / `line-ai` olarak güncellendi.
@@ -51,9 +56,9 @@
 - Gerçek canlı işlem geçmişi için regresyon testi önce erişilebilir adım listesi bulunmadığından beklenen nedenle `FAIL` oldu; minimal uygulamadan sonra odaklı test ve tam `pnpm verify` zinciri `42/42 PASS` verdi. Liste yalnız native provider event'lerinden oluşur; yapay süre/yüzde üretmez (`E3 SELF_TEST_PASSED`).
 - Güncel native Tauri/WebView2 CDP tekrar koşusunda iki gerçek SVG artifact, güvenli preview/download, sohbetten SVG kaynak saklama ve ikinci sürüm yerel DIFF `PASS`; DIFF `29 added / 29 removed / 63 context`, eski/yeni numaralı toplam `121/121` satır gösterdi. Canlı adım listesinde gerçek OpenAI kredi reddi, Gemini model/anahtar denemeleri ve `line-ai-logo.svg` KB aktarımı birlikte gözlendi (`E4 RUNTIME_VERIFIED_ISOLATED`, `E5 INTEGRATION_VERIFIED`, `E6 PHYSICALLY_VERIFIED_PREVIEW`).
 - `004938c` commit'inden yerel `Line AI.exe` üretildi; ancak canlı işlem geçmişi kaynak değişikliği nedeniyle bu EXE artık `STALE_REVERIFY` ve güncel kaynakla yeniden derlenecek.
-- Kullanıcının son talimatıyla yeni Vercel aktarımı/deploy işlemleri `PAUSED`; mevcut üretim kanıtı önceki deployment için geçerlidir, güncel kaynak değişikliği üretimde doğrulanmış sayılmaz.
+- Önceki `PAUSED` Vercel talimatı, kullanıcının güncel "site, GitHub, ZIP ve masaüstü kısayolunu güncelle" talimatıyla geçersizdir. Güncel kaynak için yeni production kanıtı henüz üretilmemiştir.
 - Güncel EXE, masaüstü temiz kaynak ZIP'i ve GitHub EXE-only release henüz yeniden üretilip doğrulanmadı.
 
 ## EXACT NEXT ACTION
 
-Canlı işlem geçmişi değişikliğini frontend ve Rust zincirleriyle doğrula; secret ve kapsam denetiminden geçirip kullanıcı değişikliklerini silmeden commit oluştur. Sonra güncel Windows EXE'yi temiz commit'ten derle/kopyala/hash doğrula → masaüstünde build/cache/secret içermeyen temiz yerel kaynak ZIP'i üret → GitHub `yaertu/line-ai` release'ini yalnız aynı doğrulanmış EXE ile güncelle → public download/hash ve EXE-only varlık listesini doğrula. Kaynak ZIP'i GitHub'a yükleme. Kullanıcı kaldırana kadar yeni Vercel aktarımı/deploy adımlarını beklet. P0 bitince geçici Gemini anahtarlarının kullanıcı tarafından revoke/rotate edilmesi gerektiğini bildir ve ancak sonrasında onaylı eski Line AI/Codex temizlik kapsamına geç.
+Temiz commit'te frontend/Rust/cloud doğrulamasını tamamla; güncel Windows EXE'yi derle, masaüstüne kopyala ve hash doğrula. Aynı commit'ten build/cache/secret içermeyen yerel `Line AI v0.5.0-rc.1 Source.zip` üret, `Line AI.lnk` kısayolunu güncelle, GitHub'a push ederek EXE-only `v0.5.0-rc.1` aday sürümünü oluştur ve public indirme/hash doğrulamasını yap. Ardından production siteyi dağıtıp doğrula; sonra Mission Control UI ve kalan v0.5.0 işiyle devam et.
