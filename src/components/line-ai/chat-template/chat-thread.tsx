@@ -61,6 +61,7 @@ import {
 	CONTEXT_LIMIT,
 	type ExecutePromptEvent,
 	type ExecutePromptRequest,
+	type LocalModelEngine,
 	PROVIDERS,
 	type PromptAttachment,
 	type PromptExecutor,
@@ -136,6 +137,9 @@ export type ChatThreadProps = {
 	turns: ChatTurn[];
 	browserTools: boolean;
 	customInstructions: string;
+	localEndpoint: string;
+	localEngine: LocalModelEngine;
+	localModel: string;
 	responseStyle: ExecutePromptRequest["responseStyle"];
 };
 
@@ -157,6 +161,9 @@ export const ChatThread = ({
 	turns,
 	browserTools,
 	customInstructions,
+	localEndpoint,
+	localEngine,
+	localModel,
 	responseStyle,
 }: ChatThreadProps) => {
 	const [draft, setDraft] = useState("");
@@ -708,6 +715,9 @@ export const ChatThread = ({
 				...browserAttachments,
 			],
 			customInstructions,
+			...(provider === "local"
+				? { localEndpoint, localEngine, localModel }
+				: {}),
 			prompt,
 			provider,
 			reasoning,
@@ -1309,7 +1319,9 @@ const ChatTurnView = ({
 			? "OpenAI"
 			: turn.provider === "gemini"
 				? "Gemini"
-				: "Sağlayıcı";
+				: turn.provider === "local"
+					? "Yerel model"
+					: "Sağlayıcı";
 
 	return (
 		<article aria-label="Line AI mesajı işlemleri" {...contextProps}>

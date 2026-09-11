@@ -131,6 +131,9 @@ describe("Line AI masaüstü çalışma alanı", () => {
 			within(settings).getByText("Yerel çalışma alanı altyapısı"),
 		).toBeInTheDocument();
 		expect(
+			within(settings).getByText("Yerel model bağlantısı"),
+		).toBeInTheDocument();
+		expect(
 			within(settings).getByText(/bağlanma çalışması sürüyor/i),
 		).toBeInTheDocument();
 	});
@@ -189,6 +192,44 @@ describe("Line AI masaüstü çalışma alanı", () => {
 			),
 		);
 		expect(localStorage.getItem("line-ai.conversations.v1")).toBeNull();
+	});
+
+	it("yerel sağlayıcı seçildiğinde motor, uç nokta ve modeli doğrudan isteğe taşır", async () => {
+		localStorage.setItem(
+			"line-ai.preferences.v1",
+			JSON.stringify({
+				localEndpoint: "http://127.0.0.1:1234/v1",
+				localEngine: "lm-studio",
+				localModel: "qwen2.5-coder:7b",
+				provider: "local",
+			}),
+		);
+		const user = userEvent.setup();
+		const executePrompt = vi.fn().mockResolvedValue({
+			message: "Yerel yanıt",
+			model: "qwen2.5-coder:7b",
+			provider: "local",
+			sources: [],
+		});
+		render(<LineAiApp executePrompt={executePrompt} />);
+
+		await user.type(
+			screen.getByRole("textbox", { name: "Line AI'ya mesaj gönder" }),
+			"Yerel model çalışıyor mu?",
+		);
+		await user.click(screen.getByRole("button", { name: "Mesajı gönder" }));
+
+		await waitFor(() =>
+			expect(executePrompt).toHaveBeenCalledWith(
+				expect.objectContaining({
+					localEndpoint: "http://127.0.0.1:1234/v1",
+					localEngine: "lm-studio",
+					localModel: "qwen2.5-coder:7b",
+					provider: "local",
+				}),
+				expect.any(Function),
+			),
+		);
 	});
 
 	it("kullanıcı ve Line AI mesajlarında görünür gerçek işlem denetimleri sunar", async () => {
@@ -861,6 +902,9 @@ describe("Line AI masaüstü çalışma alanı", () => {
 			chatFontSize: 15,
 			codeFontSize: 13,
 			customInstructions: "",
+			localEndpoint: "http://127.0.0.1:11434/v1",
+			localEngine: "ollama",
+			localModel: "llama3.2",
 			motion: "system",
 			provider: "gemini",
 			reasoning: "high",
@@ -869,6 +913,71 @@ describe("Line AI masaüstü çalışma alanı", () => {
 			truthMode: false,
 			uiFontSize: 14,
 		});
+	});
+
+	it("yerel model motorunu, döngü adresini ve modelini tercihlerde saklar", async () => {
+		const user = userEvent.setup();
+		render(<LineAiApp executePrompt={vi.fn()} />);
+
+		await user.click(screen.getByRole("button", { name: "Ayarları aç" }));
+		const settings = screen.getByRole("dialog", { name: "Line AI ayarları" });
+		await user.click(
+			within(settings).getByRole("button", { name: "Yapay zekâ" }),
+		);
+		expect(
+			within(settings).getByText(/yalnızca bu bilgisayardaki HTTP döngü/i),
+		).toBeInTheDocument();
+		expect(
+			within(settings).getByRole("textbox", { name: "Yerel uç nokta" }),
+		).toHaveValue("http://127.0.0.1:11434/v1");
+
+		await user.click(within(settings).getByRole("button", { name: /^LM Studio/ }));
+		await user.clear(
+			within(settings).getByRole("textbox", { name: "Yerel model adı" }),
+		);
+		await user.type(
+			within(settings).getByRole("textbox", { name: "Yerel model adı" }),
+			"qwen2.5-coder:7b",
+		);
+		await user.click(
+			within(settings).getByRole("button", { name: /^Yerel model/ }),
+		);
+
+		await waitFor(() =>
+			expect(
+				JSON.parse(localStorage.getItem("line-ai.preferences.v1") ?? "null"),
+			).toMatchObject({
+				localEndpoint: "http://127.0.0.1:1234/v1",
+				localEngine: "lm-studio",
+				localModel: "qwen2.5-coder:7b",
+				provider: "local",
+			}),
+		);
+	});
+
+	it("geçersiz veya eski yerel ayarları motor varsayılanına taşır", async () => {
+		localStorage.setItem(
+			"line-ai.preferences.v1",
+			JSON.stringify({
+				localEndpoint: "https://model.example.test/v1?token=secret",
+				localEngine: "lm-studio",
+			}),
+		);
+		const user = userEvent.setup();
+		render(<LineAiApp executePrompt={vi.fn()} />);
+
+		await user.click(screen.getByRole("button", { name: "Ayarları aç" }));
+		const settings = screen.getByRole("dialog", { name: "Line AI ayarları" });
+		await user.click(
+			within(settings).getByRole("button", { name: "Yapay zekâ" }),
+		);
+
+		expect(
+			within(settings).getByRole("textbox", { name: "Yerel uç nokta" }),
+		).toHaveValue("http://127.0.0.1:1234/v1");
+		expect(
+			within(settings).getByRole("textbox", { name: "Yerel model adı" }),
+		).toHaveValue("llama3.2");
 	});
 
 	it("komut panelini yalnız artı yazıldığında açar ve seçimi gönderime uygular", async () => {

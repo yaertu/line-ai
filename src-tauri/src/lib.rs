@@ -2,10 +2,12 @@
 
 mod browser;
 mod cloud;
+mod providers;
 mod workspace;
 
 use futures_util::StreamExt;
-use reqwest::{header::ACCEPT, Client, StatusCode};
+use providers::{compatible, LocalProviderConfig, ProviderKind as Provider};
+use reqwest::{header::ACCEPT, redirect::Policy, Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
@@ -53,6 +55,12 @@ struct ExecuteAiPromptRequest {
     attachments: Option<Vec<PromptAttachment>>,
     #[serde(default)]
     custom_instructions: Option<String>,
+    #[serde(default)]
+    local_endpoint: Option<String>,
+    #[serde(default)]
+    local_engine: Option<String>,
+    #[serde(default)]
+    local_model: Option<String>,
     prompt: String,
     provider: String,
     reasoning: String,
@@ -139,28 +147,10 @@ fn default_content_kind() -> String {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Provider {
-    Auto,
-    OpenAi,
-    Gemini,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Reasoning {
     Low,
     Medium,
     High,
-}
-
-impl Provider {
-    fn parse(value: &str) -> Result<Self, String> {
-        match value {
-            "auto" => Ok(Self::Auto),
-            "openai" => Ok(Self::OpenAi),
-            "gemini" => Ok(Self::Gemini),
-            _ => Err("Desteklenmeyen sağlayıcı seçimi.".to_owned()),
-        }
-    }
 }
 
 impl Reasoning {
@@ -232,49 +222,51 @@ async fn execute_ai_prompt(
         .build()
         .map_err(|_| "Güvenli ağ istemcisi başlatılamadı.".to_owned())?;
 
-    match provider {
-        Provider::OpenAi => {
-            run_openai(&client, &request, &current_prompt, reasoning, &on_event).await
-        }
-        Provider::Gemini => {
-            run_gemini(&client, &request, &current_prompt, reasoning, &on_event).await
-        }
-        Provider::Auto => {
-            let openai_is_configured = read_nonempty_env("OPENAI_API_KEY").is_some();
-            let gemini_is_configured = read_nonempty_env("GEMINI_API_KEY").is_some()
-                || read_nonempty_env("GEMINI_API_KEY2").is_some();
-
-            if !openai_is_configured && !gemini_is_configured {
-                return Err(
-                    "OPENAI_API_KEY veya GEMINI_API_KEY Windows ortam değişkeni bulunamadı."
-                        .to_owned(),
-                );
+    if !provider.allows_automatic_cloud_fallback() {
+        return match provider {
+            Provider::OpenAi => {
+                run_openai(&client, &request, &current_prompt, reasoning, &on_event).await
             }
-
-            if openai_is_configured {
-                match run_openai(&client, &request, &current_prompt, reasoning, &on_event).await {
-                    Ok(result) => return Ok(result),
-                    Err(_error) => {
-                        #[cfg(debug_assertions)]
-                        eprintln!("[line-ai] openai fallback reason={_error}");
-                    }
-                }
-                emit_event(&on_event, ExecuteAiPromptEvent::Reset);
-                emit_event(
-                    &on_event,
-                    ExecuteAiPromptEvent::Status {
-                        label: "OpenAI kullanılamadı · Gemini'ye geçiliyor".to_owned(),
-                    },
-                );
+            Provider::Gemini => {
+                run_gemini(&client, &request, &current_prompt, reasoning, &on_event).await
             }
-
-            if gemini_is_configured {
-                return run_gemini(&client, &request, &current_prompt, reasoning, &on_event).await;
-            }
-
-            Err("OpenAI isteği başarısız oldu ve kullanılabilir Gemini anahtarı yok.".to_owned())
-        }
+            Provider::Local => run_local(&request, &current_prompt, &on_event).await,
+            Provider::Auto => Err("Geçersiz sağlayıcı yönlendirmesi.".to_owned()),
+        };
     }
+
+    let openai_is_configured = read_nonempty_env("OPENAI_API_KEY").is_some();
+    let gemini_is_configured = read_nonempty_env("GEMINI_API_KEY").is_some()
+        || read_nonempty_env("GEMINI_API_KEY2").is_some();
+
+    if !openai_is_configured && !gemini_is_configured {
+        return Err(
+            "OPENAI_API_KEY veya GEMINI_API_KEY Windows ortam değişkeni bulunamadı.".to_owned(),
+        );
+    }
+
+    if openai_is_configured {
+        match run_openai(&client, &request, &current_prompt, reasoning, &on_event).await {
+            Ok(result) => return Ok(result),
+            Err(_error) => {
+                #[cfg(debug_assertions)]
+                eprintln!("[line-ai] openai fallback reason={_error}");
+            }
+        }
+        emit_event(&on_event, ExecuteAiPromptEvent::Reset);
+        emit_event(
+            &on_event,
+            ExecuteAiPromptEvent::Status {
+                label: "OpenAI kullanılamadı · Gemini'ye geçiliyor".to_owned(),
+            },
+        );
+    }
+
+    if gemini_is_configured {
+        return run_gemini(&client, &request, &current_prompt, reasoning, &on_event).await;
+    }
+
+    Err("OpenAI isteği başarısız oldu ve kullanılabilir Gemini anahtarı yok.".to_owned())
 }
 
 #[tauri::command]
@@ -1053,6 +1045,114 @@ async fn run_openai(
         model,
         provider: "openai".to_owned(),
         sources,
+    })
+}
+
+async fn run_local(
+    request: &ExecuteAiPromptRequest,
+    current_prompt: &str,
+    on_event: &tauri::ipc::Channel<ExecuteAiPromptEvent>,
+) -> Result<ExecuteAiPromptResult, String> {
+    let config = LocalProviderConfig::parse(
+        request.local_endpoint.as_deref(),
+        request.local_model.as_deref(),
+        request.local_engine.as_deref(),
+    )?;
+    // Local model traffic must never inherit a system proxy or follow a redirect.
+    // Together with the validated loopback URL this prevents a local-model choice
+    // from becoming an unreviewed remote request.
+    let client = Client::builder()
+        .http1_only()
+        .no_proxy()
+        .redirect(Policy::none())
+        .timeout(Duration::from_secs(120))
+        .build()
+        .map_err(|_| "Yerel model için güvenli ağ istemcisi başlatılamadı.".to_owned())?;
+    let model = config.model.clone();
+    let engine = config.engine.label();
+    let mut messages = vec![json!({
+        "role": "system",
+        "content": build_system_instruction(
+            request.truth_mode,
+            request.custom_instructions.as_deref(),
+            request.response_style.as_deref(),
+        ),
+    })];
+    messages.extend(openai_messages(&request.transcript, current_prompt));
+    let body = json!({
+        "model": model,
+        "messages": messages,
+        "stream": true,
+    });
+
+    emit_event(
+        on_event,
+        ExecuteAiPromptEvent::Status {
+            label: provider_attempt_label("Yerel model", &model, 1, 1),
+        },
+    );
+    let response = client
+        .post(config.chat_completions_url())
+        .header(ACCEPT, "text/event-stream")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|_| format!("{engine} yerel sunucusuna bağlanılamadı."))?;
+    let status = response.status();
+    if !status.is_success() {
+        let text = response.text().await.unwrap_or_default();
+        return Err(provider_error("Yerel model", status, &text, &[]));
+    }
+    emit_event(
+        on_event,
+        ExecuteAiPromptEvent::Status {
+            label: format!("{engine} yanıtı hazırlanıyor · {model}"),
+        },
+    );
+
+    let mut message = String::new();
+    let mut stream_failure = None;
+    for_each_sse_value(response, "Yerel model", |event| {
+        if let Some(error) = compatible::error_message(&event) {
+            stream_failure = Some(error);
+            return;
+        }
+        if let Some(delta) = compatible::text_delta(&event) {
+            message.push_str(&delta);
+            emit_event(on_event, ExecuteAiPromptEvent::TextDelta { text: delta });
+            return;
+        }
+        if message.trim().is_empty() {
+            if let Some(completed) = compatible::completed_text(&event) {
+                message = completed.clone();
+                emit_event(
+                    on_event,
+                    ExecuteAiPromptEvent::TextDelta { text: completed },
+                );
+            }
+        }
+    })
+    .await?;
+
+    if let Some(failure) = stream_failure {
+        let safe_failure = failure.chars().take(500).collect::<String>();
+        return Err(format!("Yerel model akışı başarısız oldu: {safe_failure}"));
+    }
+    if message.trim().is_empty() {
+        return Err("Yerel model boş veya desteklenmeyen bir yanıt döndürdü.".to_owned());
+    }
+    if !response_is_sufficient(current_prompt, &message) {
+        return Err(
+            "Yerel model tam dosya isteğini eksik veya bozuk tamamladı; eksik yanıt gösterilmedi."
+                .to_owned(),
+        );
+    }
+
+    Ok(ExecuteAiPromptResult {
+        message: message.trim().to_owned(),
+        model,
+        provider: "local".to_owned(),
+        sources: Vec::new(),
     })
 }
 

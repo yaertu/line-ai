@@ -19,6 +19,9 @@ import {
 	type ChatTurn,
 	CONVERSATIONS,
 	DEFAULT_PREFERENCES,
+	isLocalLoopbackEndpoint,
+	localEndpointForEngine,
+	type LocalModelEngine,
 	type PromptExecutor,
 } from "./chat-data";
 import ChatSidebar, { DialogButton, DialogShell } from "./chat-sidebar";
@@ -123,8 +126,13 @@ const loadPreferences = (): AppPreferences => {
 				? { ...DEFAULT_PREFERENCES, theme: previewTheme }
 				: DEFAULT_PREFERENCES;
 		}
+		const localEngine = ["ollama", "lm-studio", "openai-compatible"].includes(
+			parsed.localEngine ?? "",
+		)
+			? (parsed.localEngine as LocalModelEngine)
+			: DEFAULT_PREFERENCES.localEngine;
 		return {
-			provider: ["auto", "openai", "gemini"].includes(parsed.provider ?? "")
+			provider: ["auto", "openai", "gemini", "local"].includes(parsed.provider ?? "")
 				? (parsed.provider as AppPreferences["provider"])
 				: DEFAULT_PREFERENCES.provider,
 			reasoning: ["low", "medium", "high"].includes(parsed.reasoning ?? "")
@@ -157,6 +165,14 @@ const loadPreferences = (): AppPreferences => {
 				typeof parsed.customInstructions === "string"
 					? parsed.customInstructions.slice(0, 12_000)
 					: DEFAULT_PREFERENCES.customInstructions,
+			localEngine,
+			localEndpoint: isLocalLoopbackEndpoint(parsed.localEndpoint)
+				? parsed.localEndpoint.trim()
+				: localEndpointForEngine(localEngine),
+			localModel:
+				typeof parsed.localModel === "string"
+					? parsed.localModel.trim().slice(0, 200)
+					: DEFAULT_PREFERENCES.localModel,
 			motion: ["system", "reduce"].includes(parsed.motion ?? "")
 				? (parsed.motion as AppPreferences["motion"])
 				: DEFAULT_PREFERENCES.motion,
@@ -827,6 +843,9 @@ const ChatTemplate = ({
 				customInstructions={preferences.customInstructions}
 				executePrompt={executePrompt}
 				key={`${activeId}-${newChatVersion}`}
+				localEndpoint={preferences.localEndpoint}
+				localEngine={preferences.localEngine}
+				localModel={preferences.localModel}
 				onAppendTurn={appendTurn}
 				onCodeWorkspaceOpen={() => setIsSidebarOpen(false)}
 				onDeleteTurn={deleteTurn}

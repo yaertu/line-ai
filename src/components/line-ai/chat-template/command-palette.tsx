@@ -57,6 +57,7 @@ const nextTheme = (theme: ThemeChoice): ThemeChoice => {
 const providerLabels: Record<ProviderChoice, string> = {
   auto: "Otomatik",
   gemini: "Gemini",
+  local: "Yerel model",
   openai: "OpenAI",
 };
 
@@ -125,7 +126,7 @@ export const CommandPalette = ({
         label: "Truth Mode",
         selected: preferences.truthMode,
       },
-      ...(["auto", "openai", "gemini"] as ProviderChoice[]).map((provider) => ({
+      ...(["auto", "openai", "gemini", "local"] as ProviderChoice[]).map((provider) => ({
         action: closeAfter(() => onPreferencesChange({ ...preferences, provider })),
         category: "Yapay zekâ" as const,
         description: provider === "auto" ? "Uygun sağlayıcıyı otomatik seç" : `${providerLabels[provider]} sağlayıcısını kullan`,

@@ -2,7 +2,8 @@ import type { AIPromptAttachment } from "@/components/line-ai/ai-prompt-input";
 import type { AISuggestion } from "@/components/line-ai/ai-suggestions";
 import type { FileContentKind } from "@/lib/file-content";
 
-export type ProviderChoice = "auto" | "openai" | "gemini";
+export type ProviderChoice = "auto" | "openai" | "gemini" | "local";
+export type LocalModelEngine = "ollama" | "lm-studio" | "openai-compatible";
 export type ReasoningLevel = "low" | "medium" | "high";
 export type ThemeChoice = "system" | "light" | "dark";
 export type MotionChoice = "system" | "reduce";
@@ -17,6 +18,9 @@ export type AppPreferences = {
 	chatFontSize: number;
 	codeFontSize: number;
 	customInstructions: string;
+	localEndpoint: string;
+	localEngine: LocalModelEngine;
+	localModel: string;
 	motion: MotionChoice;
 	responseStyle: ResponseStyle;
 	uiFontSize: number;
@@ -79,7 +83,7 @@ export type ChatTurn =
 			from: "assistant";
 			id: string;
 			model?: string;
-			provider?: "openai" | "gemini";
+			provider?: "openai" | "gemini" | "local";
 			sources?: WebSource[];
 			durationMs?: number;
 			reasoning?: ReasoningLevel;
@@ -120,6 +124,9 @@ export type ExecutePromptRequest = {
 	prompt: string;
 	provider: ProviderChoice;
 	reasoning: ReasoningLevel;
+	localEndpoint?: string;
+	localEngine?: LocalModelEngine;
+	localModel?: string;
 	transcript: PromptTranscriptTurn[];
 	truthMode: boolean;
 	customInstructions?: string;
@@ -129,7 +136,7 @@ export type ExecutePromptRequest = {
 export type ExecutePromptResult = {
 	message: string;
 	model: string;
-	provider: "openai" | "gemini";
+	provider: "openai" | "gemini" | "local";
 	sources: WebSource[];
 };
 
@@ -149,6 +156,9 @@ export const DEFAULT_PREFERENCES: AppPreferences = {
 	chatFontSize: 15,
 	codeFontSize: 13,
 	customInstructions: "",
+	localEndpoint: "http://127.0.0.1:11434/v1",
+	localEngine: "ollama",
+	localModel: "llama3.2",
 	motion: "system",
 	responseStyle: "balanced",
 	uiFontSize: 14,
@@ -164,10 +174,67 @@ export const PROVIDERS = [
 	{ id: "auto", label: "Otomatik", note: "OpenAI, gerekirse Gemini" },
 	{ id: "openai", label: "OpenAI", note: "GPT-5.6 Terra" },
 	{ id: "gemini", label: "Gemini", note: "Gemini 3.7 Flash" },
+	{ id: "local", label: "Yerel model", note: "Ollama veya uyumlu motor" },
 ] as const satisfies ReadonlyArray<{
 	id: ProviderChoice;
 	label: string;
 	note: string;
 }>;
+
+export const LOCAL_MODEL_ENGINES = [
+	{
+		endpoint: "http://127.0.0.1:11434/v1",
+		id: "ollama",
+		label: "Ollama",
+		note: "Varsayılan adres: 11434",
+	},
+	{
+		endpoint: "http://127.0.0.1:1234/v1",
+		id: "lm-studio",
+		label: "LM Studio",
+		note: "OpenAI uyumlu sunucu: 1234/v1",
+	},
+	{
+		endpoint: "http://127.0.0.1:8000/v1",
+		id: "openai-compatible",
+		label: "OpenAI uyumlu",
+		note: "Özel yerel motor için adres",
+	},
+] as const satisfies ReadonlyArray<{
+	endpoint: string;
+	id: LocalModelEngine;
+	label: string;
+	note: string;
+}>;
+
+export const localEndpointForEngine = (engine: LocalModelEngine) =>
+	LOCAL_MODEL_ENGINES.find((item) => item.id === engine)?.endpoint ??
+	DEFAULT_PREFERENCES.localEndpoint;
+
+export const isLocalLoopbackEndpoint = (value: unknown): value is string => {
+	if (typeof value !== "string" || value.length > 512) return false;
+	const input = value.trim();
+	if (
+		!/^http:\/\/(?:localhost|127(?:\.\d{1,3}){3}|\[::1\]):\d{1,5}(?:[/?]|$)/i.test(
+			input,
+		)
+	)
+		return false;
+	try {
+		const endpoint = new URL(input);
+		const hostname = endpoint.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+		return (
+			endpoint.protocol === "http:" &&
+			Number(endpoint.port) > 0 &&
+			endpoint.username.length === 0 &&
+			endpoint.password.length === 0 &&
+			endpoint.search.length === 0 &&
+			endpoint.hash.length === 0 &&
+			(hostname === "localhost" || hostname === "::1" || hostname.startsWith("127."))
+		);
+	} catch {
+		return false;
+	}
+};
 
 export const CONTEXT_LIMIT = 1_000_000;

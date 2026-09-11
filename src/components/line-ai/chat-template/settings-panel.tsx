@@ -13,6 +13,7 @@ import {
 	Moon,
 	Palette,
 	RefreshCw,
+	Server,
 	ShieldCheck,
 	Sparkles,
 	Sun,
@@ -37,6 +38,10 @@ import ChromeMark from "../chrome-mark";
 import {
 	type AppPreferences,
 	type ChatConversation,
+	isLocalLoopbackEndpoint,
+	localEndpointForEngine,
+	LOCAL_MODEL_ENGINES,
+	type LocalModelEngine,
 	type MotionChoice,
 	PROVIDERS,
 	type ProviderChoice,
@@ -147,6 +152,12 @@ const RELEASE_HIGHLIGHTS: ReadonlyArray<ReleaseHighlight> = [
 			"Native terminal çıktısı, salt-okunur Git özeti ve açık onaylı checkpoint geri yükleme altyapısı eklendi.",
 		icon: BrainCircuit,
 		title: "Yerel çalışma alanı altyapısı",
+	},
+	{
+		description:
+			"Ollama, LM Studio ve OpenAI uyumlu yerel modeller; yalnız bu bilgisayardaki HTTP loopback uç noktalarıyla kullanılabilir.",
+		icon: Server,
+		title: "Yerel model bağlantısı",
 	},
 ];
 
@@ -595,6 +606,81 @@ const SettingsPanel = ({
 												)
 											}
 										/>
+									</SettingsGroup>
+									<SettingsGroup
+										description="Yerel motor bağlantısı yalnızca bu bilgisayardaki HTTP döngü (loopback) adresleri içindir. Bağlantı noktası zorunludur; uzak ağ, HTTPS, sorgu, parça veya kimlik bilgisi kullanmayın."
+										title="Yerel model"
+									>
+										<ChoiceGrid
+											onSelect={(value) => {
+												const localEngine = value as LocalModelEngine;
+												onChange({
+													...preferences,
+													localEngine,
+													localEndpoint: localEndpointForEngine(localEngine),
+												});
+											}}
+											options={LOCAL_MODEL_ENGINES.map((item) => ({
+												id: item.id,
+												label: item.label,
+												note: item.note,
+											}))}
+											value={preferences.localEngine}
+										/>
+										<div className="mt-3 grid gap-3 sm:grid-cols-2">
+											<label className="grid gap-1.5 text-sm">
+												<span className="font-medium">Yerel uç nokta</span>
+												<input
+													aria-label="Yerel uç nokta"
+													className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none transition-colors focus:border-primary"
+													onChange={(event) =>
+														onChange(
+															updatePreference(
+																preferences,
+																"localEndpoint",
+																event.target.value,
+															),
+														)
+													}
+													onBlur={(event) => {
+														const endpoint = event.target.value.trim();
+														onChange(
+															updatePreference(
+																preferences,
+																"localEndpoint",
+																isLocalLoopbackEndpoint(endpoint)
+																	? endpoint
+																	: localEndpointForEngine(preferences.localEngine),
+															),
+														);
+													}}
+													spellCheck={false}
+													type="url"
+													value={preferences.localEndpoint}
+												/>
+											</label>
+											<label className="grid gap-1.5 text-sm">
+												<span className="font-medium">Model</span>
+												<input
+													aria-label="Yerel model adı"
+													className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none transition-colors focus:border-primary"
+													maxLength={200}
+													onChange={(event) =>
+														onChange(
+															updatePreference(
+																preferences,
+																"localModel",
+																event.target.value,
+															),
+														)
+													}
+													placeholder="Örn. llama3.2"
+													spellCheck={false}
+													type="text"
+													value={preferences.localModel}
+												/>
+											</label>
+										</div>
 									</SettingsGroup>
 									<SettingsGroup
 										description="Yalnız ortam değişkeninin varlığı okunur. Anahtar değeri arayüze veya yerel depoya alınmaz."
@@ -1116,9 +1202,8 @@ const SettingsPanel = ({
 										</ul>
 										<p className="mt-4 rounded-xl border border-dashed border-primary/35 bg-primary/5 p-3 text-muted-foreground text-xs leading-relaxed">
 											<span className="font-medium text-foreground">Arayüz durumu: </span>
-											Mission Control, replay, Jury ve yerel model ekranlarına bağlanma
-											çalışması sürüyor; bu altyapılar henüz uygulama içinden tek tek
-											başlatılamaz.
+											Mission Control, replay ve Jury ekranlarına bağlanma çalışması sürüyor;
+											bu altyapılar henüz uygulama içinden tek tek başlatılamaz.
 										</p>
 									</SettingsGroup>
 									<SettingsGroup
