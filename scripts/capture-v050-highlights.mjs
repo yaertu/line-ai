@@ -17,6 +17,9 @@ const outputDirectory = path.join(projectRoot, "cloud", "media");
 const recordingDirectory = path.join(tmpdir(), `line-ai-v050-${Date.now()}`);
 const applicationUrl = process.env.LINE_AI_CAPTURE_URL ?? "http://127.0.0.1:1430";
 const ffmpegPath = process.env.LINE_AI_FFMPEG ?? "ffmpeg";
+// Playwright starts the stream with the new page. Remove browser/context startup
+// frames so the published loop begins on the real Line AI workspace.
+const playableLeadSeconds = "5.5";
 const videoTarget = path.join(outputDirectory, "line-ai-v050-yenilikler.mp4");
 const posterTarget = path.join(outputDirectory, "line-ai-v050-yenilikler-poster.png");
 const evidenceTarget = path.join(outputDirectory, "line-ai-v050-yenilikler.evidence.json");
@@ -88,10 +91,12 @@ try {
 		ffmpegPath,
 		[
 			"-y",
+			"-ss",
+			playableLeadSeconds,
 			"-i",
 			webmTarget,
 			"-vf",
-			"fps=30,scale=1440:900:flags=lanczos,format=yuv420p",
+			"fps=30,scale=1440:900:flags=lanczos,fade=t=in:st=0:d=0.25,fade=t=out:st=7.4:d=0.35,format=yuv420p",
 			"-c:v",
 			"libx264",
 			"-preset",
