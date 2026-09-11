@@ -55,7 +55,10 @@ try {
 	assert(landing.status === 200, "Landing sayfası yüklenemedi.");
 	assert(
 		landingHtml.includes("Bir şey yaz.") &&
-		landingHtml.includes('id="tour-video"') &&
+			landingHtml.includes("Fikirden sonuca") &&
+			landingHtml.includes("Video stüdyosu") &&
+			landingHtml.includes('class="feature-card"') &&
+			landingHtml.includes('id="tour-video"') &&
 		sourceUiTours.every(
 			({ id }) =>
 				landingHtml.includes(`/media/${id}.mp4`) &&

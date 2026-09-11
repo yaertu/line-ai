@@ -742,7 +742,7 @@ const ChatTemplate = ({
 	return (
 		<div
 			className={cn(
-				"relative flex h-full min-h-0 w-full overflow-hidden bg-background text-foreground",
+				"line-ai-workspace relative flex h-full min-h-0 w-full overflow-hidden bg-background/70 text-foreground",
 				className,
 			)}
 			data-registry="line-ai/chat-workspace"

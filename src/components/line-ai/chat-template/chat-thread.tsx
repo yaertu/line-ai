@@ -854,7 +854,7 @@ export const ChatThread = ({
 	return (
 		<div className="relative flex min-h-0 min-w-0 flex-1">
 			<section className={cn("flex min-w-0 flex-1 flex-col", className)}>
-				<header className="flex h-14 shrink-0 items-center gap-3 border-border/60 border-b px-3 sm:px-5">
+				<header className="line-ai-topbar flex h-14 shrink-0 items-center gap-3 border-border/60 border-b px-3 sm:px-5">
 					<button
 						aria-label="Sohbet listesini aç"
 						className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
@@ -878,7 +878,7 @@ export const ChatThread = ({
 				<section
 					aria-label="Dosya bırakma ve sohbet alanı"
 					className={cn(
-						"relative min-h-0 flex-1",
+						"line-ai-thread-stage relative min-h-0 flex-1",
 						isDragging && "bg-primary/5",
 					)}
 					onDragEnter={(event) => {
@@ -955,7 +955,7 @@ export const ChatThread = ({
 					<AIConversation className="h-full" contentKey={contentKey}>
 						<div className="mx-auto flex min-h-full w-full max-w-[52rem] flex-col px-4 py-7 sm:px-7 sm:py-9">
 							{allTurns.length === 0 && !isBusy ? (
-								<div className="m-auto flex w-full max-w-2xl flex-col items-center gap-6 py-12 text-center">
+								<div className="line-ai-empty-state m-auto flex w-full max-w-2xl flex-col items-center gap-6 py-12 text-center">
 									<SiriOrb size="96px" state="idle" />
 									<div>
 										<h2 className="font-semibold text-2xl tracking-tight sm:text-3xl">
@@ -1050,6 +1050,7 @@ export const ChatThread = ({
 							/>
 							<AIPromptInput
 								ariaLabel="Line AI'ya mesaj gönder"
+								className="line-ai-composer"
 								attachments={draftFiles}
 								attachLabel="Dosya veya arşiv ekle"
 								disabled={isBusy}

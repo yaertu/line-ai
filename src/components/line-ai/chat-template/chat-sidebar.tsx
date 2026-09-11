@@ -226,7 +226,7 @@ export const ChatSidebar = ({
 			<aside
 				aria-label="Daraltılmış sohbet kenar çubuğu"
 				className={cn(
-					"flex h-full w-[4.5rem] shrink-0 flex-col items-center gap-2 border-border/60 border-r bg-muted/60 py-3",
+					"line-ai-sidebar flex h-full w-[4.5rem] shrink-0 flex-col items-center gap-2 border-border/60 border-r py-3",
 					className,
 				)}
 			>
@@ -274,7 +274,7 @@ export const ChatSidebar = ({
 		<aside
 			aria-label="Sohbet kenar çubuğu"
 			className={cn(
-				"relative flex h-full shrink-0 flex-col gap-3 border-border/60 border-r bg-muted/60 p-3",
+				"line-ai-sidebar relative flex h-full shrink-0 flex-col gap-3 border-border/60 border-r p-3",
 				className,
 			)}
 			style={{ width }}

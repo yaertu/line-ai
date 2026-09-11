@@ -9,7 +9,7 @@ export type LineAiAppProps = {
 const LineAiApp = ({
   executePrompt = executeDesktopPrompt,
 }: LineAiAppProps) => (
-  <main className="h-dvh min-h-[36rem] min-w-0 overflow-hidden bg-background text-foreground">
+  <main className="line-ai-app-shell h-dvh min-h-[36rem] min-w-0 overflow-hidden text-foreground">
     <ChatTemplate className="h-full" executePrompt={executePrompt} />
   </main>
 );

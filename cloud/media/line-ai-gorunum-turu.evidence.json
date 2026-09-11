@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11T17:45:31.302Z",
+  "generatedAt": "2026-09-11T18:31:30.355Z",
   "source": {
     "kind": "vite-source-ui-playwright",
     "url": "http://127.0.0.1:1430",
@@ -28,10 +28,10 @@
   },
   "poster": {
     "fileName": "line-ai-gorunum-turu-poster.png",
-    "sha256": "f858716efe5b11577fe396e2d09a779e17aafc0fe90139fcc72dbbb4d3cf58b4"
+    "sha256": "9f1eb2fc670fb091cd78d02ae70d356a3cadf1fae6c5a09bce168f1c13d329e2"
   },
   "video": {
     "fileName": "line-ai-gorunum-turu.mp4",
-    "sha256": "dd8ee2a877a0177c492649d61279742edacdcfe7dbddc2cac11b30caed0f9cd4"
+    "sha256": "947bd2432f0b59ae9d007632590e2e3a3f7b33959c466ed1f066f73925ef6e3a"
   }
 }
