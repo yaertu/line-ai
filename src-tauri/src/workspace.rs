@@ -314,8 +314,6 @@ async fn run_terminal_process(
     emitter: Option<OutputEmitter>,
 ) -> Result<TerminalResult, String> {
     let (working_directory, risk) = validate_terminal_request(&request)?;
-    let started_at_ms = unix_ms();
-    let started = Instant::now();
     let secrets = Arc::new(known_secret_values());
     let mut command = tokio::process::Command::new("powershell.exe");
     command
@@ -344,6 +342,11 @@ async fn run_terminal_process(
     let mut child = command
         .spawn()
         .map_err(|error| format!("PowerShell işlemi başlatılamadı: {error}"))?;
+    // The caller's timeout applies to the command after Windows has created the
+    // process. PowerShell's cold-start work can otherwise consume the entire
+    // budget before the child gets a chance to run or write output.
+    let started_at_ms = unix_ms();
+    let started = Instant::now();
     let stdout = child
         .stdout
         .take()
