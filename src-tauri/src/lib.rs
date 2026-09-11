@@ -1,5 +1,8 @@
+#![cfg_attr(test, allow(dead_code))]
+
 mod browser;
 mod cloud;
+mod workspace;
 
 use futures_util::StreamExt;
 use reqwest::{header::ACCEPT, Client, StatusCode};
@@ -1745,10 +1748,12 @@ fn redact_secrets(message: &str, secrets: &[&str]) -> String {
         })
 }
 
+#[cfg(not(test))]
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(browser::BrowserRuntime::default())
+        .manage(workspace::WorkspaceRuntime::default())
         .invoke_handler(tauri::generate_handler![
             browser::execute_browser_tool,
             browser::get_browser_status,
@@ -1760,6 +1765,12 @@ pub fn run() {
             cloud::get_cloud_status,
             cloud::load_cloud_conversations,
             cloud::upsert_cloud_conversation,
+            workspace::cancel_terminal,
+            workspace::create_workspace_checkpoint,
+            workspace::execute_terminal,
+            workspace::inspect_workspace_checkpoint,
+            workspace::read_git_status,
+            workspace::restore_workspace_checkpoint,
             execute_ai_prompt,
             get_provider_status,
             read_dropped_text_files
@@ -1767,6 +1778,9 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("Line AI başlatılamadı");
 }
+
+#[cfg(test)]
+pub fn run() {}
 
 #[cfg(test)]
 mod tests {
