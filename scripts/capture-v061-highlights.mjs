@@ -14,15 +14,15 @@ const execFileAsync = promisify(execFile);
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(scriptDirectory, "..");
 const outputDirectory = path.join(projectRoot, "cloud", "media");
-const recordingDirectory = path.join(tmpdir(), `line-ai-v050-${Date.now()}`);
+const recordingDirectory = path.join(tmpdir(), `line-ai-v061-${Date.now()}`);
 const applicationUrl = process.env.LINE_AI_CAPTURE_URL ?? "http://127.0.0.1:1430";
 const ffmpegPath = process.env.LINE_AI_FFMPEG ?? "ffmpeg";
 // Playwright starts the stream with the new page. Remove browser/context startup
 // frames so the published loop begins on the real Line AI workspace.
 const playableLeadSeconds = "5.5";
-const videoTarget = path.join(outputDirectory, "line-ai-v050-yenilikler.mp4");
-const posterTarget = path.join(outputDirectory, "line-ai-v050-yenilikler-poster.png");
-const evidenceTarget = path.join(outputDirectory, "line-ai-v050-yenilikler.evidence.json");
+const videoTarget = path.join(outputDirectory, "line-ai-v061-yenilikler.mp4");
+const posterTarget = path.join(outputDirectory, "line-ai-v061-yenilikler-poster.png");
+const evidenceTarget = path.join(outputDirectory, "line-ai-v061-yenilikler.evidence.json");
 
 const chromeCandidates = [
 	"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -31,7 +31,7 @@ const chromeCandidates = [
 const executablePath = chromeCandidates.find(existsSync);
 
 if (!executablePath) {
-	throw new Error("Google Chrome bulunamadı; v0.5.0 kaynak arayüz kaydı üretilemedi.");
+	throw new Error("Google Chrome bulunamadı; v0.6.1 kaynak arayüz kaydı üretilemedi.");
 }
 
 const response = await fetch(applicationUrl);
@@ -69,7 +69,7 @@ try {
 	await page.getByRole("dialog", { name: "Line AI ayarları" }).waitFor();
 	await page.waitForTimeout(700);
 	await page.getByRole("button", { exact: true, name: "Hakkında" }).click();
-	await page.getByRole("heading", { name: "Yenilikler · v0.5.0" }).waitFor();
+	await page.getByRole("heading", { name: "Yenilikler · v0.6.1" }).waitFor();
 	await page.waitForTimeout(3_400);
 	await page.screenshot({
 		animations: "allow",
@@ -80,12 +80,12 @@ try {
 	await context.close();
 
 	if (!capturedVideo) {
-		throw new Error("v0.5.0 kaynak arayüz kaydı başlatılamadı.");
+		throw new Error("v0.6.1 kaynak arayüz kaydı başlatılamadı.");
 	}
 
 	const recordedPath = await capturedVideo.path();
 	await access(recordedPath, constants.R_OK);
-	const webmTarget = path.join(outputDirectory, "line-ai-v050-yenilikler.webm");
+	const webmTarget = path.join(outputDirectory, "line-ai-v061-yenilikler.webm");
 	await copyFile(recordedPath, webmTarget);
 	await execFileAsync(
 		ffmpegPath,
@@ -121,20 +121,20 @@ try {
 			kind: "vite-source-ui-playwright",
 			url: applicationUrl,
 			viewport: "1440x900",
-			surface: "Ayarlar > Hakkında > Yenilikler · v0.5.0",
+			surface: "Ayarlar > Hakkında > Yenilikler · v0.6.1",
 		},
 		claims: {
 			shown: [
-				"Trace/Evidence/Verification çekirdek özeti",
-				"yerel oturum ve SHA-256 proof bundle özeti",
-				"terminal, Git ve checkpoint runtime özeti",
-				"yerel loopback model bağlantısı özeti",
+				"tek Line AI Engine ve bulut API özeti",
+				"sohbet, dosya, kod Artifact ve görsel çalışma alanı",
+				"grafit ve mint arayüz ile yeni Line AI simgesi",
+				"kota, maliyet ve açık izinli geri bildirim denetimi",
 			],
 			notShownAsProductUi: [
-				"Mission Control",
-				"replay",
-				"Jury",
-				"yerel model çalıştırma yüzeyi",
+				"yönetici giriş bilgileri veya Engine anahtarı",
+				"kullanıcının sohbet geçmişi",
+				"kapalı görsel çalışma zamanında üretilmiş örnek",
+				"temel model ağırlıklarının bize ait olduğu iddiası",
 			],
 		},
 		video: {

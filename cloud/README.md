@@ -1,46 +1,66 @@
-# Line AI Engine v0.6.0
+# Line AI Engine v0.6.1
 
-Base URL: https://lineaicloud.vercel.app/api/v1
+Base URL: `https://lineaicloud.vercel.app/api/v1`
 
-Line AI owns the gateway, project/key lifecycle, ledger, policies and management interface. Hosted Gemini handles text/code and the OpenAI image adapter handles images. No local inference is required. Images are currently disabled in production because the configured provider's credit is exhausted.
+Line AI Engine; istemci kimliği, proje anahtarı, kapsam, kota, maliyet, tekrar koruması, kalite politikası, geri bildirim ve denetim kaydını yöneten Line AI’a ait API katmanıdır. Kullanıcının bilgisayarında model veya GPU çalıştırmaz.
 
-## API
+## API sözleşmesi
 
-Use `Authorization: Bearer <Engine key>`. History installation tokens are separate and cannot authorize Engine endpoints. Keys have text/images/feedback scopes and expiry. Mutating generation calls require a unique `Idempotency-Key` (12–96 alphanumeric, underscore or hyphen characters); reuse it only to recover the same operation.
+`Authorization: Bearer <Engine key>` kullanılır. Sohbet geçmişi kurulum anahtarı Engine uçlarını yetkilendiremez. Üretim çağrıları 12–96 karakterlik benzersiz `Idempotency-Key` ister; aynı anahtar yalnız aynı isteğin sonucunu kurtarmak için yeniden kullanılabilir.
 
-| Method | Path | Purpose |
+| Yöntem | Yol | Amaç |
 | --- | --- | --- |
-| GET | /capabilities | Project limits, usage, model configuration and availability |
-| POST | /generate | prompt, transcript, customInstructions, responseStyle, reasoning, truthMode |
-| POST | /images/generations | prompt, aspectRatio (1:1/3:2/2:3), quality (low/medium/high), style |
-| GET / DELETE | /images/:id | Job state / remove stored image |
-| GET | /assets/:id | Project-authorized signed URL, valid for 600 seconds |
-| GET | /requests/:id | Request status without prompt or response text |
-| POST | /feedback | requestId, rating (up/down), note, trainingOptIn |
+| `GET` | `/capabilities` | Proje limitleri, kullanım, Line AI model kimliği ve kullanılabilirlik |
+| `POST` | `/generate` | `prompt`, `transcript`, `customInstructions`, `responseStyle`, `reasoning`, `truthMode` |
+| `POST` | `/images/generations` | `prompt`, `aspectRatio`, `quality`, `style` |
+| `GET/DELETE` | `/images/:id` | Görsel işinin durumu veya silinmesi |
+| `GET` | `/assets/:id` | 600 saniye geçerli proje yetkili imzalı bağlantı |
+| `GET` | `/requests/:id` | Prompt veya yanıt metni olmadan istek durumu |
+| `POST` | `/feedback` | `requestId`, `rating`, `note`, `trainingOptIn` |
 
-Generated text is JSON, not upstream streaming. Prompts are sent to the configured provider but not stored by Engine. Response replay is allowed for 24 hours; daily maintenance deletes expired replay bodies (physical retention can be up to 48 hours). Opt-in feedback notes are kept for up to 90 days. Images remain private until deleted; already issued signed links may remain valid for their short lifetime. Token counts come from provider usage metadata; missing metadata keeps a conservative reservation. Costs are USD list-price estimates, not a billing invoice; cache/free-tier discounts are not assumed.
+İstemciye yalnız `line-ai-neural-v1` ve `line-ai-vision-v1` kimlikleri döner. Sunucudaki çıkarım runtime’ı ayrı, özel ve değiştirilebilir bir bağlantıdır. Runtime değiştiğinde masaüstü API sözleşmesi, proje anahtarları ve kota kayıtları değişmez.
 
-Production text uses `gemini-2.5-flash-lite` (input $0.10 / output $0.40 per million tokens). `LINE_AI_TEXT_MODEL` supports `gemini-2.5-flash` and `gemini-2.5-flash-lite`; switching models also switches the configured cost rates.
+Prompt metni istek tablosunda tutulmaz. Tamamlanan yanıtlar 24 saat tekrar kurtarma amacıyla saklanır; günlük bakım nedeniyle fiziksel saklama 48 saate yaklaşabilir. İzin verilmiş geri bildirim notları en fazla 90 gün tutulur. Görseller silinene kadar özel alandadır; daha önce verilmiş imzalı bağlantı kısa ömrü boyunca çalışabilir.
 
-## Operations
+Token sayıları runtime kullanım bilgisinden gelir. Kullanım bilgisi yoksa konservatif rezervasyon korunur. Maliyetler mikro-USD cinsinden yapılandırılmış tahminlerdir; fatura değildir.
 
-1. Install dependencies with `pnpm install`.
-2. Supply Supabase service/database credentials in untracked `.env.local`.
-3. Run `pnpm migrate`, `pnpm verify:database`, `pnpm test:engine:database`.
-4. `scripts/configure-engine.mjs` loads existing operator provider credentials from the environment and sends them to Vercel over stdin. It retains a private local Engine pepper. Never rotate that pepper without a key/session migration.
-5. `node --env-file=.env.local --env-file=.env.engine scripts/bootstrap-engine.mjs` creates the first operator and capped desktop/quality projects. The access file is outside the repo at `~/.lineai/engine-operator.json`; restrict its filesystem ACL.
-6. Deploy the linked Vercel project and bind the canonical domain. Admin mutations require exactly `LINE_AI_ADMIN_ORIGIN`; sessions are Secure/HttpOnly/SameSite=Strict.
+## Sunucu kurulumu
 
-Environment: LINE_AI_ENGINE_ENABLED, LINE_AI_IMAGES_ENABLED, LINE_AI_TEXT_MODEL, LINE_AI_ENGINE_PEPPER, LINE_AI_GEMINI_KEY, LINE_AI_OPENAI_KEY, LINE_AI_ADMIN_ORIGIN, CRON_SECRET, plus existing Supabase variables. Image generation can be enabled after provider credit is restored by setting LINE_AI_IMAGES_ENABLED=true and redeploying.
+1. `pnpm install` ile bağımlılıkları kurun.
+2. Supabase ve veritabanı sırlarını yalnız izlenmeyen `.env.local` içinde veya Vercel ortamında tanımlayın.
+3. `pnpm migrate`, `pnpm verify:database` ve `pnpm test:engine:database` komutlarını çalıştırın.
+4. `node --env-file=.env.local --env-file=.env.engine scripts/bootstrap-engine.mjs` ile ilk operator ve sınırlı projeleri oluşturun.
+5. Operator erişim dosyası repo dışında `%USERPROFILE%\.lineai\engine-operator.json` yolunda tutulur. Bu dosya GitHub’a, ZIP’e veya siteye eklenmez.
+6. Üretime bağlı Vercel projesini dağıtın. Yönetim yazma işlemleri yalnız `LINE_AI_ADMIN_ORIGIN` kaynağından kabul edilir; oturum çerezleri Secure, HttpOnly ve SameSite=Strict’tir.
 
-Global roles: owner controls keys/projects/publication; operator can draft and evaluate policies using an existing project's limited budget; viewer can inspect. All roles are application administrators, not independent customer tenants. Policies and consented feedback improvements are global. The selected evaluation project is the billing account for tests, not a feedback tenant filter.
+Sunucu değişkenleri:
 
-Maintenance runs daily at 09:00 UTC. It cleans expired response/session/feedback records, then proposes an improvement only for new opted-in feedback. Evaluation has six server-owned cases and a 15-second limit per provider call. Failed runs preserve the feedback watermark for the next daily attempt. Automatic publication requires a strict improvement with all cases passing; equal results remain reviewable. No model weights, application code or test cases rewrite themselves.
+- `LINE_AI_ENGINE_ENABLED`
+- `LINE_AI_IMAGES_ENABLED`
+- `LINE_AI_ENGINE_PEPPER`
+- `LINE_AI_TEXT_RUNTIME_URL`
+- `LINE_AI_TEXT_RUNTIME_KEY`
+- `LINE_AI_IMAGE_RUNTIME_URL`
+- `LINE_AI_IMAGE_RUNTIME_KEY`
+- `LINE_AI_ADMIN_ORIGIN`
+- `CRON_SECRET`
+- mevcut Supabase/PostgreSQL değişkenleri
 
-Database reads have a 12-second request limit and one bounded retry for transient gateway failures. Database writes are never retried automatically; ambiguous generation outcomes retain their reservations. Provider request limits remain effective and can temporarily reject calls even when a project has quota.
+Runtime URL ve anahtarları sunucuya özeldir. `NEXT_PUBLIC_` önekiyle tanımlanmaz ve tarayıcı paketine alınmaz.
 
-## Verification
+## Sürekli geliştirme
 
-`pnpm check`, `pnpm test`, `pnpm test:engine:database`. The live `scripts/smoke-engine.mjs` tests admin/CSRF/key lifecycle, actual text generation, token accounting and replay, cross-project denial, opt-in privacy, and private asset deletion. When provider image credit is unavailable it explicitly uses a stored screenshot fixture only for asset lifecycle checks and reports real generation as blocked.
+Davranış politikası doğrudan canlıya yazılmaz. Yönetici yeni bir taslak oluşturur veya yalnız açık izinli geri bildirimlerden öneri üretir. Aday sürüm sabit regresyon vakalarında mevcut yayınla karşılaştırılır. Tüm vakaları geçmeyen sürüm yayınlanamaz; otomatik bakım yalnız kesin olarak daha iyi sonucu yayınlar.
 
-Provider rate references: [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing), [GPT Image 1](https://developers.openai.com/api/docs/models/gpt-image-1). Verify rates before changing models. Reservations include conservative prompt-byte and output caps; a timed-out request retains its reservation until reconciled.
+Bu mekanizma prompt/politika geliştirmesidir. Model ağırlıklarını kendi kendine eğitmez, uygulama kodunu değiştirmez ve testleri yeniden yazmaz. Yeni temel model veya kendi GPU worker’ı hazırlandığında özel runtime bağlantısı değiştirilir ve aynı değerlendirme paketiyle doğrulanır.
+
+## Doğrulama
+
+```powershell
+pnpm check
+pnpm test
+pnpm test:engine:database
+pnpm smoke:production
+```
+
+Canlı smoke testi; yönetici/CSRF, anahtar yaşam döngüsü, gerçek metin üretimi, token muhasebesi, tekrar koruması, proje yalıtımı, geri bildirim izni ve özel varlık silmeyi sınar. Runtime kapasitesi yoksa sahte başarı üretmez.

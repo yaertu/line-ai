@@ -116,7 +116,7 @@ try {
 			storageKey,
 			JSON.stringify({
 				...current,
-				provider: "auto",
+				provider: "lineai",
 				reasoning: "low",
 				truthMode: true,
 			}),
@@ -274,7 +274,7 @@ try {
 	const srcDoc = (await previewFrame.getAttribute("srcdoc")) ?? "";
 	if (srcDoc.length < 800) {
 		throw new Error(
-			`Gerçek sağlayıcı tamamlandı ancak önizleme içeriği yetersiz (${srcDoc.length} karakter).`,
+			`Line AI Engine tamamlandı ancak önizleme içeriği yetersiz (${srcDoc.length} karakter).`,
 		);
 	}
 	const initialImageSource = await previewFrame

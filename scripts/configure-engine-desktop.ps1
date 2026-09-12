@@ -1,7 +1,8 @@
 param([string]$AccessFile = (Join-Path $env:USERPROFILE '.lineai\engine-operator.json'))
 $ErrorActionPreference = 'Stop'
 $access = Get-Content -LiteralPath $AccessFile -Raw | ConvertFrom-Json
-if ($access.engineKey -notmatch '^lai_sk_live_[A-Za-z0-9_-]{43}$') { throw 'Geçersiz Engine anahtarı.' }
+$engineKey = ([string]$access.engineKey).Trim()
+if ($engineKey.Length -ne 55 -or -not $engineKey.StartsWith('lai_sk_live_') -or $engineKey.Substring(12) -match '[^A-Za-z0-9_-]') { throw 'Geçersiz Engine anahtarı.' }
 Add-Type @'
 using System;
 using System.Runtime.InteropServices;
@@ -17,7 +18,7 @@ public static class LineEngineCredential {
  public static extern bool Write(ref Credential credential,uint flags);
 }
 '@
-$bytes = [Text.Encoding]::Unicode.GetBytes($access.engineKey)
+$bytes = [Text.Encoding]::Unicode.GetBytes($engineKey)
 $pointer = [Runtime.InteropServices.Marshal]::AllocHGlobal($bytes.Length)
 try {
  [Runtime.InteropServices.Marshal]::Copy($bytes,0,$pointer,$bytes.Length)
@@ -36,4 +37,5 @@ try {
  for($i=0;$i -lt $credential.CredentialBlobSize;$i++){[Runtime.InteropServices.Marshal]::WriteByte($pointer,$i,0)}
  [Runtime.InteropServices.Marshal]::FreeHGlobal($pointer)
  $access=$null
+ $engineKey=$null
 }

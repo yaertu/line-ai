@@ -9,13 +9,13 @@ try{
  const status=await page.evaluate(()=>window.__TAURI_INTERNALS__.invoke('get_engine_status'));
  assert(status.configured&&status.capabilities?.enabled&&status.capabilities?.text,'Credential Manager and live capabilities');
  console.log('PASS: native Credential Manager and live Engine capabilities');
- await page.evaluate(()=>{const key='line-ai.preferences.v1';const prior=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...prior,provider:'auto',reasoning:'low',theme:'dark'}));});
+	await page.evaluate(()=>{const key='line-ai.preferences.v1';const prior=JSON.parse(localStorage.getItem(key)||'{}');localStorage.setItem(key,JSON.stringify({...prior,provider:'lineai',reasoning:'low',theme:'dark'}));});
  await page.reload();await page.getByTestId('line-ai-chat-workspace').waitFor();await page.setViewportSize({width:1440,height:900});
  const newChat=page.getByRole('button',{name:/Yeni sohbet/i}).first();if(await newChat.count())await newChat.click();
  await page.getByRole('textbox',{name:"Line AI'ya mesaj gönder"}).fill('Line AI Engine bağlantı kontrolü: 6 ile 7 çarpımı nedir? Yalnızca sayıyı yaz.');
  await page.getByRole('button',{name:'Mesajı gönder',exact:true}).click();
  await page.getByRole('form',{name:'Line AI yanıt geri bildirimi'}).waitFor({timeout:120000});
- console.log('PASS: automatic provider returned a real Engine response with feedback controls');
+	console.log('PASS: Line AI Engine returned a real response with feedback controls');
  assert((await page.locator('body').innerText()).includes('42'));
  await mkdir('artifacts/native-engine',{recursive:true});
  await page.screenshot({path:'artifacts/native-engine/chat.png'});

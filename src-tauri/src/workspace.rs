@@ -919,7 +919,7 @@ mod tests {
 
     #[test]
     fn redacts_known_and_shaped_secrets_from_terminal_output() {
-        let output = "Authorization: Bearer private-value\nOPENAI_API_KEY=known-secret\nsk-project-abcdefghijkl";
+        let output = "Authorization: Bearer private-value\nLINE_AI_RUNTIME_KEY=known-secret\nsk-project-abcdefghijkl";
         let redacted = redact_terminal_output(output, &["private-value", "known-secret"]);
 
         assert!(!redacted.contains("private-value"));

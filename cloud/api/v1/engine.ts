@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {allowMethods,ApiError,readObjectBody,sendJson,sendError} from '../_lib/http.js';
 import {parseText,parseImage,safeError,stringField} from '../_lib/engine-core.js';
 import {requireEngine,activePolicy,reserve,replay,finish,usage,uuid,dbCheck} from '../_lib/engine-store.js';
-import {generateText,generateImage,textEnvelope,textCost,MAX_OUTPUT,TEXT_MODEL,IMAGE_MODEL,IMAGE_RESERVE,textReady,imagesReady,engineEnabled,RejectedRequest} from '../_lib/engine-provider.js';
+import {generateText,generateImage,textEnvelope,textCost,MAX_OUTPUT,TEXT_MODEL,IMAGE_MODEL,IMAGE_RESERVE,textReady,imagesReady,engineEnabled,RejectedRequest} from '../_lib/engine-runtime.js';
 
 export const config = {maxDuration:240};
 export default async function handler(req:VercelRequest,res:VercelResponse) {
@@ -23,7 +23,7 @@ export default async function handler(req:VercelRequest,res:VercelResponse) {
     quota:{dailyUnits:who.project.daily_units,monthlyUnits:who.project.monthly_units,usedDaily:totals.daily,usedMonthly:totals.monthly,
      dailyImages:who.project.daily_images,monthlyImages:who.project.monthly_images,usedDailyImages:totals.dailyImages,usedMonthlyImages:totals.monthlyImages,
      dailyCostMicros:who.project.daily_cost_micros,monthlyCostMicros:who.project.monthly_cost_micros,usedDailyCostMicros:totals.dailyCostMicros,usedMonthlyCostMicros:totals.monthlyCostMicros},
-    imageUnavailableReason:imagesReady()?null:'Görsel sağlayıcısının kredisi yenilenene kadar üretim kapalı.',
+    imageUnavailableReason:imagesReady()?null:'Line AI görsel çalışma zamanı etkinleştirilene kadar üretim kapalı.',
     models:{text:TEXT_MODEL,image:IMAGE_MODEL},privacy:{promptsStored:false,replayHours:24,feedbackOptIn:true}});return;
   }
   if(route==='generate'||route==='images') {

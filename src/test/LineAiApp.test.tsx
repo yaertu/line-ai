@@ -30,7 +30,6 @@ const engine = vi.hoisted(() => ({
 	generateEngineImage: vi.fn(),
 	getEngineAsset: vi.fn(),
 	getEngineImage: vi.fn(),
-	readDesktopProviderStatus: vi.fn(),
 	readEngineStatus: vi.fn(),
 	saveEngineKey: vi.fn(),
 	submitEngineFeedback: vi.fn(),
@@ -60,12 +59,6 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		cloud.saveCloudConversation.mockResolvedValue(undefined);
 		cloud.removeCloudConversation.mockResolvedValue(undefined);
 		cloud.clearCloudHistory.mockResolvedValue(undefined);
-		engine.readDesktopProviderStatus.mockResolvedValue({
-			geminiConfigured: false,
-			geminiModel: "Gemini",
-			openAiConfigured: false,
-			openAiModel: "OpenAI",
-		});
 		engine.readEngineStatus.mockResolvedValue({
 			configured: true,
 			endpoint: "https://lineaicloud.vercel.app/api/v1",
@@ -85,7 +78,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 			id: "job-1",
 			status: "completed",
 			assetId: "asset-1",
-			model: "gpt-image-1",
+			model: "line-ai-vision-v1",
 			createdAt: "2026-09-12T00:00:00.000Z",
 		});
 		engine.getEngineImage.mockResolvedValue({ id: "job-1", status: "completed", assetId: "asset-1" });
@@ -168,28 +161,28 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		);
 
 		expect(
-			within(settings).getByRole("heading", { name: "Line AI v0.6.0" }),
+			within(settings).getByRole("heading", { name: "Line AI v0.6.1" }),
 		).toBeInTheDocument();
 		expect(
 			within(settings).getByRole("heading", {
-				name: "Yenilikler · v0.5.0",
+				name: "Yenilikler · v0.6.1",
 			}),
 		).toBeInTheDocument();
-		expect(within(settings).getByText("İşlem izi ve kanıt")).toBeInTheDocument();
+		expect(within(settings).getByText("Tek Line AI Engine")).toBeInTheDocument();
 		expect(
-			within(settings).getByText("Yerel çalışma alanı altyapısı"),
+			within(settings).getByText("Modern sohbet çalışma alanı"),
 		).toBeInTheDocument();
 		expect(
 			within(settings).getByText(/bağlanma çalışması sürüyor/i),
 		).toBeInTheDocument();
 	});
 
-	it("mesajı seçilen ortam API sağlayıcısına gönderir ve yanıtı gösterir", async () => {
+	it("mesajı yalnız Line AI Engine'e gönderir ve yanıtı gösterir", async () => {
 		const user = userEvent.setup();
 		const executePrompt = vi.fn().mockResolvedValue({
-			message: "Gerçek OpenAI API yanıtı",
-			model: "gpt-5.6-terra",
-			provider: "openai",
+			message: "Gerçek Line AI Engine yanıtı",
+			model: "line-ai-neural-v1",
+			provider: "lineai",
 		});
 		render(<LineAiApp executePrompt={executePrompt} />);
 
@@ -212,7 +205,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 			name: "Sohbet mesajları",
 		});
 		await waitFor(() =>
-			expect(transcript).toHaveTextContent("Gerçek OpenAI API yanıtı"),
+			expect(transcript).toHaveTextContent("Gerçek Line AI Engine yanıtı"),
 		);
 		expect(
 			within(transcript).getByText("Bu klasörü açıkla"),
@@ -231,7 +224,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 						}),
 						expect.objectContaining({
 							from: "assistant",
-							text: "Gerçek OpenAI API yanıtı",
+							text: "Gerçek Line AI Engine yanıtı",
 						}),
 					]),
 				}),
@@ -288,7 +281,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		const executePrompt = vi.fn().mockResolvedValue({
 			message: "Yeniden üretilen gerçek yanıt",
 			model: "test-model",
-			provider: "openai",
+			provider: "lineai",
 		});
 		localStorage.setItem(
 			"line-ai.conversations.v1",
@@ -360,7 +353,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		let finishPrompt!: (value: {
 			message: string;
 			model: string;
-			provider: "openai";
+			provider: "lineai";
 			sources: Array<{ id: string; title: string; url: string }>;
 		}) => void;
 		const source = {
@@ -431,8 +424,8 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		finishPrompt({
 			message:
 				'Canlı yanıt başlıyor. Tamamlandı.\n```html file=index.html\n<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><h1>Oyuncu merkezi</h1></body></html>\n```',
-			model: "gpt-5.6-terra",
-			provider: "openai",
+			model: "line-ai-neural-v1",
+			provider: "lineai",
 			sources: [source],
 		});
 		await waitFor(() =>
@@ -465,7 +458,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		).toHaveTextContent("index.html bütünlük denetiminden geçti");
 	});
 
-	it("sağlayıcının gerçek unified diff çıktısını okunabilir değişiklik paneline dönüştürür", () => {
+	it("Engine'in gerçek unified diff çıktısını okunabilir değişiklik paneline dönüştürür", () => {
 		localStorage.setItem(
 			"line-ai.conversations.v1",
 			JSON.stringify([
@@ -908,9 +901,9 @@ describe("Line AI masaüstü çalışma alanı", () => {
 	it("ayarları gerçek sohbet tercihleriyle birlikte yönetir", async () => {
 		const user = userEvent.setup();
 		const executePrompt = vi.fn().mockResolvedValue({
-			message: "Gemini yanıtı",
-			model: "gemini-test",
-			provider: "gemini",
+			message: "Line AI Engine yanıtı",
+			model: "line-ai-neural-v1",
+			provider: "lineai",
 		});
 		render(<LineAiApp executePrompt={executePrompt} />);
 
@@ -919,7 +912,12 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		await user.click(
 			within(settings).getByRole("button", { name: "Yapay zekâ" }),
 		);
-		await user.click(within(settings).getByRole("button", { name: /^Gemini/ }));
+		expect(
+			within(settings).queryByRole("button", { name: /^Gemini/ }),
+		).not.toBeInTheDocument();
+		expect(
+			within(settings).queryByRole("button", { name: /^OpenAI/ }),
+		).not.toBeInTheDocument();
 		await user.click(within(settings).getByRole("button", { name: /^Derin/ }));
 		await user.click(
 			within(settings)
@@ -936,7 +934,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		await waitFor(() =>
 			expect(executePrompt).toHaveBeenCalledWith(
 				expect.objectContaining({
-					provider: "gemini",
+					provider: "lineai",
 					reasoning: "high",
 					truthMode: true,
 				}),
@@ -951,7 +949,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 			codeFontSize: 13,
 			customInstructions: "",
 			motion: "system",
-			provider: "gemini",
+			provider: "lineai",
 			reasoning: "high",
 			responseStyle: "balanced",
 			theme: "dark",
@@ -1145,8 +1143,8 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		const user = userEvent.setup();
 		const executePrompt = vi.fn().mockResolvedValue({
 			message: "Tamam",
-			model: "gemini-test",
-			provider: "gemini",
+			model: "line-ai-neural-v1",
+			provider: "lineai",
 		});
 		render(<LineAiApp executePrompt={executePrompt} />);
 
@@ -1156,10 +1154,10 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		const input = screen.getByRole("textbox", {
 			name: "Line AI'ya mesaj gönder",
 		});
-		await user.type(input, "+gemini");
+		await user.type(input, "+derin");
 		const commandMenu = screen.getByRole("menu", { name: "Line AI komutları" });
 		await user.click(
-			within(commandMenu).getByRole("menuitem", { name: /Sağlayıcı: Gemini/ }),
+			within(commandMenu).getByRole("menuitem", { name: /Akıl yürütme: Derin/ }),
 		);
 		expect(input).toHaveValue("");
 
@@ -1168,8 +1166,9 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		await waitFor(() =>
 			expect(executePrompt).toHaveBeenCalledWith(
 				expect.objectContaining({
-					provider: "gemini",
+					provider: "lineai",
 					prompt: "Komut seçimi çalıştı mı?",
+					reasoning: "high",
 				}),
 				expect.any(Function),
 			),

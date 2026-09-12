@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T02:31:49.303Z",
+  "generatedAt": "2026-09-12T08:44:30.168Z",
   "source": {
     "kind": "vite-source-ui-playwright",
-    "url": "http://127.0.0.1:1431",
+    "url": "http://127.0.0.1:1430",
     "viewport": "1440x900",
     "surface": "Yeni sohbet ana ekranı"
   },
@@ -28,10 +28,10 @@
   },
   "poster": {
     "fileName": "line-ai-baslangic-turu-poster.png",
-    "sha256": "5fe25252db5695c5453cb45e6e55bd8d35a46be37ae7a03e9ea6862e22597385"
+    "sha256": "1017d84cde50c045915384b89e2566926ca5e71e8d1eade568e688b4a7e54b98"
   },
   "video": {
     "fileName": "line-ai-baslangic-turu.mp4",
-    "sha256": "93ddbfbc7dec98eb21b9f1758a9310a676983ec0cc0b70791020926869b27271"
+    "sha256": "5214dda8657a0cb75ba60952d91458bad048779d0b652b26fea51facaa4bee46"
   }
 }

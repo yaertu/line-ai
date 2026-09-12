@@ -45,13 +45,13 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 const ATTACHMENT_STAGGER = 0.035;
 
 export type AIPromptAttachment = {
-	/** Text previews are sent to the provider; binary files remain metadata-only. */
+	/** Text previews are sent to Line AI Engine; binary files remain metadata-only. */
 	contentKind?: FileContentKind;
 	id: string;
 	/** Bytes. Rendered as a human-readable size when present. */
 	size?: number;
 	name: string;
-	/** The provider receives a bounded text preview instead of the complete file. */
+	/** Line AI Engine receives a bounded text preview instead of the complete file. */
 	truncated?: boolean;
 };
 

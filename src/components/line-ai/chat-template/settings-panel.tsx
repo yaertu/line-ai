@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { deleteEngineKey, readDesktopProviderStatus, readEngineStatus, saveEngineKey } from "@/lib/ai";
+import { deleteEngineKey, readEngineStatus, saveEngineKey } from "@/lib/ai";
 import {
 	type BrowserStatus,
 	readBrowserStatus,
@@ -39,9 +39,6 @@ import {
 	type EngineStatus,
 	type ChatConversation,
 	type MotionChoice,
-	PROVIDERS,
-	type ProviderChoice,
-	type ProviderStatus,
 	type ReasoningLevel,
 	type ResponseStyle,
 	type ThemeChoice,
@@ -123,31 +120,24 @@ const SECTION_GROUPS: ReadonlyArray<{
 
 const SECTIONS = SECTION_GROUPS.flatMap((group) => group.items);
 
-const EMPTY_STATUS: ProviderStatus = {
-	geminiConfigured: false,
-	geminiModel: "Denetleniyor",
-	openAiConfigured: false,
-	openAiModel: "Denetleniyor",
-};
-
 const RELEASE_HIGHLIGHTS: ReadonlyArray<ReleaseHighlight> = [
 	{
 		description:
-			"Sıralı işlem olayları, gizli değerlerden arındırılmış kanıtlar ve gerçek kriterlere dayalı sonuç hesabı eklendi.",
+			"Sohbet, kodlama ve görsel işleri tek özel bulut API sözleşmesinden geçer; uygulama yalnız Line AI Engine kullanır.",
 		icon: ShieldCheck,
-		title: "İşlem izi ve kanıt",
+		title: "Tek Line AI Engine",
 	},
 	{
 		description:
-			"Oturumlar yerelde korunur; kesilen işler işaretlenir ve SHA-256 kontrollü proof bundle ile taşınabilir.",
+			"Geçmiş, dosya ekleri, kod önizleme ve DIFF, görsel üretimi, yeniden deneme ve geri bildirim aynı akışta toplandı.",
 		icon: ArchiveRestore,
-		title: "Dayanıklı oturumlar",
+		title: "Modern sohbet çalışma alanı",
 	},
 	{
 		description:
-			"Native terminal çıktısı, salt-okunur Git özeti ve açık onaylı checkpoint geri yükleme altyapısı eklendi.",
+			"Graphite ve mint tema, yeni konuşma işareti ve tüm Windows ikon boyutları birlikte yenilendi.",
 		icon: BrainCircuit,
-		title: "Yerel çalışma alanı altyapısı",
+		title: "Yeni marka ve ikon",
 	},
 ];
 
@@ -174,11 +164,6 @@ const SettingsPanel = ({
 	preferences,
 }: SettingsPanelProps) => {
 	const [section, setSection] = useState<SettingsSection>("general");
-	const [providerStatus, setProviderStatus] =
-		useState<ProviderStatus>(EMPTY_STATUS);
-	const [statusState, setStatusState] = useState<"loading" | "ready" | "error">(
-		"loading",
-	);
 	const [engineStatus, setEngineStatus] = useState<EngineStatus | null>(null);
 	const [engineMessage, setEngineMessage] = useState("Engine durumu okunuyor…");
 	const [engineBusy, setEngineBusy] = useState(false);
@@ -196,16 +181,6 @@ const SettingsPanel = ({
 	const shouldReduceMotion =
 		preferences.motion === "reduce" ||
 		(preferences.motion === "system" && systemReduceMotion);
-
-	const refreshStatus = async () => {
-		setStatusState("loading");
-		try {
-			setProviderStatus(await readDesktopProviderStatus());
-			setStatusState("ready");
-		} catch {
-			setStatusState("error");
-		}
-	};
 
 	const refreshEngine = async () => {
 		setEngineBusy(true);
@@ -298,22 +273,6 @@ const SettingsPanel = ({
 	};
 
 	useEffect(() => {
-		let cancelled = false;
-		void readDesktopProviderStatus()
-			.then((status) => {
-				if (cancelled) return;
-				setProviderStatus(status);
-				setStatusState("ready");
-			})
-			.catch(() => {
-				if (!cancelled) setStatusState("error");
-			});
-		return () => {
-			cancelled = true;
-		};
-	}, []);
-
-	useEffect(() => {
 		const timer = window.setTimeout(() => { void refreshEngine(); }, 0);
 		return () => window.clearTimeout(timer);
 	}, []);
@@ -326,9 +285,6 @@ const SettingsPanel = ({
 		return () => document.removeEventListener("keydown", onKeyDown);
 	}, [onClose]);
 
-	const configuredCount =
-		Number(providerStatus.openAiConfigured) +
-		Number(providerStatus.geminiConfigured);
 	const activeLabel =
 		SECTIONS.find((item) => item.id === section)?.label ?? "Ayarlar";
 	const cloudStateLabel =
@@ -438,12 +394,12 @@ const SettingsPanel = ({
 										className="flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-xs hover:bg-muted disabled:opacity-60"
 										disabled={
 											section === "ai"
-												? statusState === "loading"
+												? engineBusy
 												: browserState === "loading"
 										}
 										onClick={() =>
-											section === "ai"
-												? void refreshStatus()
+										section === "ai"
+											? void refreshEngine()
 												: void refreshBrowser()
 										}
 										type="button"
@@ -452,8 +408,8 @@ const SettingsPanel = ({
 											aria-hidden="true"
 											className={
 												(
-													section === "ai"
-														? statusState === "loading"
+												section === "ai"
+													? engineBusy
 														: browserState === "loading"
 												)
 													? "animate-spin"
@@ -476,9 +432,9 @@ const SettingsPanel = ({
 									/>
 									<SummaryCard
 										icon={<Sparkles size={18} />}
-										label="Sağlayıcı"
-										value={providerLabel(preferences.provider)}
-										note={`${statusState === "ready" ? configuredCount : "—"} sağlayıcı yapılandırılmış`}
+										label="Yapay zekâ motoru"
+										value="Line AI Engine"
+										note={engineStatus?.configured ? "Bulut API anahtarı hazır" : "API anahtarı bekleniyor"}
 									/>
 									<SummaryCard
 										icon={<Cloud size={18} />}
@@ -561,28 +517,6 @@ const SettingsPanel = ({
 							{section === "ai" ? (
 								<div className="space-y-5">
 									<SettingsGroup
-										description="Yeni mesajın hangi sağlayıcıya gönderileceğini seçin. Otomatik seçim OpenAI başarısızsa yapılandırılmış Gemini'ye geçer."
-										title="Sağlayıcı yönlendirme"
-									>
-										<ChoiceGrid
-											onSelect={(value) =>
-												onChange(
-													updatePreference(
-														preferences,
-														"provider",
-														value as ProviderChoice,
-													),
-												)
-											}
-											options={PROVIDERS.map((item) => ({
-												id: item.id,
-												label: item.label,
-												note: item.note,
-											}))}
-											value={preferences.provider}
-										/>
-									</SettingsGroup>
-									<SettingsGroup
 										description="Bu tercih yalnız destekleyen model isteğine eklenir; modelin gizli düşünce zinciri gösterilmez."
 										title="Akıl yürütme düzeyi"
 									>
@@ -631,28 +565,6 @@ const SettingsPanel = ({
 										</div>
 										<p aria-live="polite" className="mt-3 rounded-xl bg-muted/60 px-3 py-2 text-muted-foreground text-xs">{engineMessage}</p>
 										{engineStatus?.capabilities ? <p className="mt-2 text-xs text-muted-foreground">{engineStatus.capabilities.project.name} · Metin {engineStatus.capabilities.text ? "hazır" : "kapalı"} · Görsel {engineStatus.capabilities.images ? "hazır" : "kapalı"} · Bugün {Math.max(0, engineStatus.capabilities.quota.dailyUnits - engineStatus.capabilities.quota.usedDaily)} birim</p> : null}
-									</SettingsGroup>
-									<SettingsGroup
-										description="Yalnız ortam değişkeninin varlığı okunur. Anahtar değeri arayüze veya yerel depoya alınmaz."
-										title="Bağlantı durumu"
-									>
-										<ProviderRow
-											configured={providerStatus.openAiConfigured}
-											model={providerStatus.openAiModel}
-											name="OpenAI"
-											state={statusState}
-										/>
-										<ProviderRow
-											configured={providerStatus.geminiConfigured}
-											model={providerStatus.geminiModel}
-											name="Gemini"
-											state={statusState}
-										/>
-										{statusState === "error" ? (
-											<p className="px-1 pt-2 text-destructive text-xs">
-												Masaüstü sağlayıcı durumu okunamadı.
-											</p>
-										) : null}
 									</SettingsGroup>
 								</div>
 							) : null}
@@ -769,7 +681,7 @@ const SettingsPanel = ({
 							{section === "personalization" ? (
 								<div className="space-y-5">
 									<SettingsGroup
-										description="Yeni sağlayıcı isteklerine eklenir. En fazla 12 KB; system ve güvenlik kurallarını geçersiz kılamaz."
+										description="Yeni Line AI Engine isteklerine eklenir. En fazla 12 KB; sistem ve güvenlik kurallarını geçersiz kılamaz."
 										title="Özel talimatlar"
 									>
 										<textarea
@@ -796,7 +708,7 @@ const SettingsPanel = ({
 										</p>
 									</SettingsGroup>
 									<SettingsGroup
-										description="Yanıtın varsayılan ayrıntı düzeyini belirler; her istekte sağlayıcıya gerçekten gönderilir."
+										description="Yanıtın varsayılan ayrıntı düzeyini belirler; her istekte Line AI Engine'e gönderilir."
 										title="Yanıt stili"
 									>
 										<ChoiceGrid
@@ -1015,7 +927,7 @@ const SettingsPanel = ({
 										</div>
 									</SettingsGroup>
 									<SettingsGroup
-										description="Bu işlem Line AI Cloud sohbet geçmişini temizler. Uygulama tercihleri, sağlayıcı anahtarları ve kurulum kimliği korunur."
+										description="Bu işlem Line AI Cloud sohbet geçmişini temizler. Uygulama tercihleri, Engine anahtarı ve kurulum kimliği korunur."
 										title="Sohbet geçmişi"
 									>
 										{confirmClear ? (
@@ -1112,12 +1024,11 @@ const SettingsPanel = ({
 								<div className="space-y-4">
 									<SettingsGroup
 										description="Denetlenebilir Windows yapay zekâ çalışma alanı · güncel sürüm"
-										title="Line AI v0.6.0"
+									title="Line AI v0.6.1"
 									>
 										<p className="text-muted-foreground text-sm leading-relaxed">
-											Line AI; sohbet, dosya bağlamı ve Chrome araçlarının yanına
-											yaptığı işlemleri kanıtlamaya yönelik çalışma alanı çekirdeğini
-											ekler.
+											Line AI; sohbet, kodlama, dosya bağlamı, Chrome araçları ve
+											görsel üretimini tek sade çalışma alanında birleştirir.
 										</p>
 									</SettingsGroup>
 									<SettingsGroup
@@ -1126,17 +1037,16 @@ const SettingsPanel = ({
 									>
 										<p className="text-muted-foreground text-sm leading-relaxed">
 											Engine anahtarı Windows Credential Manager’da tutulur. Yanıt geri bildirimi
-											isteğe bağlıdır; not yalnız açık izin verildiğinde gönderilir. Image Studio
-											arayüzü, sağlayıcı kredisi yeniden etkinleştirilene kadar canlı görsel
-											üretimi kapalı olduğunu doğrudan gösterir.
+											isteğe bağlıdır; not yalnız açık izin verildiğinde gönderilir. Kota,
+											maliyet ve kalite politikası sunucudaki yönetim katmanında izlenir.
 										</p>
 									</SettingsGroup>
 									<SettingsGroup
-										description="v0.5.0 çekirdek gösteriminde eklenen çalışma alanı altyapıları."
-										title="Yenilikler · v0.5.0"
+									description="Bu sürümde kullanıcıya doğrudan ulaşan ana geliştirmeler."
+									title="Yenilikler · v0.6.1"
 									>
 										<ul
-											aria-label="v0.5.0 yenilikleri"
+										aria-label="v0.6.1 yenilikleri"
 											className="space-y-3"
 										>
 											{RELEASE_HIGHLIGHTS.map((highlight) => {
@@ -1172,7 +1082,7 @@ const SettingsPanel = ({
 										title="Gizlilik ve lisans"
 									>
 										<p className="text-muted-foreground text-sm leading-relaxed">
-											Sağlayıcı anahtarları ve bulut erişim secret’ı React
+											Engine çalışma anahtarları ve bulut erişim secret’ı React
 											katmanına aktarılmaz. Her kurulum kendi kimliğiyle
 											ayrılır; geçmiş silinebilir.
 										</p>
@@ -1187,8 +1097,6 @@ const SettingsPanel = ({
 	);
 };
 
-const providerLabel = (value: ProviderChoice) =>
-	PROVIDERS.find((item) => item.id === value)?.label ?? value;
 const reasoningLabel = (value: ReasoningLevel) =>
 	value === "high" ? "Derin" : value === "medium" ? "Dengeli" : "Hızlı";
 
@@ -1360,44 +1268,6 @@ const ShortcutRow = ({ keys, label }: { keys: string; label: string }) => (
 		<kbd className="rounded-lg border border-border bg-background px-2 py-1 font-mono text-xs shadow-sm">
 			{keys}
 		</kbd>
-	</div>
-);
-
-const ProviderRow = ({
-	configured,
-	model,
-	name,
-	state,
-}: {
-	configured: boolean;
-	model: string;
-	name: string;
-	state: "loading" | "ready" | "error";
-}) => (
-	<div className="flex items-center gap-3 border-border/60 border-t py-3 first:border-t-0 first:pt-0 last:pb-0">
-		<span
-			className={cn(
-				"size-2.5 rounded-full",
-				state === "loading"
-					? "animate-pulse bg-muted-foreground"
-					: configured
-						? "bg-emerald-500"
-						: "bg-amber-500",
-			)}
-		/>
-		<span className="min-w-0 flex-1">
-			<span className="block font-medium text-sm">{name}</span>
-			<span className="block truncate text-muted-foreground text-xs">
-				{model}
-			</span>
-		</span>
-		<span className="text-muted-foreground text-xs">
-			{state === "loading"
-				? "Denetleniyor"
-				: configured
-					? "Hazır"
-					: "Anahtar yok"}
-		</span>
 	</div>
 );
 

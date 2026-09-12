@@ -180,9 +180,6 @@ async fn read_key() -> Result<Option<String>, String> {
         .await
         .map_err(|_| "Windows Credential Manager işlemi tamamlanamadı.".to_owned())?
 }
-pub async fn is_engine_key_configured() -> Result<bool, String> {
-    Ok(read_key().await?.is_some())
-}
 fn valid_key(value: &str) -> bool {
     let value = value.trim();
     value.len() == 55

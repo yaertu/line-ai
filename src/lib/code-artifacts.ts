@@ -119,9 +119,9 @@ export const extractCodeArtifact = (message: string): ExtractedCodeArtifact => {
 };
 
 /**
- * Reads both completed and currently open fenced code blocks from the provider's
+ * Reads both completed and currently open fenced code blocks from the Engine's
  * real text delta stream. It never invents characters or replays them on a timer;
- * every character in the returned artifact has already arrived from the provider.
+ * every character in the returned artifact has already arrived from the Engine.
  */
 export const extractStreamingCodeArtifact = (
 	message: string,

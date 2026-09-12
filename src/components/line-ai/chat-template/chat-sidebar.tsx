@@ -23,11 +23,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import LineAiBrandMark from "@/components/line-ai/brand-mark";
 import { cn } from "@/lib/utils";
-import {
-	type ChatConversation,
-	PROVIDERS,
-	type ProviderChoice,
-} from "./chat-data";
+import type { ChatConversation } from "./chat-data";
 
 export type ChatSidebarProps = {
 	activeId: string;
@@ -46,9 +42,7 @@ export type ChatSidebarProps = {
 	onTogglePin: (id: string) => void;
 	onToggleCollapsed?: () => void;
 	onWidthChange?: (width: number) => void;
-	provider: ProviderChoice;
 	width?: number;
-	truthMode: boolean;
 };
 
 const LineAiMark = LineAiBrandMark;
@@ -101,7 +95,6 @@ export const ChatSidebar = ({
 	onTogglePin,
 	onToggleCollapsed,
 	onWidthChange,
-	provider,
 	width = 272,
 }: ChatSidebarProps) => {
 	const [query, setQuery] = useState("");
@@ -451,7 +444,7 @@ export const ChatSidebar = ({
 						Çalışma alanım
 					</span>
 					<span className="block truncate text-muted-foreground text-[0.68rem]">
-						{PROVIDERS.find((item) => item.id === provider)?.label ?? provider}{" "}
+						Line AI Engine · Bulut API
 					</span>
 				</span>
 				<button

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T02:32:38.705Z",
+  "generatedAt": "2026-09-12T08:45:19.263Z",
   "source": {
     "kind": "vite-source-ui-playwright",
-    "url": "http://127.0.0.1:1431",
+    "url": "http://127.0.0.1:1430",
     "viewport": "1440x900",
     "surface": "Ayarlar > Bulut verileri"
   },
@@ -28,10 +28,10 @@
   },
   "poster": {
     "fileName": "line-ai-bulut-veri-turu-poster.png",
-    "sha256": "84ed3998617e8038799bd1ccc9c23e87d57983182a7d8337866ba31311b9688f"
+    "sha256": "24f848f106a358f0be4107c6ae00e0b1beb61a92e049e539b1635a233754b1b1"
   },
   "video": {
     "fileName": "line-ai-bulut-veri-turu.mp4",
-    "sha256": "326fd5c90eab722e5d85202f5bfba20dc1a4ee7553df092f9d31a72cc0e589d1"
+    "sha256": "83031d854001b65e370c08b9637bc3fa2983d65f6307562f65c08a2709f41a04"
   }
 }

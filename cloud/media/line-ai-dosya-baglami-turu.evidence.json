@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T02:32:49.038Z",
+  "generatedAt": "2026-09-12T08:45:30.230Z",
   "source": {
     "kind": "vite-source-ui-playwright",
-    "url": "http://127.0.0.1:1431",
+    "url": "http://127.0.0.1:1430",
     "viewport": "1440x900",
     "surface": "Yeni sohbet > dosya bağlamı ekleme"
   },
@@ -21,17 +21,17 @@
       "gönderilmemiş taslakta ek kaldırma denetimi"
     ],
     "notShown": [
-      "dosyanın sağlayıcıya gönderilmesi veya model yanıtı",
-      "üretilmiş kod Artifact'i; bunun için yapılandırılmış bir sağlayıcı gerekir",
+      "dosyanın Line AI Engine'e gönderilmesi veya model yanıtı",
+      "üretilmiş kod Artifact'i; bunun için etkin bir Engine bağlantısı gerekir",
       "kullanıcının yerel dosyaları veya sohbet geçmişi"
     ]
   },
   "poster": {
     "fileName": "line-ai-dosya-baglami-turu-poster.png",
-    "sha256": "7e89c02ee0fa03f1856f799fc56bfb0ad2e87d4420f39f3115e2043774d26d25"
+    "sha256": "9203aa8f169e3797f5fe156df9dcbb00b8b1d3e2dd877eecb0aa7423aa546554"
   },
   "video": {
     "fileName": "line-ai-dosya-baglami-turu.mp4",
-    "sha256": "7255fe996592c944bafeeb630a17ad396b98d1660fd338cf4a8d514ce418db72"
+    "sha256": "e43dcb7547ea4ccc98d19845bdbe68c56b23b1ca894b85a3a460096e686d4f2a"
   }
 }

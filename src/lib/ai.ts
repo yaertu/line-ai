@@ -6,12 +6,11 @@ import type {
 	EngineImageJob,
 	EngineStatus,
 	PromptExecutor,
-	ProviderStatus,
 } from "@/components/line-ai/chat-template/chat-data";
 
 // Tauri streams events through a JavaScript Channel object. Keep a strong
 // reference until the native command settles; otherwise the channel can be
-// collected while a long provider response is still in flight.
+// collected while a long Engine response is still in flight.
 // Native Result<String> failures arrive as strings, not JavaScript Error objects.
 // Normalize once so every Engine surface can display the safe server explanation.
 const invoke = async <T>(command: string, args?: Record<string, unknown>): Promise<T> => {
@@ -42,18 +41,6 @@ export const executeDesktopPrompt: PromptExecutor = async (
 	} finally {
 		activePromptChannels.delete(onEventChannel);
 	}
-};
-
-export const readDesktopProviderStatus = async (): Promise<ProviderStatus> => {
-	if (!("__TAURI_INTERNALS__" in window)) {
-		return {
-			geminiConfigured: false,
-			geminiModel: "Masaüstü uygulamasında doğrulanır",
-			openAiConfigured: false,
-			openAiModel: "Masaüstü uygulamasında doğrulanır",
-		};
-	}
-	return invoke<ProviderStatus>("get_provider_status");
 };
 
 const requireDesktop = () => {

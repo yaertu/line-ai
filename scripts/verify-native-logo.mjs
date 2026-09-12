@@ -69,7 +69,7 @@ try {
 		const current = JSON.parse(localStorage.getItem(storageKey) ?? "{}");
 		localStorage.setItem(
 			storageKey,
-			JSON.stringify({ ...current, provider: "auto", reasoning: "low", truthMode: true }),
+			JSON.stringify({ ...current, provider: "lineai", reasoning: "low", truthMode: true }),
 		);
 	});
 	await page.reload({ waitUntil: "networkidle" });
@@ -142,8 +142,8 @@ try {
 	}
 
 	const statusList = [...statuses];
-	if (!statusList.some((status) => /Gemini bağlantısı deneniyor/.test(status))) {
-		throw new Error(`Provider deneme durumu gözlenmedi: ${JSON.stringify(statusList)}`);
+	if (!statusList.some((status) => /Line AI Engine yanıtı hazırlanıyor/.test(status))) {
+		throw new Error(`Engine hazırlık durumu gözlenmedi: ${JSON.stringify(statusList)}`);
 	}
 	if (!statusList.some((status) => /line-ai-logo\.svg yazılıyor · \d+(?:[.,]\d+)? KB/.test(status))) {
 		throw new Error(`Dosya ve boyut yazma durumu gözlenmedi: ${JSON.stringify(statusList)}`);
@@ -156,7 +156,7 @@ try {
 				diff: { ...counts, ...numbered },
 				firstPreview,
 				nativeBridgeReady: true,
-				providerStatuses: statusList,
+				engineStatuses: statusList,
 				secondPreview,
 				source: "native-tauri-webview2-cdp",
 				svgSourceHiddenFromChat: true,

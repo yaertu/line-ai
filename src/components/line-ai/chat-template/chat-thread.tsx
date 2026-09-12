@@ -1,7 +1,6 @@
 "use client";
 
 import {
-	Bot,
 	BrainCircuit,
 	Check,
 	ChevronDown,
@@ -60,10 +59,8 @@ import {
 	type ChatTurn,
 	type ExecutePromptEvent,
 	type ExecutePromptRequest,
-	PROVIDERS,
 	type PromptAttachment,
 	type PromptExecutor,
-	type ProviderChoice,
 	type ReasoningLevel,
 	STARTER_SUGGESTIONS,
 	type ToolActivity,
@@ -125,9 +122,7 @@ export type ChatThreadProps = {
 	onDeleteTurn: (turnId: string) => void;
 	onOpenSidebar?: () => void;
 	onVoteTurn: (turnId: string, vote: "up" | "down") => void;
-	onProviderChange: (provider: ProviderChoice) => void;
 	onReasoningChange: (reasoning: ReasoningLevel) => void;
-	provider: ProviderChoice;
 	reasoning: ReasoningLevel;
 	title: string;
 	truthMode: boolean;
@@ -145,9 +140,7 @@ export const ChatThread = ({
 	onDeleteTurn,
 	onOpenSidebar,
 	onVoteTurn,
-	onProviderChange,
 	onReasoningChange,
-	provider,
 	reasoning,
 	title,
 	truthMode,
@@ -299,7 +292,7 @@ export const ChatThread = ({
 				);
 			} else if (hasTruncatedPreview) {
 				showNotice(
-					"Büyük dosyalar eklendi. Sağlayıcıya her dosyanın ilk 64 KiB metin önizlemesi gönderilecek.",
+					"Büyük dosyalar eklendi. Line AI Engine'e her dosyanın ilk 64 KiB metin önizlemesi gönderilecek.",
 				);
 			} else if (accepted.length > 0) {
 				showNotice(`${accepted.length} dosya eklendi.`, "success");
@@ -613,7 +606,7 @@ export const ChatThread = ({
 							status: "failed",
 						});
 						appendDirectBrowserResult(
-							"Chrome sayfası okundu; ancak bu istekte 30 dosya bulunduğu için sayfa içeriği sağlayıcıya güvenli biçimde eklenemedi.",
+							"Chrome sayfası okundu; ancak bu istekte 30 dosya bulunduğu için sayfa içeriği Line AI Engine'e güvenli biçimde eklenemedi.",
 							"error",
 						);
 						setIsBusy(false);
@@ -670,7 +663,7 @@ export const ChatThread = ({
 			],
 			customInstructions,
 			prompt,
-			provider,
+			provider: "lineai",
 			reasoning,
 			responseStyle,
 			transcript: allTurns.map((turn) => ({
@@ -962,14 +955,6 @@ export const ChatThread = ({
 									setDraft("");
 									showNotice("Ekler temizlendi.", "success");
 								}}
-								onProvider={(next) => {
-									onProviderChange(next);
-									setDraft("");
-									showNotice(
-										`Sağlayıcı ${PROVIDERS.find((item) => item.id === next)?.label ?? next} olarak ayarlandı.`,
-										"success",
-									);
-								}}
 								onReasoning={(next) => {
 									onReasoningChange(next);
 									setDraft("");
@@ -978,7 +963,6 @@ export const ChatThread = ({
 										"success",
 									);
 								}}
-								provider={provider}
 								query={draft.startsWith("+") ? draft.slice(1) : null}
 								reasoning={reasoning}
 							/>
@@ -1005,7 +989,6 @@ export const ChatThread = ({
 								submitLabel="Mesajı gönder"
 								value={draft}
 							>
-								<ProviderPicker onSelect={onProviderChange} value={provider} />
 								<ReasoningPicker
 									onSelect={onReasoningChange}
 									value={reasoning}
@@ -1366,15 +1349,6 @@ const ChatTurnView = ({
 				favicon: <SourceFavicon url={source.url} />,
 			}))
 		: extractSources(turn.text);
-	const providerLabel =
-		turn.provider === "openai"
-			? "OpenAI"
-		: turn.provider === "gemini"
-			? "Gemini"
-			: turn.provider === "lineai"
-				? "Line AI Engine"
-					: "Sağlayıcı";
-
 	return (
 		<article aria-label="Line AI mesajı işlemleri" {...contextProps}>
 			<AIMessage
@@ -1458,7 +1432,7 @@ const ChatTurnView = ({
 					) : null}
 					{turn.provider || turn.durationMs ? (
 						<p className="text-[0.7rem] text-muted-foreground tracking-[-0.005em]">
-							{turn.model ?? providerLabel}
+							Line AI Engine
 							{turn.durationMs
 								? ` · ${(turn.durationMs / 1000).toFixed(1)} sn`
 								: ""}
@@ -1689,37 +1663,18 @@ type CommandItem = {
 const ComposerCommandMenu = ({
 	filesAttached,
 	onClearFiles,
-	onProvider,
 	onReasoning,
-	provider,
 	query,
 	reasoning,
 }: {
 	filesAttached: boolean;
 	onClearFiles: () => void;
-	onProvider: (provider: ProviderChoice) => void;
 	onReasoning: (reasoning: ReasoningLevel) => void;
-	provider: ProviderChoice;
 	query: string | null;
 	reasoning: ReasoningLevel;
 }) => {
 	if (query === null) return null;
 	const items: CommandItem[] = [
-		...PROVIDERS.map((item) => ({
-			icon:
-				item.id === "auto" ? (
-					<Sparkles size={15} />
-				) : item.id === "openai" ? (
-					<Bot size={15} />
-				) : (
-					<Globe2 size={15} />
-				),
-			id: `provider-${item.id}`,
-			label: `Sağlayıcı: ${item.label}`,
-			note: item.note,
-			selected: provider === item.id,
-			run: () => onProvider(item.id),
-		})),
 		...REASONING_OPTIONS.map((item) => ({
 			icon:
 				item.id === "high" ? <BrainCircuit size={15} /> : <Gauge size={15} />,
@@ -1863,25 +1818,6 @@ const TurnMenuAction = ({
 		{label}
 	</button>
 );
-
-const ProviderPicker = ({
-	onSelect,
-	value,
-}: {
-	onSelect: (value: ProviderChoice) => void;
-	value: ProviderChoice;
-}) => {
-	const current = PROVIDERS.find((item) => item.id === value) ?? PROVIDERS[0];
-	return (
-		<SelectMenu
-			icon={<Sparkles aria-hidden="true" size={13} />}
-			label="Sağlayıcı"
-			onSelect={(id) => onSelect(id as ProviderChoice)}
-			options={PROVIDERS}
-			value={current.id}
-		/>
-	);
-};
 
 const REASONING_OPTIONS = [
 	{ id: "low", label: "Hızlı", note: "Daha kısa düşünme" },

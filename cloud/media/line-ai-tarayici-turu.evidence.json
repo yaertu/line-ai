@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T02:32:09.577Z",
+  "generatedAt": "2026-09-12T08:44:54.747Z",
   "source": {
     "kind": "vite-source-ui-playwright",
-    "url": "http://127.0.0.1:1431",
+    "url": "http://127.0.0.1:1430",
     "viewport": "1440x900",
     "surface": "Ayarlar > Tarayıcı"
   },
@@ -22,16 +22,16 @@
     ],
     "notShown": [
       "açık web sayfası içeriği veya tarayıcı sekme verisi",
-      "sağlayıcı anahtarları veya gizli değerler",
+      "Line AI Engine anahtarları veya gizli değerler",
       "sohbet mesajı içeriği"
     ]
   },
   "poster": {
     "fileName": "line-ai-tarayici-turu-poster.png",
-    "sha256": "95ed9d9ff3f44e95eca0701fba446650c28a510423e3691fb1fce556415b642d"
+    "sha256": "380715db2565ce28c10b4e89ee3af58beed6fbc3074066c8ed671a7a11be3185"
   },
   "video": {
     "fileName": "line-ai-tarayici-turu.mp4",
-    "sha256": "fe8349af96a594913102ae393a67052d48bc6bd505ff2897e7c52df1e0bfb324"
+    "sha256": "96dca0c060b77bf60e85cfd35dbe8e86848794a04312b26bc83239e3d5499b86"
   }
 }

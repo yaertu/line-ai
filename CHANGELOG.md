@@ -2,6 +2,27 @@
 
 Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir. Sürümleme [SemVer](https://semver.org/lang/tr/) yaklaşımını izler.
 
+## [0.6.1] - 2026-09-12
+
+### Değiştirildi
+
+- Masaüstündeki doğrudan üçüncü taraf ve yerel model yolları kaldırıldı; sohbet ve kodlama yalnız Line AI Engine üzerinden çalışır.
+- Sağlayıcı seçicileri, eski bağlantı durumları ve model adları sohbet, ayarlar, komut merkezi ve yanıt alt bilgisinden kaldırıldı.
+- Line AI API dış modeli `line-ai-neural-v1`, görsel modeli `line-ai-vision-v1` olarak sabitlendi; çıkarım özel ve değiştirilebilir sunucu runtime'ına ayrıldı.
+- Site ve yönetim paneli programın graphite/mint renklerine geçirildi; içerikler özel API, gerçek kota/maliyet ve sürekli değerlendirme döngüsünü anlatacak biçimde yenilendi.
+- Uygulama, site ve Windows için yeni konuşma balonu/spark ikonu üretildi.
+
+### Güvenlik
+
+- Yönetici erişim dosyası, runtime anahtarları ve servis sırları GitHub ile kaynak ZIP'in dışında tutulur.
+- Runtime hata gövdeleri istemciye veya loglara aktarılmaz; kesin reddedilen işlerde kota iade edilir, belirsiz ağ sonucunda rezervasyon korunur.
+
+### Doğrulama
+
+- React: 12 dosyada 84 test.
+- Cloud API: 4 dosyada 18 test.
+- Rust/Tauri: 23 test başarılı, gerçek Chrome isteyen 1 test isteğe bağlıdır.
+
 ## [0.5.0] - 2026-09-11
 
 ### Eklendi

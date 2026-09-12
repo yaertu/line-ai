@@ -72,10 +72,10 @@ try {
 		"Landing doğrulanmış gerçek kodlama kaydını kullanmıyor.",
 	);
 	assert(
-		landingHtml.includes("/media/line-ai-v050-yenilikler.mp4") &&
-			landingHtml.includes("/media/line-ai-v050-yenilikler-poster.png") &&
-			landingHtml.includes("releases/download/v0.6.0/Line.AI.exe"),
-		"Landing v0.5.0 kaynak arayüz kaydını veya sabit indirme bağlantısını kullanmıyor.",
+		landingHtml.includes("/media/line-ai-v061-yenilikler.mp4") &&
+			landingHtml.includes("/media/line-ai-v061-yenilikler-poster.png") &&
+			landingHtml.includes("releases/download/v0.6.1/Line.AI.exe"),
+		"Landing v0.6.1 kaynak arayüz kaydını veya sabit indirme bağlantısını kullanmıyor.",
 	);
 
 	const evidenceResponse = await requestRaw(
@@ -101,24 +101,24 @@ try {
 	console.log("landingRealCapture=PASS");
 
 	const sourceUiEvidenceResponse = await requestRaw(
-		"/media/line-ai-v050-yenilikler.evidence.json",
+		"/media/line-ai-v061-yenilikler.evidence.json",
 	);
 	const sourceUiEvidence = await sourceUiEvidenceResponse.json();
-	assert(sourceUiEvidenceResponse.status === 200, "v0.5.0 kaynak arayüz evidence JSON yayınlanmıyor.");
+	assert(sourceUiEvidenceResponse.status === 200, "v0.6.1 kaynak arayüz evidence JSON yayınlanmıyor.");
 	assert(
 		sourceUiEvidence?.source?.kind === "vite-source-ui-playwright" &&
-			sourceUiEvidence?.source?.surface === "Ayarlar > Hakkında > Yenilikler · v0.5.0" &&
-			sourceUiEvidence?.claims?.notShownAsProductUi?.includes("Mission Control"),
-		"v0.5.0 kaynak arayüz kaydının kapsamı ve sınırı doğrulanamıyor.",
+			sourceUiEvidence?.source?.surface === "Ayarlar > Hakkında > Yenilikler · v0.6.1" &&
+			sourceUiEvidence?.claims?.notShownAsProductUi?.includes("yönetici giriş bilgileri veya Engine anahtarı"),
+		"v0.6.1 kaynak arayüz kaydının kapsamı ve sınırı doğrulanamıyor.",
 	);
 
-	const sourceUiVideoResponse = await requestRaw("/media/line-ai-v050-yenilikler.mp4");
+	const sourceUiVideoResponse = await requestRaw("/media/line-ai-v061-yenilikler.mp4");
 	const sourceUiVideoBytes = Buffer.from(await sourceUiVideoResponse.arrayBuffer());
 	const sourceUiVideoHash = createHash("sha256").update(sourceUiVideoBytes).digest("hex");
-	assert(sourceUiVideoResponse.status === 200, "v0.5.0 kaynak arayüz videosu yayınlanmıyor.");
+	assert(sourceUiVideoResponse.status === 200, "v0.6.1 kaynak arayüz videosu yayınlanmıyor.");
 	assert(
 		sourceUiVideoHash === sourceUiEvidence?.video?.sha256,
-		"v0.5.0 kaynak arayüz videosu ile evidence SHA-256 özeti eşleşmiyor.",
+		"v0.6.1 kaynak arayüz videosu ile evidence SHA-256 özeti eşleşmiyor.",
 	);
 	console.log("landingV050SourceUi=PASS");
 

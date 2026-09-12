@@ -72,7 +72,7 @@ const tours = [
 		],
 		notShown: [
 			"Tarayıcı bağlantısı başlatma veya durdurma denetimleri",
-			"Yapay zekâ sağlayıcı anahtarları veya gizli değerler",
+			"Line AI Engine anahtarları veya gizli değerler",
 			"sohbet mesajı içeriği",
 		],
 		prepare: async (page) => {
@@ -92,7 +92,7 @@ const tours = [
 		],
 		notShown: [
 			"açık web sayfası içeriği veya tarayıcı sekme verisi",
-			"sağlayıcı anahtarları veya gizli değerler",
+			"Line AI Engine anahtarları veya gizli değerler",
 			"sohbet mesajı içeriği",
 		],
 		prepare: async (page) => {
@@ -136,8 +136,8 @@ const tours = [
 			"gönderilmemiş taslakta ek kaldırma denetimi",
 		],
 		notShown: [
-			"dosyanın sağlayıcıya gönderilmesi veya model yanıtı",
-			"üretilmiş kod Artifact'i; bunun için yapılandırılmış bir sağlayıcı gerekir",
+			"dosyanın Line AI Engine'e gönderilmesi veya model yanıtı",
+			"üretilmiş kod Artifact'i; bunun için etkin bir Engine bağlantısı gerekir",
 			"kullanıcının yerel dosyaları veya sohbet geçmişi",
 		],
 		prepare: async (page, fixturePath) => {

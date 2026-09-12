@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T02:31:59.470Z",
+  "generatedAt": "2026-09-12T08:44:42.794Z",
   "source": {
     "kind": "vite-source-ui-playwright",
-    "url": "http://127.0.0.1:1431",
+    "url": "http://127.0.0.1:1430",
     "viewport": "1440x900",
     "surface": "Ayarlar > Görünüm"
   },
@@ -22,16 +22,16 @@
     ],
     "notShown": [
       "Tarayıcı bağlantısı başlatma veya durdurma denetimleri",
-      "Yapay zekâ sağlayıcı anahtarları veya gizli değerler",
+      "Line AI Engine anahtarları veya gizli değerler",
       "sohbet mesajı içeriği"
     ]
   },
   "poster": {
     "fileName": "line-ai-gorunum-turu-poster.png",
-    "sha256": "d04358ad70f6778a17ac2ffbf92284bc881642e9cd84ff0f926dace2c6590de0"
+    "sha256": "05f4a808557a26259bfce30e7f9e2bf20ac6cf2bf60bb6344f98078e8918e442"
   },
   "video": {
     "fileName": "line-ai-gorunum-turu.mp4",
-    "sha256": "058d8738ac53e26f632e3ca989aba9ce20ca02c2d9057ae304a433f6010a59d2"
+    "sha256": "86e6e9652820ae529f3c1e2f508dd43532166311700fee22da95a71c768e77b1"
   }
 }

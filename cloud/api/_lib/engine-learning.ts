@@ -4,7 +4,7 @@ import {getDatabase} from './database.js';
 import {ApiError} from './http.js';
 import {createEngineKey,parseText} from './engine-core.js';
 import {activePolicy,dbCheck,pepper,reserve,finish} from './engine-store.js';
-import {generateText,textEnvelope,textCost,TEXT_MODEL,MAX_OUTPUT,RejectedRequest} from './engine-provider.js';
+import {generateText,textEnvelope,textCost,TEXT_MODEL,MAX_OUTPUT,RejectedRequest} from './engine-runtime.js';
 import {audit} from './engine-admin.js';
 
 // Versioned, server-owned regression cases. Model answers are never executed as code.
@@ -17,14 +17,14 @@ export const CASES=[
  {id:'simple-explanation',task:'chat',prompt:'API nedir? Beş yaşındaki bir çocuğa en fazla üç kısa cümleyle anlat.',check:(s:string)=>s.length>30&&s.length<700}
 ];
 const EVALUATION_CALL_TIMEOUT_MS=20000;
-export function evaluationFailure(error:unknown,phase:'provider'|'storage') {
+export function evaluationFailure(error:unknown,phase:'runtime'|'storage') {
  if(error instanceof ApiError)return error;
  const name=error instanceof Error?error.name:'unknown';
- const timeout=phase==='provider'&&/abort|timeout/i.test(name);
- const code=phase==='provider'?(timeout?'evaluation_provider_timeout':'evaluation_provider_unavailable'):'evaluation_storage_unavailable';
+	const timeout=phase==='runtime'&&/abort|timeout/i.test(name);
+	const code=phase==='runtime'?(timeout?'evaluation_runtime_timeout':'evaluation_runtime_unavailable'):'evaluation_storage_unavailable';
  // Do not log the upstream body, prompt, policy, or raw exception message.
  console.warn('line_engine_evaluation_failure',{code,phase});
- return new ApiError(503,code,timeout?'Sağlayıcı yanıtı değerlendirme süresini aştı. Taslak yayımlanmadı.':phase==='provider'?'Sağlayıcı değerlendirme yanıtını tamamlayamadı. Taslak yayımlanmadı.':'Değerlendirme kaydı güncellenemedi. Taslak yayımlanmadı.');
+	return new ApiError(503,code,timeout?'Engine yanıtı değerlendirme süresini aştı. Taslak yayımlanmadı.':phase==='runtime'?'Engine çalışma katmanı değerlendirme yanıtını tamamlayamadı. Taslak yayımlanmadı.':'Değerlendirme kaydı güncellenemedi. Taslak yayımlanmadı.');
 }
 export const freshBaselineEvaluation=(score:number,testedAt:string)=>({passed:score===CASES.length,score,total:CASES.length,suiteVersion:'1',model:TEXT_MODEL,testedAt,source:'fresh_baseline_measurement'});
 export async function evaluationIdentity(projectId:string) {
@@ -41,7 +41,7 @@ async function measuredText(identity:Awaited<ReturnType<typeof evaluationIdentit
  const req={headers:{'idempotency-key':randomUUID()}} as unknown as VercelRequest;
  const held=await reserve(identity,req,input,'evaluation',task,policy.version,TEXT_MODEL,envelope.upperInput+MAX_OUTPUT,textCost(envelope.upperInput,MAX_OUTPUT));
  try {const result=await generateText(input,policy.instructions,EVALUATION_CALL_TIMEOUT_MS);await finish(held.request.id,'completed',null,result.usage);return result.message;}
- catch(error){const safe=evaluationFailure(error,'provider');const rejected=error instanceof RejectedRequest;await finish(held.request.id,rejected?'failed':'uncertain',null,rejected?{input:0,output:0,cost:0}:{input:null,output:null,cost:null},'evaluation_failed').catch(()=>console.warn('line_engine_evaluation_settlement_retry_failed'));throw safe;}
+	catch(error){const safe=evaluationFailure(error,'runtime');const rejected=error instanceof RejectedRequest;await finish(held.request.id,rejected?'failed':'uncertain',null,rejected?{input:0,output:0,cost:0}:{input:null,output:null,cost:null},'evaluation_failed').catch(()=>console.warn('line_engine_evaluation_settlement_retry_failed'));throw safe;}
 }
 export async function evaluatePolicy(id:string,projectId:string,userId:string|null) {
  let identity:Awaited<ReturnType<typeof evaluationIdentity>>|undefined;
@@ -57,7 +57,7 @@ export async function evaluatePolicy(id:string,projectId:string,userId:string|nu
    nextCallAt=Date.now()+17000;
    return measuredText(evaluationIdentityForRun,prompt,task,policy);
   };
-  // Sequential calls keep the shared provider load and project concurrency bounded.
+	// Sequential calls keep shared runtime load and project concurrency bounded.
   for(const test of CASES){
    const base=await paced(test.prompt,test.task,baseline);
    const next=await paced(test.prompt,test.task,candidate);

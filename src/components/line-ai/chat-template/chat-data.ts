@@ -2,7 +2,7 @@ import type { AIPromptAttachment } from "@/components/line-ai/ai-prompt-input";
 import type { AISuggestion } from "@/components/line-ai/ai-suggestions";
 import type { FileContentKind } from "@/lib/file-content";
 
-export type ProviderChoice = "auto" | "openai" | "gemini" | "lineai";
+export type ProviderChoice = "lineai";
 export type ReasoningLevel = "low" | "medium" | "high";
 export type ThemeChoice = "system" | "light" | "dark";
 export type MotionChoice = "system" | "reduce";
@@ -29,13 +29,6 @@ export type ToolActivity = {
 	status: "completed" | "failed";
 	title?: string;
 	url?: string;
-};
-
-export type ProviderStatus = {
-	geminiConfigured: boolean;
-	geminiModel: string;
-	openAiConfigured: boolean;
-	openAiModel: string;
 };
 
 export type EngineCapabilities = {
@@ -105,7 +98,7 @@ export type ChatTurn =
 			from: "assistant";
 			id: string;
 			model?: string;
-			provider?: "openai" | "gemini" | "lineai";
+			provider?: "lineai";
 			sources?: WebSource[];
 			durationMs?: number;
 			reasoning?: ReasoningLevel;
@@ -155,7 +148,7 @@ export type ExecutePromptRequest = {
 export type ExecutePromptResult = {
 	message: string;
 	model: string;
-	provider: "openai" | "gemini" | "lineai";
+	provider: "lineai";
 	requestId?: string;
 	sources: WebSource[];
 };
@@ -186,16 +179,5 @@ export const STARTER_SUGGESTIONS: AISuggestion[] = [
 	{ id: "st2", label: "Bu hatayı birlikte inceleyelim" },
 	{ id: "st3", label: "Kısa ve net bir metin hazırla" },
 ];
-
-export const PROVIDERS = [
-	{ id: "auto", label: "Otomatik", note: "Engine anahtarı varsa Line AI; yoksa OpenAI, gerekirse Gemini" },
-	{ id: "openai", label: "OpenAI", note: "GPT-5.6 Terra" },
-	{ id: "gemini", label: "Gemini", note: "Gemini 3.7 Flash" },
-	{ id: "lineai", label: "Line AI Engine", note: "Sunucuda metin ve görsel üretimi" },
-] as const satisfies ReadonlyArray<{
-	id: ProviderChoice;
-	label: string;
-	note: string;
-}>;
 
 export const CONTEXT_LIMIT = 1_000_000;

@@ -3,7 +3,7 @@ import type {VercelRequest,VercelResponse} from '@vercel/node';
 const f=vi.hoisted(()=>({finish:vi.fn(),reserve:vi.fn(),requireEngine:vi.fn(),policy:vi.fn(),usage:vi.fn()}));
 vi.mock('./engine-store.js',async(importOriginal)=>({...await importOriginal<typeof import('./engine-store.js')>(),finish:f.finish,reserve:f.reserve,requireEngine:f.requireEngine,activePolicy:f.policy,usage:f.usage}));
 import handler from '../v1/engine.js';
-import {generateImage} from './engine-provider.js';
+import {generateImage} from './engine-runtime.js';
 import {parseImage} from './engine-core.js';
 function response(){
  const body:{status:number;json:Record<string,unknown>}={status:0,json:{}};
@@ -12,7 +12,7 @@ function response(){
 }
 const req=(route:string,body:unknown={})=>({method:route==='capabilities'?'GET':'POST',query:{route},headers:{'idempotency-key':'operation-123456'},body}) as unknown as VercelRequest;
 beforeEach(()=>{
- vi.stubEnv('LINE_AI_ENGINE_ENABLED','true');vi.stubEnv('LINE_AI_GEMINI_KEY','test');vi.stubEnv('LINE_AI_OPENAI_KEY','test');
+	vi.stubEnv('LINE_AI_ENGINE_ENABLED','true');vi.stubEnv('LINE_AI_TEXT_RUNTIME_URL','https://runtime.lineai.test/v1/text');vi.stubEnv('LINE_AI_TEXT_RUNTIME_KEY','runtime-test');vi.stubEnv('LINE_AI_IMAGE_RUNTIME_URL','https://runtime.lineai.test/v1/images');vi.stubEnv('LINE_AI_IMAGE_RUNTIME_KEY','runtime-test');
  f.finish.mockReset().mockResolvedValue(undefined);f.reserve.mockReset().mockResolvedValue({existing:false,request:{id:'request-1'}});
  f.requireEngine.mockReset().mockResolvedValue({key:{id:'key-1',scopes:['text','images']},project:{id:'project-1',name:'Test',images_enabled:true,daily_units:100000,monthly_units:1000000},db:{}});
  f.policy.mockResolvedValue({version:'test-1',instructions:'Doğru cevap ver.'});
@@ -20,31 +20,38 @@ beforeEach(()=>{
 });
 afterEach(()=>{vi.unstubAllEnvs();vi.unstubAllGlobals();});
 describe('Engine request accounting and desktop contract',()=>{
- it('accepts native nullable preferences and emits numeric estimated units without provider usage',async()=>{
-  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({candidates:[{content:{parts:[{text:'Merhaba'}]}}]}))));
-  const r=response();await handler(req('generate',{prompt:'Merhaba',customInstructions:null,responseStyle:null,reasoning:'high',truthMode:true}),r.res);
+	it('exposes only the Line AI Engine identity to clients',async()=>{
+		const r=response();await handler(req('capabilities'),r.res);
+		expect(r.body.status).toBe(200);
+		expect(r.body.json.models).toEqual({text:'line-ai-neural-v1',image:'line-ai-vision-v1'});
+		expect(JSON.stringify(r.body.json)).not.toMatch(/gemini|openai|provider/i);
+	});
+	it('accepts native nullable preferences and emits numeric estimated units without provider usage',async()=>{
+		vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({message:'Merhaba',usage:{input:null,output:null}}))));
+		const r=response();await handler(req('generate',{prompt:'Merhaba',customInstructions:null,responseStyle:null,reasoning:'high',truthMode:true}),r.res);
   expect(r.body.status).toBe(200);expect((r.body.json.usage as {units:number;estimated:boolean}).units).toBeGreaterThan(0);
   expect((r.body.json.usage as {estimated:boolean}).estimated).toBe(true);
-  const sent=JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string);
-  expect(sent.generationConfig.thinkingConfig.thinkingBudget).toBe(2048);
-  expect(sent.systemInstruction.parts[0].text).toContain('Doğruluk modu açık');
- });
- it('settles real provider tokens and cost',async()=>{
-  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({candidates:[{content:{parts:[{text:'42'}]}}],usageMetadata:{promptTokenCount:100,totalTokenCount:130}}))));
+		const sent=JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string);
+		expect(vi.mocked(fetch).mock.calls[0][0]).toBe('https://runtime.lineai.test/v1/text');
+		expect(sent.reasoning).toBe('high');
+		expect(sent.system).toContain('Doğruluk modu açık');
+	});
+	it('settles real provider tokens and cost',async()=>{
+		vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({message:'42',usage:{input:100,output:30}}))));
   const r=response();await handler(req('generate',{prompt:'6*7'}),r.res);
   expect(r.body.status).toBe(200);expect(f.finish).toHaveBeenCalledWith('request-1','completed',expect.anything(),{input:100,output:30,cost:105});
  });
- it('uses structured output when explicitly asked for JSON without formatting',async()=>{
-  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({candidates:[{content:{parts:[{text:'{"ok":true}'}]}}]}))));
-  const r=response();await handler(req('generate',{prompt:'Yalnızca geçerli JSON yaz: ok true. Kod bloğu kullanma.'}),r.res);
-  const sent=JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string);
-  expect(sent.generationConfig.responseMimeType).toBe('application/json');
+	it('uses structured output when explicitly asked for JSON without formatting',async()=>{
+		vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({message:'{"ok":true}',usage:{input:null,output:null}}))));
+		const r=response();await handler(req('generate',{prompt:'Yalnızca geçerli JSON yaz: ok true. Kod bloğu kullanma.'}),r.res);
+		const sent=JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string);
+		expect(sent.responseFormat).toBe('json');
   expect(r.body.status).toBe(200);
  });
  it('refunds a rejected provider request and never returns upstream secrets',async()=>{
   vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response('sk-secret-private',{status:429})));
   const r=response();await handler(req('generate',{prompt:'Merhaba'}),r.res);
-  expect(r.body.status).toBe(503);expect(f.finish).toHaveBeenCalledWith('request-1','failed',null,{input:0,output:0,cost:0},'provider_busy');
+		expect(r.body.status).toBe(503);expect(f.finish).toHaveBeenCalledWith('request-1','failed',null,{input:0,output:0,cost:0},'engine_capacity');
   expect(JSON.stringify(r.body)).not.toContain('sk-secret');
  });
  it('retains reservation on ambiguous network failure',async()=>{
@@ -63,8 +70,8 @@ describe('Engine request accounting and desktop contract',()=>{
   const r=response();await handler(req('generate',{prompt:'Merhaba'}),r.res);expect(r.body.status).toBe(503);expect(f.reserve).not.toHaveBeenCalled();expect(fetcher).not.toHaveBeenCalled();
   const c=response();await handler(req('capabilities'),c.res);expect(c.body.json.enabled).toBe(false);expect(c.body.json.text).toBe(false);
  });
- it('rejects mislabeled image bytes',async()=>{
-  vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({data:[{b64_json:Buffer.from('<script>bad</script>').toString('base64')}]}))));
+	it('rejects mislabeled image bytes',async()=>{
+		vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({data:Buffer.from('<script>bad</script>').toString('base64'),mimeType:'image/webp',usage:{input:null,output:null}}))));
   await expect(generateImage(parseImage({prompt:'image'}))).rejects.toThrow();
  });
 });

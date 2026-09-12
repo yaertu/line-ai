@@ -6,11 +6,11 @@ describe('Engine policy evaluation diagnostics',()=>{
  afterEach(()=>vi.restoreAllMocks());
  it('converts an upstream timeout to a stable, secret-free operator error',()=>{
   const warning=vi.spyOn(console,'warn').mockImplementation(()=>{});
-  const failure=evaluationFailure(new DOMException('provider body with a secret','TimeoutError'),'provider');
-  expect(failure.status).toBe(503);
-  expect(failure.code).toBe('evaluation_provider_timeout');
-  expect(failure.message).not.toContain('secret');
-  expect(warning).toHaveBeenCalledWith('line_engine_evaluation_failure',{code:'evaluation_provider_timeout',phase:'provider'});
+		const failure=evaluationFailure(new DOMException('runtime body with a secret','TimeoutError'),'runtime');
+		expect(failure.status).toBe(503);
+		expect(failure.code).toBe('evaluation_runtime_timeout');
+		expect(failure.message).not.toContain('secret');
+		expect(warning).toHaveBeenCalledWith('line_engine_evaluation_failure',{code:'evaluation_runtime_timeout',phase:'runtime'});
  });
  it('replaces a stale failed baseline result with the current suite measurement',()=>{
   const fresh=freshBaselineEvaluation(CASES.length,'2026-09-12T00:00:00.000Z');

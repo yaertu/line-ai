@@ -49,7 +49,7 @@ try {
   assert.equal(created.error,null);assert.equal((await db.storage.from('line-engine-assets').upload(path,bytes,{contentType:'image/png'})).error,null);
   assert.equal((await db.from('line_engine_assets').insert({id:assetId,request_id:id,project_id:access.projectId,storage_path:path})).error,null);
   image={id,assetId,status:'completed',model:'storage-contract-fixture'};
-  console.log('BLOCKED: real image generation awaits provider credit; asset tests below use an explicit existing screenshot fixture.');
+  console.log('BLOCKED: Line AI image runtime is disabled; asset tests below use an explicit existing screenshot fixture.');
  }
  imageJob=image.id;assert.equal(image.status,'completed');
  await call('/api/v1/assets/'+image.assetId,{key:otherKey,expected:404});
@@ -63,7 +63,7 @@ try {
  await action({action:'revoke_key',id:textKey.key.id});await call('/api/v1/capabilities',{key:textKey.secret,expected:401});
  await action({action:'logout'});await call('/api/admin',{admin:true,expected:401});
  await mkdir(new URL('../../artifacts/',import.meta.url),{recursive:true});
- await writeFile(new URL('../../artifacts/engine-smoke.json',import.meta.url),JSON.stringify({date:new Date().toISOString(),origin,checks:'admin,CSRF,scopes,text,idempotency,isolation,privacy,assets,deletion,revocation',textModel:first.model,textTokens:first.usage.units,imageGeneration:fixture?'blocked_provider_credit':'verified',imageModel:image.model},null,2));
+ await writeFile(new URL('../../artifacts/engine-smoke.json',import.meta.url),JSON.stringify({date:new Date().toISOString(),origin,checks:'admin,CSRF,scopes,text,idempotency,isolation,privacy,assets,deletion,revocation',textModel:first.model,textTokens:first.usage.units,imageGeneration:fixture?'runtime_disabled':'verified',imageModel:image.model},null,2));
  console.log('PASS: revocation and logout. Live smoke completed; image generation status is recorded separately.');
 }catch(error){console.error('Engine smoke failed:',error.message);process.exitCode=1;}
 finally{

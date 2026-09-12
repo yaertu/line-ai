@@ -126,9 +126,7 @@ const loadPreferences = (): AppPreferences => {
 				: DEFAULT_PREFERENCES;
 		}
 		return {
-			provider: ["auto", "openai", "gemini", "lineai"].includes(parsed.provider ?? "")
-				? (parsed.provider as AppPreferences["provider"])
-				: DEFAULT_PREFERENCES.provider,
+			provider: "lineai",
 			reasoning: ["low", "medium", "high"].includes(parsed.reasoning ?? "")
 				? (parsed.reasoning as AppPreferences["reasoning"])
 				: DEFAULT_PREFERENCES.reasoning,
@@ -755,9 +753,7 @@ const ChatTemplate = ({
 				onTogglePin={togglePinnedConversation}
 				onToggleCollapsed={() => setIsSidebarOpen((isOpen) => !isOpen)}
 				onWidthChange={setSidebarWidth}
-				provider={preferences.provider}
 				width={sidebarWidth}
-				truthMode={preferences.truthMode}
 			/>
 
 			<AnimatePresence>
@@ -801,8 +797,6 @@ const ChatTemplate = ({
 								onSelect={open}
 								onTogglePin={togglePinnedConversation}
 								onToggleCollapsed={() => setIsDrawerOpen(false)}
-								provider={preferences.provider}
-								truthMode={preferences.truthMode}
 							/>
 						</motion.div>
 					</>
@@ -839,14 +833,10 @@ const ChatTemplate = ({
 				onCodeWorkspaceOpen={() => setIsSidebarOpen(false)}
 				onDeleteTurn={deleteTurn}
 				onOpenSidebar={() => setIsDrawerOpen(true)}
-				onProviderChange={(provider) =>
-					setPreferences((current) => ({ ...current, provider }))
-				}
 				onReasoningChange={(reasoning) =>
 					setPreferences((current) => ({ ...current, reasoning }))
 				}
 				onVoteTurn={voteTurn}
-				provider={preferences.provider}
 				reasoning={preferences.reasoning}
 				responseStyle={preferences.responseStyle}
 				title={active?.title ?? "Yeni sohbet"}

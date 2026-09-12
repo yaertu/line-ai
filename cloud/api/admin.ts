@@ -4,7 +4,7 @@ import {adminIdentity,login,audit,cookieToken,sessionHash,sessionCookie,requireO
 import {createEngineKey,stringField} from './_lib/engine-core.js';
 import {dbCheck,pepper,uuid,usage} from './_lib/engine-store.js';
 import {evaluatePolicy,proposeImprovement} from './_lib/engine-learning.js';
-import {textReady,imagesReady,TEXT_MODEL,IMAGE_MODEL} from './_lib/engine-provider.js';
+import {textReady,imagesReady,TEXT_MODEL,IMAGE_MODEL} from './_lib/engine-runtime.js';
 export const config={maxDuration:300};
 function integer(v:unknown,min:number,max:number){if(typeof v!=='number'||!Number.isSafeInteger(v)||v<min||v>max)throw new ApiError(400,'invalid_limit','Limit geçersiz.');return v;}
 export default async function handler(req:VercelRequest,res:VercelResponse) {
@@ -24,7 +24,7 @@ export default async function handler(req:VercelRequest,res:VercelResponse) {
    const projectList=projects as unknown as {id:string}[];
    const totals=await Promise.all(projectList.map(async p=>({projectId:p.id,...await usage(p.id)})));
    sendJson(res,200,{role:admin.role,projects,keys,policies,requests,logs,automation,totals,
-    providers:{text:textReady(),images:imagesReady(),textModel:TEXT_MODEL,imageModel:IMAGE_MODEL}});return;
+    engine:{text:textReady(),images:imagesReady(),textModel:TEXT_MODEL,imageModel:IMAGE_MODEL}});return;
   }
   const body=readObjectBody(req);const action=stringField(body.action,40,'İşlem',true);
   if(action==='login'){sendJson(res,200,await login(req,res,stringField(body.email,254,'E-posta',true),stringField(body.password,200,'Parola',true)));return;}

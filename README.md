@@ -5,115 +5,72 @@
 <h1 align="center">Line AI</h1>
 
 <p align="center">
-  <strong>Fikrini, dosyalarını ve kodunu tek bir düzenli çalışma alanında buluşturan açık kaynak Windows yapay zekâ uygulaması.</strong>
+  <strong>Sohbeti, kodu, dosyaları ve görsel üretimini tek Windows çalışma alanında birleştiren açık kaynak istemci.</strong>
 </p>
 
 <p align="center">
-  <img alt="Platform: Windows" src="https://img.shields.io/badge/Platform-Windows-0078D4?logo=windows11&logoColor=white">
-  <img alt="Tauri 2" src="https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white">
-  <img alt="React 19" src="https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white">
-  <img alt="Rust" src="https://img.shields.io/badge/Rust-Native-000000?logo=rust&logoColor=white">
-  <img alt="Dil: Türkçe" src="https://img.shields.io/badge/Dil-Türkçe-E30A17">
-  <img alt="Lisans: MIT" src="https://img.shields.io/badge/Lisans-MIT-2EA44F">
+  <a href="https://lineaicloud.vercel.app"><strong>Tanıtım sitesi</strong></a> ·
+  <a href="https://lineaicloud.vercel.app/admin"><strong>Engine yönetimi</strong></a> ·
+  <a href="https://github.com/yaertu/line-ai/releases/tag/v0.6.1"><strong>v0.6.1</strong></a>
 </p>
 
-Line AI v0.6.0, Windows çalışma alanını kendi bulut API’si ve yönetim paneliyle birleştirir. Sohbet ve kodlama sunucudaki modellerle çalışır; Ollama veya yerel GPU gerekmez. Line AI Engine; kimlik, kota, maliyet kontrolü ve sürümlü davranış katmanımızdır, sıfırdan eğitilmiş bir temel model değildir.
+## v0.6.1
 
-### v0.6.0 — Line AI Engine
+Line AI artık masaüstünde tek yapay zekâ yolu kullanır: **Line AI Engine**. Eski OpenAI, Gemini, otomatik sağlayıcı ve yerel model seçenekleri uygulamadan kaldırıldı. Kullanıcının bilgisayarında model, Ollama veya GPU kurulumu gerekmez.
 
-Grafit ve nane yeşili teması, yeni logo, sade sohbet alanı ve başlangıç kartlarıyla arayüz yenilendi. Yerel model çalıştırma, Ollama/LM Studio ayarları ve Truth Mode anahtarları uygulamadan kaldırıldı. Yeni kurulumlar doğrudan Line AI Engine kullanır.
+- Modern graphite ve mint sohbet arayüzü ile yeni konuşma balonu ikonu.
+- ChatGPT benzeri yeni sohbet, aranabilir geçmiş, yeniden adlandırma, sabitleme, arşivleme ve silme akışı.
+- Codex benzeri dosya/klasör bağlamı, kod artifact alanı, güvenli SVG önizleme ve sürümler arası DIFF.
+- Line AI Image Studio, Chrome araçları, yanıtı durdurma/yeniden deneme ve isteğe bağlı geri bildirim.
+- Tek Line AI Engine API sözleşmesi: proje anahtarları, kapsamlar, sona erme, iptal, token ve görsel kotaları, eşzamanlılık, maliyet sınırı ve tekrar koruması.
+- Değerlendirilmeden yayına çıkmayan davranış politikaları; izin verilmiş geri bildirimden taslak üretme ve sabit regresyon vakalarıyla ölçme.
+- Yönetici oturumu, çalışma anahtarları ve servis sırları GitHub kaynağına veya tarayıcı paketine girmez.
 
-- **Bulut sohbet ve kodlama:** Windows kimlik kasasında tutulan Engine anahtarı, görev ve akıl yürütme düzeyine göre talimatlar, sunucuda doğruluk kuralları.
-- **Yönetim paneli:** [Canlı panel](https://lineaicloud.vercel.app/admin), proje/anahtar oluşturma ve iptali, kapsamlar, son kullanma tarihi, token/görsel kotaları, istek ve tahmini maliyet kayıtları.
-- **Maliyet kontrolü:** Atomik kota rezervasyonu, aynı işlem için tek üretim, reddedilen istekte iade, belirsiz sağlayıcı sonuçlarında korunan rezervasyon.
-- **Görsel Stüdyosu:** Açıklama, oran/kalite/stil seçenekleri; özel dosya alanı, süreli bağlantı, indirme ve silme entegrasyonu. **Canlı görsel üretimi sağlayıcı kredisi yenilenene kadar kapalıdır.** Sınırsız ücretsiz bulut üretimi taahhüt edilmez.
-- **Ölçülen gelişim:** İzin verilmiş yeni geri bildirimle günlük öneri, ayrı bütçede altı vakalık gerçek model değerlendirmesi, sürümleme ve geri alma. Otomatik yayın tüm testlerin geçmesini ve temel sürümden daha iyi sonucu gerektirir. Bu sınırlı test seti genel zekâ üstünlüğü veya model ağırlıklarının eğitildiği anlamına gelmez.
+Line AI API, anahtar/kota/politika/denetim katmanı ve masaüstü sözleşmesi bu projeye aittir. Temel çıkarım, sunucuda özel ve değiştirilebilir bir runtime arkasında yürür. Bu sürüm temel model ağırlıklarının sıfırdan eğitildiği iddiasını taşımaz; runtime ileride masaüstünü veya kullanıcı anahtarlarını değiştirmeden Line AI’ın kendi GPU altyapısına geçirilebilir.
 
-[Engine kurulum ve API belgesi](./cloud/README.md)
+## Görsel turlar
 
-Önceki v0.5.0 sürümünün Trace, Checkpoint, Verification, Workflow ve hafıza çekirdeği ile Rust terminal/Git runtime’ı korunur. Mission Control, replay ve Jury kullanıcı arayüzleri henüz bağlı değildir.
+![Line AI çalışma alanı](./docs/gorseller/line-ai-tanitim.gif)
 
-<p align="center">
-  <a href="https://lineaicloud.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
-</p>
-
-## Uygulamadan görüntüler
-
-![Line AI Engine yönetimi](./cloud/media/line-ai-engine-yonetim-poster.png)
-
-[Canlı yönetim panelinin videosunu izle](https://lineaicloud.vercel.app/media/line-ai-engine-yonetim.mp4) · [v0.6.0 indir](https://github.com/yaertu/line-ai/releases/tag/v0.6.0)
-
-![Line AI v0.6.0 yeni çalışma alanı](./docs/gorseller/line-ai-tanitim.gif)
-
-> Güncel v0.6.0 başlangıç ekranı, kaynak arayüzden kaydedildi. Bu kısa tur model yanıtı üretmez; sohbet ve Engine girişini gösterir.
-
-| ☀️ Açık tema | 🌙 Koyu tema |
+| Açık tema | Koyu tema |
 | --- | --- |
 | ![Line AI açık tema](./docs/gorseller/line-ai-acik-tema.png) | ![Line AI koyu tema](./docs/gorseller/line-ai-koyu-tema.png) |
 
-## Öne çıkan özellikler
+Sitedeki sekiz video; başlangıç, dosya bağlamı, kod üretimi ve DIFF, bulut verileri, görünüm, tarayıcı, kanıt çekirdeği ve Engine yönetimini ayrı ayrı gösterir.
 
-### v0.5.0 çekirdeği
+## Line AI Engine
 
-- **Trace ve Evidence:** Sıralı olaylar, gizli değerlerden arındırılmış kanıtlar ve katı `VERIFIED`, `PARTIALLY_VERIFIED`, `UNVERIFIED`, `FAILED`, `BLOCKED` sonuç hesabı.
-- **Yerel dayanıklılık:** Oturumlar cihazda saklanır; açık kalan oturumlar sonraki açılışta kesildi olarak işaretlenir. SHA-256 bütünlük değerli proof bundle dışa/içe aktarımı bulunur.
-- **Workflow ve proje hafızası:** v1 workflow JSON doğrulaması, adım durum hesabı ve kanıt kimliği olmadan yazılamayan hafıza kayıtları vardır.
-- **Native çalışma alanı runtime'ı:** Tauri IPC üzerinden terminal stdout/stderr/çıkış kodu/süre aşımı/iptal, çıktı redaksiyonu, Git durum okuması ve onaylı checkpoint oluşturma–inceleme–geri yükleme çalışır.
-- **Arayüz durumu:** Bu yeni çekirdeğin Mission Control, replay, yerel sağlayıcı/model veya Jury kullanıcı arayüzü henüz yoktur. UI'da olmayan işlemler kullanıcıya tamamlanmış iş olarak gösterilmez.
-- **Uygulama içi yenilikler:** Ayarlar → Hakkında içindeki **Yenilikler** kartı, gelen altyapıyı ve henüz arayüze bağlanmamış yüzeyleri açıkça gösterir.
+Masaüstü uygulamasında Ayarlar → Yapay zekâ bölümüne yönetim panelinden üretilen `lai_sk_live_…` anahtarı girilir. Anahtar Windows Credential Manager’da tutulur. İstekler yalnız `https://lineaicloud.vercel.app/api/v1` üzerinden gider.
 
-- 🗑️ **Tüm sohbetleri sil:** Sidebar'dan onaylı toplu silme; arşivler dahil, gerçek mesaj/sohbet sayısı, bulut yanıtını bekleyen durum ve hatada yeniden deneme. API anahtarları ve tercihler korunur.
-- 💬 **Düzenli sohbet çalışma alanı:** Sidebar'ın üstünde arama, yeni sohbet, zaman damgalı ve gruplandırılmış geçmiş, sabitleme, yeniden adlandırma, tam başlık/mesaj sayılı erişilebilir silme onayı ve beş saniyelik geri alma.
-- 🧭 **Gerçek Sidebar:** 240–400 piksel arasında sürüklenerek veya klavyeyle yeniden boyutlandırılan geniş görünüm; daraltılmış ikon şeridi ve mobil çekmece.
-- 🔀 **Sağlayıcı yönlendirme:** Kullanıcının eklediği desteklenen API bağlantılarını doğrular; otomatik modda yalnız çalıştığı doğrulanan bağlantılar arasında kontrollü geçiş yapar.
-- 🧠 **Akıl yürütme ve durum:** Hızlı, orta ve yüksek düzeyler; istek hazırlama, gerçek sağlayıcı/model/deneme, tamamlanan son gerçek işlem adımları, artifact aktarım miktarı ve hata durumları sohbet içinde görünür.
-- 🧩 **Gerçek artifact çalışma alanı:** Kod ve güvenli SVG çıktıları sohbet metnine dökülmeden KOD, ÖNİZLE ve indirme yüzeylerine gider; DIFF sekmesi önceki kararlı artifact ile güncel dosyayı provider'dan bağımsız olarak yerelde karşılaştırır.
-- ⚙️ **İşlevsel Ayarlar:** Genel, içe/dışa aktarma, yapay zekâ, görünüm, kişiselleştirme, kısayollar, tarayıcı, bulut verileri, arşiv ve hakkında bölümleri; kontroller gerçek uygulama durumuna bağlıdır.
-- 🌐 **Gerçek Chrome köprüsü:** Chrome'u başlatma/durdurma, etkin sayfayı okuma, URL açma, geri gitme, yenileme, tıklama ve yazma komutları native CDP köprüsü üzerinden çalışır.
-- 📎 **Dosya, klasör ve arşiv bağlamı:** Windows sürükle-bırak; klasörleri güvenli dolaşma; ZIP, RAR, 7z, TAR ve sıkıştırılmış TAR ailesini diske çıkarmadan okuma; içerik tabanlı metin/ikili algılama.
-- 👍 **İnsancıl geri bildirim:** Asistan yanıtlarına beğen/beğenme tepkisi, işlem durumları ve geri alınabilir arşivleme akışı.
-- ⌨️ **`+` komut paneli:** Görünür bir ek düğme olmadan sağlayıcı, akıl yürütme, Truth Mode ve ek dosya komutlarına hızlı erişim.
-- 🔎 **Hızlı komut merkezi:** `Ctrl+K` ile sohbetleri, ayarları, sağlayıcıyı, akıl yürütmeyi ve temayı tek arama alanından yönetme.
-- 🛡️ **Truth Mode:** Varsayılan açık doğruluk disiplini; doğrulanmamış sonucu tamamlanmış gibi göstermeyi engelleyen sistem talimatı.
-- 🔐 **Anahtar güvenliği:** Sağlayıcı anahtarları yalnız native masaüstü sürecinde okunur; arayüze veya sohbet kaydına yazılmaz.
-- ☁️ **Line AI Cloud geçmişi:** Her kurulum için ayrı kimlikle otomatik eşitleme, eski cihaz geçmişini ilk başarılı bağlantıda taşıma, yeniden deneme ve bulut verilerini silme.
-- 🌗 **Açık/koyu tema:** Sistem tercihini izleme, okunaklı tipografi ve hareket azaltma ayarına saygı.
-- 📐 **Responsive yapı:** İçeriği ezmek yerine Sidebar ve panelleri ekran genişliğine uygun düzene dönüştürür.
+Başlıca uçlar:
 
-## Gereksinimler
+| Yöntem | Uç | Amaç |
+| --- | --- | --- |
+| `GET` | `/capabilities` | Engine, proje, kota ve model yetenekleri |
+| `POST` | `/generate` | Sohbet, kod ve dosya bağlamı üretimi |
+| `POST` | `/images/generations` | Görsel işi oluşturma |
+| `GET/DELETE` | `/images/:id` | Görsel işi durumu ve silme |
+| `POST` | `/feedback` | İsteğe bağlı yanıt geri bildirimi |
 
-- Windows 10 veya Windows 11
-- Node.js 20 veya üstü
-- pnpm 10
-- Rust stable toolchain
-- Tauri 2 için Windows WebView2 ve C++ derleme araçları
-- En az bir sağlayıcı anahtarı
+Ayrıntılar: [cloud/README.md](./cloud/README.md)
 
-## Sağlayıcı yapılandırması
+## Program özellikleri
 
-Anahtarları kaynak dosyasına veya `.env` dosyasına eklemeyin. Windows kullanıcı ortam değişkeni olarak tanımlayın ve ardından Line AI'ı yeniden başlatın:
+- Aranabilir ve gruplandırılmış sohbet geçmişi; mobil çekmece ve yeniden boyutlandırılabilir kenar çubuğu.
+- Hızlı, dengeli ve derin akıl yürütme düzeyleri.
+- `Ctrl+K` komut merkezi ve yazma alanındaki `+` akıl yürütme/ek temizleme komutları.
+- Dosya, klasör, ZIP/RAR/7z/TAR ve sıkıştırılmış arşivleri diske çıkarmadan güvenli okuma.
+- Dosya başına 64 KiB, toplam 2 MiB metin bağlamı; ikili dosyalar yalnız güvenli metadata olarak eklenir.
+- Kod, HTML ve SVG artifact önizleme; önceki sürümle yerel DIFF ve dosya indirme.
+- Chrome başlatma/durdurma, sayfa okuma, URL açma, geri gitme, yenileme, tıklama ve yazma araçları.
+- Açık/koyu tema, yazı boyutu, hareket azaltma ve özel yanıt tercihleri.
+- Kurulum kimliğiyle Line AI Cloud geçmiş eşitleme ve uygulama içinden toplu silme.
 
-```powershell
-[Environment]::SetEnvironmentVariable('OPENAI_API_KEY', 'ANAHTARINIZ', 'User')
-[Environment]::SetEnvironmentVariable('GEMINI_API_KEY', 'ANAHTARINIZ', 'User')
-```
-
-İkinci Gemini anahtarı isteğe bağlıdır:
-
-```powershell
-[Environment]::SetEnvironmentVariable('GEMINI_API_KEY2', 'IKINCI_ANAHTARINIZ', 'User')
-```
-
-Varsayılan modeller isteğe bağlı olarak değiştirilebilir:
-
-```powershell
-[Environment]::SetEnvironmentVariable('LINE_AI_OPENAI_MODEL', 'gpt-5.6-terra', 'User')
-[Environment]::SetEnvironmentVariable('LINE_AI_GEMINI_MODEL', 'gemini-3.7-flash', 'User')
-```
-
-Uygulama anahtar değerlerini arayüze döndürmez. Sağlayıcı hata metinleri kullanıcıya gösterilmeden önce anahtar değerlerinden arındırılır.
+Doğruluk koruması kullanıcı tarafından kapatılamayan Engine politikasıdır. Line AI çalıştırmadığı işlemi tamamlandı diye sunmamak, belirsizliği belirtmek ve kaynak uydurmamak üzere yönlendirilir; bu yine de her yanıtın hatasız olduğu garantisi değildir.
 
 ## Geliştirme
+
+Gereksinimler: Windows 10/11, Node.js 20+, pnpm 10, Rust stable, WebView2 ve Tauri 2 için C++ derleme araçları.
 
 ```powershell
 pnpm install --frozen-lockfile
@@ -126,100 +83,24 @@ Native geliştirme:
 pnpm tauri:dev
 ```
 
-## Doğrulama ve derleme
-
-Frontend statik kontrol, birim testleri ve production derlemesi:
+Tam doğrulama ve portable EXE:
 
 ```powershell
 pnpm verify
-```
-
-Rust testleri:
-
-```powershell
 cargo test --manifest-path src-tauri/Cargo.toml
-```
-
-Portable Windows çalıştırılabilir dosyası:
-
-```powershell
 pnpm tauri:build
 ```
 
-Çıktı `src-tauri/target/release/line-ai.exe` yolunda oluşur. Dağıtımdaki çalıştırılabilir dosya imzalanmamışsa Windows bunu bilinmeyen yayıncı olarak gösterebilir; yayın öncesinde güvenilir bir Authenticode sertifikasıyla imzalanması önerilir.
+Çıktı `src-tauri/target/release/line-ai.exe` yolunda oluşur. `pnpm release:desktop` doğrulama ve masaüstü teslimini birlikte çalıştırır.
 
-Doğrulama, Rust testleri, native derleme ve masaüstü EXE kopyası tek komutla üretilebilir:
+## Gizlilik
 
-```powershell
-pnpm release:desktop
-```
+- Engine anahtarı Windows Credential Manager’da saklanır; React durumuna veya sohbet kaydına yazılmaz.
+- Yönetici bilgileri yalnız yerel operator kasasında ve sunucu ortamında tutulur.
+- Tema ve cihaz tercihleri yerelde kalır; sohbet geçmişi kurulum kimliğiyle Line AI Cloud’da eşitlenir ve silinebilir.
+- Gönderilen sohbet bağlamı ve izin verilen dosya metni üretim için Engine’e iletilir; Engine prompt içeriğini istek tablosunda saklamaz.
+- İstek maliyeti ve kota kullanımı yönetim panelinde görünür. Başarısız ve kesin reddedilmiş işlerde ayrılan kota iade edilir.
 
-Komut masaüstünde yalnız `Line AI.exe` teslim dosyasını günceller. GitHub Release indirmelerinde de tek özel varlık aynı doğrulanmış EXE'dir.
+## Lisans
 
-## Dosya ve klasör sınırları
-
-- Tek işlemde en fazla **30 dosya**.
-- Dosya başına en fazla **512 MiB**.
-- Model bağlamı için dosya başına en fazla 64 KiB, toplamda en fazla 2 MiB metin önizlemesi okunur; dosyanın kendisi değiştirilmez.
-- Dosyalar yalnız uzantı beyaz listesine göre değil, gerçek içeriklerine göre algılanır. Metin/kod türleri, uzantısız metinler ve bilinmeyen metin uzantıları kabul edilir; ikili içerikler güvenli metadata olarak eklenir.
-- Bırakılan klasörler alt klasörleriyle güvenli biçimde taranır; sembolik bağlantılar izlenmez.
-- `zip`, `rar`, `7z`, `tar`, `tar.gz`, `tgz`, `tar.bz2`, `tbz2`, `tar.xz`, `txz`, `gz`, `bz2`, `xz`, `cab` ve `cpio` arşivleri diske açılmadan güvenli biçimde okunur. Arşiv içindeki dosyalar da aynı adet ve boyut sınırlarına tabidir.
-- İkili dosyalar belleğe metin gibi alınmaz; güvenli dosya metadatasıyla açıkça işaretlenir.
-- Bırakılan içerik güvenilmeyen kullanıcı verisi kabul edilir; dosyadaki talimatlar sistem talimatı sayılmaz.
-
-## `+` komut paneli
-
-Sohbet alanı `+` ile başladığında komut paneli açılır. Kullanıcı buradan gerçek sağlayıcıyı ve akıl yürütme düzeyini değiştirebilir, Truth Mode'u açıp kapatabilir veya eklenmiş dosyaları temizleyebilir. `+` karakteri tek başına modele gönderilmez.
-
-## Klavye kısayolları
-
-- `Ctrl+K`: Sohbet ve gerçek uygulama komutlarını arayan komut merkezini açar.
-- `Ctrl+N`: Yeni ve boş bir sohbet açar.
-- `Ctrl+,`: Ayarlar panelini açar.
-- `Enter`: Mesajı gönderir.
-- `Shift+Enter`: Mesaj içinde yeni satır açar.
-
-## Truth Mode
-
-Truth Mode varsayılan olarak açıktır. Arayüzdeki kalkan düğmesiyle veya sohbet alanına aşağıdaki komutları yazarak değiştirilebilir:
-
-```text
-/truthmode
-/truthmode aç
-/truthmode kapat
-```
-
-Bu özellik model hatalarını tamamen ortadan kaldırma garantisi değildir. Önemli kararlar öncesinde model cevaplarını bağımsız olarak doğrulayın.
-
-## Veri ve gizlilik
-
-- Sohbet geçmişi, her Line AI kurulumuna ayrılan izole Line AI Cloud alanında saklanır ve HTTPS üzerinden eşitlenir.
-- Uygulama ilk bağlantıda rastgele bir kurulum kimliği ve gizli anahtar oluşturur. Sunucuda yalnız gizli anahtarın özeti tutulur; özgün gizli anahtar Windows Credential Manager içinde saklanır.
-- Tema ve arayüz tercihleri gibi cihaz ayarları cihazda kalır. Eski sürümden kalan sohbet geçmişi yalnız ilk başarılı bulut aktarımına kadar geçiş kaynağı olarak okunur ve aktarım tamamlanınca temizlenir.
-- Mesaj gönderildiğinde seçili sağlayıcıya sohbet bağlamı ve eklenmiş dosya metni gönderilir.
-- Bulut servisi konuşma içeriğini eşitlemek için işler; uçtan uca şifreli bir kasa değildir. Bulut kayıtları Ayarlar > Bulut verileri bölümünden silinebilir.
-- Line AI Cloud kullanıcı hesabı istemez; erişim kurulum kimliği ile Windows Credential Manager'daki gizli anahtarın birlikte doğrulanmasına dayanır.
-- API kullanımı, kota ve ücretlendirme seçilen sağlayıcının hesabına aittir.
-
-## Line AI Cloud geliştirme ve doğrulama
-
-Tanıtım sitesi ile konuşma API'si `cloud/` dizinindedir. Gizli değerler repoya eklenmez.
-
-```powershell
-pnpm -C cloud install --frozen-lockfile
-pnpm -C cloud check
-pnpm -C cloud smoke:production
-```
-
-Üretim sağlık uç noktası: [`https://lineai-eta.vercel.app/api/v1/health`](https://lineai-eta.vercel.app/api/v1/health)
-
-## Türkçe sürüm ve görsel güncelleme standardı
-
-- Kullanıcıya görünen her değişiklik [CHANGELOG.md](./CHANGELOG.md) içinde Türkçe kaydedilir.
-- Arayüz değişikliklerinden sonra gerçek uygulamadan açık/koyu görüntüler ve tanıtım GIF'i yenilenir.
-- Her yayın öncesinde doğrulama zinciri çalıştırılır; GitHub sürümüne yalnız aynı doğrulanmış EXE yüklenir.
-- CI; lint, TypeScript, React testleri, production build ve Rust testlerini Windows üzerinde yeniden çalıştırır.
-
-## Lisans ve atıf
-
-Line AI MIT lisansı altında yayımlanır. Üçüncü taraf lisans ve telif bildirimleri [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) içinde korunur.
+Line AI MIT lisansı altında yayımlanır. Üçüncü taraf bildirimleri [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) içinde korunur.

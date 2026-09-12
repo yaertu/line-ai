@@ -2,7 +2,6 @@
 
 import { cn } from "@/lib/utils";
 import {
-  Bot,
   BrainCircuit,
   Check,
   MessageSquarePlus,
@@ -17,7 +16,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   AppPreferences,
   ChatConversation,
-  ProviderChoice,
   ReasoningLevel,
   ThemeChoice,
 } from "./chat-data";
@@ -51,13 +49,6 @@ const nextTheme = (theme: ThemeChoice): ThemeChoice => {
   if (theme === "system") return "light";
   if (theme === "light") return "dark";
   return "system";
-};
-
-const providerLabels: Record<ProviderChoice, string> = {
-  auto: "Otomatik",
-  gemini: "Gemini",
-  lineai: "Line AI Engine",
-  openai: "OpenAI",
 };
 
 const reasoningLabels: Record<ReasoningLevel, string> = {
@@ -99,10 +90,10 @@ export const CommandPalette = ({
       {
         action: closeAfter(onOpenSettings),
         category: "Hızlı işlemler",
-        description: "Uygulama ve sağlayıcı tercihlerini aç",
+        description: "Uygulama ve Line AI Engine tercihlerini aç",
         icon: <Settings2 aria-hidden="true" size={17} />,
         id: "settings",
-        keywords: "ayarlar tercihler görünüm sağlayıcı",
+        keywords: "ayarlar tercihler görünüm engine",
         label: "Ayarları aç",
         shortcut: "Ctrl ,",
       },
@@ -115,16 +106,6 @@ export const CommandPalette = ({
         keywords: "tema gece gündüz koyu açık sistem görünüm",
         label: "Temayı değiştir",
       },
-      ...(["auto", "openai", "gemini", "lineai"] as ProviderChoice[]).map((provider) => ({
-        action: closeAfter(() => onPreferencesChange({ ...preferences, provider })),
-        category: "Yapay zekâ" as const,
-        description: provider === "auto" ? "Uygun sağlayıcıyı otomatik seç" : `${providerLabels[provider]} sağlayıcısını kullan`,
-        icon: <Bot aria-hidden="true" size={17} />,
-        id: `provider-${provider}`,
-        keywords: `sağlayıcı model ${providerLabels[provider]}`,
-        label: `Sağlayıcı: ${providerLabels[provider]}`,
-        selected: preferences.provider === provider,
-      })),
       ...(["low", "medium", "high"] as ReasoningLevel[]).map((reasoning) => ({
         action: closeAfter(() => onPreferencesChange({ ...preferences, reasoning })),
         category: "Yapay zekâ" as const,

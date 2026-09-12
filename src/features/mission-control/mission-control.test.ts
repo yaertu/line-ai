@@ -24,8 +24,8 @@ describe("Trace session", () => {
 			timestamp: "2026-09-11T10:00:01.000Z",
 			title: "Provider çağrısı",
 			type: "provider",
-			provider: "openai",
-			model: "gpt-test",
+			provider: "lineai",
+			model: "line-ai-neural-v1",
 			attempt: 1,
 		});
 		const second = appendTraceEvent(first, {
@@ -39,8 +39,8 @@ describe("Trace session", () => {
 		expect(second.events.map((event) => event.sequence)).toEqual([1, 2]);
 		expect(second.events[0]).toMatchObject({
 			attempt: 1,
-			model: "gpt-test",
-			provider: "openai",
+			model: "line-ai-neural-v1",
+			provider: "lineai",
 			sessionId: "session-1",
 		});
 	});
@@ -73,7 +73,7 @@ describe("kanıt sanitization", () => {
 	it("anahtarları, Authorization/Cookie header'larını ve iç içe secret alanlarını maskeler", () => {
 		const value = sanitizeEvidenceValue({
 			authorization: "Bearer sk-live-1234567890",
-			command: "$env:OPENAI_API_KEY='secret-value'; echo ok",
+			command: "$env:LINE_AI_RUNTIME_KEY='secret-value'; echo ok",
 			cookie: "session=very-private-cookie",
 			nested: { password: "correct-horse", safe: "exit 1" },
 			stdout: "token=abc123456789 and sk-project-abcdefghijkl",
@@ -81,7 +81,7 @@ describe("kanıt sanitization", () => {
 
 		expect(value).toEqual({
 			authorization: "[REDACTED]",
-			command: "$env:OPENAI_API_KEY='[REDACTED]'; echo ok",
+			command: "$env:LINE_AI_RUNTIME_KEY='[REDACTED]'; echo ok",
 			cookie: "[REDACTED]",
 			nested: { password: "[REDACTED]", safe: "exit 1" },
 			stdout: "token=[REDACTED] and [REDACTED]",

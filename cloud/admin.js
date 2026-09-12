@@ -25,7 +25,7 @@ function showLogin(message = '') { $('#app-view').classList.add('hidden'); $('#l
 function projectName(id) { return state.data?.projects?.find((project) => project.id === id)?.name || 'Bilinmeyen proje'; }
 function render(data) {
   showApp(); $('#role-label').textContent = data.role === 'owner' ? 'Sahip' : data.role === 'operator' ? 'Operatör' : 'Görüntüleyici';
-  $('#provider-status').textContent = `Metin ${data.providers.text ? 'hazır' : 'kapalı'} · Görsel ${data.providers.images ? 'hazır' : 'kapalı'}`;
+  $('#engine-status').textContent = `Line AI metin ${data.engine.text ? 'hazır' : 'kapalı'} · Görsel ${data.engine.images ? 'hazır' : 'kapalı'}`;
   $('#status-line').textContent = `${data.projects.length} proje · ${data.requests.length} son istek · veriler sunucudan canlı okunur`;
   renderMetrics(data); renderProjects(data); renderKeys(data); renderPolicies(data); renderActivity(data); renderProjectOptions(data);
 }
@@ -73,7 +73,8 @@ function renderPolicies(data) {
   list.append(card);
  });
 }
-function renderActivity(data) { const list = $('#requests-list'); clear(list); data.requests.forEach((item) => { const row = document.createElement('tr'); row.append(text('td', date(item.created_at)), text('td', item.kind), text('td', item.model), text('td', item.status, item.status === 'completed' ? 'tag good' : 'tag'), text('td', number(item.units)), text('td', `${money(item.cost_micros)} · tahmini liste fiyatı`)); list.append(row); }); const logs = $('#logs-list'); clear(logs); data.logs.forEach((log) => logs.append(text('li', `${date(log.created_at)} · ${log.action}${log.target ? ` · ${log.target}` : ''}`))); }
+function displayModel(model, kind) { return String(model || '').startsWith('line-ai-') ? model : kind === 'image' ? 'line-ai-vision-v1' : 'line-ai-neural-v1'; }
+function renderActivity(data) { const list = $('#requests-list'); clear(list); data.requests.forEach((item) => { const row = document.createElement('tr'); row.append(text('td', date(item.created_at)), text('td', item.kind), text('td', displayModel(item.model, item.kind)), text('td', item.status, item.status === 'completed' ? 'tag good' : 'tag'), text('td', number(item.units)), text('td', `${money(item.cost_micros)} · tahmini liste fiyatı`)); list.append(row); }); const logs = $('#logs-list'); clear(logs); data.logs.forEach((log) => logs.append(text('li', `${date(log.created_at)} · ${log.action}${log.target ? ` · ${log.target}` : ''}`))); }
 function activeProjectId() { return $('#key-project').value || state.data?.projects?.[0]?.id; }
 function dialog(id) { $(id).showModal(); }
 function formMessage(form, message) { const notice = form.querySelector('.notice'); if (notice) notice.textContent = message; else $('#status-line').textContent = message; }

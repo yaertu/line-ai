@@ -4,6 +4,7 @@ $projectRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $desktop = [Environment]::GetFolderPath("Desktop")
 $releaseExecutable = Join-Path $projectRoot "src-tauri\target\release\line-ai.exe"
 $desktopExecutable = Join-Path $desktop "Line AI.exe"
+$desktopShortcut = Join-Path $desktop "Line AI.lnk"
 
 function Get-Sha256Hash {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -102,6 +103,15 @@ if (-not (Test-Path -LiteralPath $releaseExecutable)) {
 
 Copy-Item -LiteralPath $releaseExecutable -Destination $desktopExecutable -Force
 
+if (Test-Path -LiteralPath $desktopShortcut) {
+    $resolvedDesktop = [System.IO.Path]::GetFullPath($desktop)
+    $resolvedShortcut = [System.IO.Path]::GetFullPath($desktopShortcut)
+    if ([System.IO.Path]::GetDirectoryName($resolvedShortcut) -ne $resolvedDesktop) {
+        throw "Kısayol masaüstü dışında çözümlendi; silme durduruldu."
+    }
+    Remove-Item -LiteralPath $resolvedShortcut -Force
+}
+
 $sourceHash = Get-Sha256Hash -Path $releaseExecutable
 $desktopHash = Get-Sha256Hash -Path $desktopExecutable
 if ($sourceHash -ne $desktopHash) {
@@ -120,3 +130,4 @@ $artifacts | ForEach-Object {
 
 $signatureStatus = Get-PeCertificateTableStatus -Path $desktopExecutable
 Write-Output "Authenticode: $signatureStatus"
+Write-Output "Masaüstü uygulama girdisi: yalnız Line AI.exe"
