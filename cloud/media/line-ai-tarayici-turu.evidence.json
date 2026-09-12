@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T08:44:54.747Z",
+  "generatedAt": "2026-09-12T10:26:35.263Z",
   "source": {
     "kind": "vite-source-ui-playwright",
     "url": "http://127.0.0.1:1430",
@@ -28,10 +28,10 @@
   },
   "poster": {
     "fileName": "line-ai-tarayici-turu-poster.png",
-    "sha256": "380715db2565ce28c10b4e89ee3af58beed6fbc3074066c8ed671a7a11be3185"
+    "sha256": "fc755db1e469be6dbb84d6159f70f52aea7054ea1761320ab45379f376dce5f1"
   },
   "video": {
     "fileName": "line-ai-tarayici-turu.mp4",
-    "sha256": "96dca0c060b77bf60e85cfd35dbe8e86848794a04312b26bc83239e3d5499b86"
+    "sha256": "a202c4371f20bae18143ae3b2954272154fe0709acbd1e13d489a8952baf9095"
   }
 }

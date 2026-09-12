@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T08:45:46.466Z",
+  "generatedAt": "2026-09-12T10:27:28.587Z",
   "source": {
     "kind": "vite-source-ui-playwright",
     "url": "http://127.0.0.1:1430",
@@ -23,6 +23,6 @@
   },
   "video": {
     "fileName": "line-ai-v061-yenilikler.mp4",
-    "sha256": "00bfe9674829e4b54d5e342b6fdbfc3a96cd89d9c543b28cd326567da6ccd48d"
+    "sha256": "e0674ff1730572cadb6012511a1643442c4e0e2a94a8cb8c3658a0b97a71d0ec"
   }
 }
