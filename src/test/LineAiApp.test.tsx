@@ -1,4 +1,5 @@
 import {
+	act,
 	fireEvent,
 	render,
 	screen,
@@ -22,10 +23,25 @@ const cloud = vi.hoisted(() => ({
 	saveCloudConversation: vi.fn(),
 }));
 
+const engine = vi.hoisted(() => ({
+	deleteEngineImage: vi.fn(),
+	deleteEngineKey: vi.fn(),
+	downloadEngineAsset: vi.fn(),
+	generateEngineImage: vi.fn(),
+	getEngineAsset: vi.fn(),
+	getEngineImage: vi.fn(),
+	readDesktopProviderStatus: vi.fn(),
+	readEngineStatus: vi.fn(),
+	saveEngineKey: vi.fn(),
+	submitEngineFeedback: vi.fn(),
+}));
+
 vi.mock("@/lib/cloud-history", async (importOriginal) => ({
 	...(await importOriginal<typeof import("@/lib/cloud-history")>()),
 	...cloud,
 }));
+
+vi.mock("@/lib/ai", () => engine);
 
 describe("Line AI masaüstü çalışma alanı", () => {
 	beforeEach(() => {
@@ -44,6 +60,39 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		cloud.saveCloudConversation.mockResolvedValue(undefined);
 		cloud.removeCloudConversation.mockResolvedValue(undefined);
 		cloud.clearCloudHistory.mockResolvedValue(undefined);
+		engine.readDesktopProviderStatus.mockResolvedValue({
+			geminiConfigured: false,
+			geminiModel: "Gemini",
+			openAiConfigured: false,
+			openAiModel: "OpenAI",
+		});
+		engine.readEngineStatus.mockResolvedValue({
+			configured: true,
+			endpoint: "https://lineaicloud.vercel.app/api/v1",
+			message: "Engine hazır.",
+			capabilities: {
+				enabled: true,
+				images: true,
+				text: true,
+				policyVersion: "1.0.0",
+				project: { id: "project-1", name: "Demo Proje" },
+				quota: { dailyUnits: 50, monthlyUnits: 500, usedDaily: 3, usedMonthly: 30 },
+			},
+		});
+		engine.saveEngineKey.mockResolvedValue(undefined);
+		engine.deleteEngineKey.mockResolvedValue(undefined);
+		engine.generateEngineImage.mockResolvedValue({
+			id: "job-1",
+			status: "completed",
+			assetId: "asset-1",
+			model: "gpt-image-1",
+			createdAt: "2026-09-12T00:00:00.000Z",
+		});
+		engine.getEngineImage.mockResolvedValue({ id: "job-1", status: "completed", assetId: "asset-1" });
+		engine.getEngineAsset.mockResolvedValue("https://assets.example.test/image.webp");
+		engine.downloadEngineAsset.mockResolvedValue({ path: "C:\\Downloads\\Line AI Images\\line-ai-job-1.png", bytes: 123 });
+		engine.deleteEngineImage.mockResolvedValue(undefined);
+		engine.submitEngineFeedback.mockResolvedValue({ saved: true, trainingOptIn: true });
 	});
 
 	it("Line AI sohbet çalışma alanını sunar", () => {
@@ -56,7 +105,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		expect(
 			screen.getByRole("complementary", { name: "Sohbet kenar çubuğu" }),
 		).toBeInTheDocument();
-		expect(screen.getByText("Line AI")).toBeInTheDocument();
+		expect(screen.getAllByText("Line AI").length).toBeGreaterThan(0);
 		expect(
 			screen.getByRole("button", { name: "Yeni sohbet" }),
 		).toBeInTheDocument();
@@ -119,7 +168,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		);
 
 		expect(
-			within(settings).getByRole("heading", { name: "Line AI v0.5.0" }),
+			within(settings).getByRole("heading", { name: "Line AI v0.6.0" }),
 		).toBeInTheDocument();
 		expect(
 			within(settings).getByRole("heading", {
@@ -129,9 +178,6 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		expect(within(settings).getByText("İşlem izi ve kanıt")).toBeInTheDocument();
 		expect(
 			within(settings).getByText("Yerel çalışma alanı altyapısı"),
-		).toBeInTheDocument();
-		expect(
-			within(settings).getByText("Yerel model bağlantısı"),
 		).toBeInTheDocument();
 		expect(
 			within(settings).getByText(/bağlanma çalışması sürüyor/i),
@@ -156,7 +202,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		expect(executePrompt).toHaveBeenCalledWith(
 			expect.objectContaining({
 				prompt: "Bu klasörü açıkla",
-				provider: "auto",
+				provider: "lineai",
 				reasoning: "medium",
 				truthMode: true,
 			}),
@@ -194,42 +240,47 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		expect(localStorage.getItem("line-ai.conversations.v1")).toBeNull();
 	});
 
-	it("yerel sağlayıcı seçildiğinde motor, uç nokta ve modeli doğrudan isteğe taşır", async () => {
+	it("eski yerel model tercihini Line AI ve açık doğruluk korumasına taşır", async () => {
 		localStorage.setItem(
 			"line-ai.preferences.v1",
 			JSON.stringify({
-				localEndpoint: "http://127.0.0.1:1234/v1",
-				localEngine: "lm-studio",
-				localModel: "qwen2.5-coder:7b",
+				localEndpoint: "http://127.0.0.1:11434/v1",
+				localEngine: "ollama",
+				localModel: "llama3.2",
 				provider: "local",
+				truthMode: false,
 			}),
 		);
 		const user = userEvent.setup();
 		const executePrompt = vi.fn().mockResolvedValue({
-			message: "Yerel yanıt",
-			model: "qwen2.5-coder:7b",
-			provider: "local",
+			message: "Line AI yanıtı",
+			model: "engine-test",
+			provider: "lineai",
 			sources: [],
 		});
 		render(<LineAiApp executePrompt={executePrompt} />);
 
 		await user.type(
 			screen.getByRole("textbox", { name: "Line AI'ya mesaj gönder" }),
-			"Yerel model çalışıyor mu?",
+			"Geçiş tercihini doğrula",
 		);
 		await user.click(screen.getByRole("button", { name: "Mesajı gönder" }));
 
 		await waitFor(() =>
 			expect(executePrompt).toHaveBeenCalledWith(
-				expect.objectContaining({
-					localEndpoint: "http://127.0.0.1:1234/v1",
-					localEngine: "lm-studio",
-					localModel: "qwen2.5-coder:7b",
-					provider: "local",
-				}),
+				expect.objectContaining({ provider: "lineai", truthMode: true }),
 				expect.any(Function),
 			),
 		);
+		await waitFor(() => {
+			const stored = JSON.parse(
+				localStorage.getItem("line-ai.preferences.v1") ?? "null",
+			);
+			expect(stored).toMatchObject({ provider: "lineai", truthMode: true });
+			expect(stored).not.toHaveProperty("localEndpoint");
+			expect(stored).not.toHaveProperty("localEngine");
+			expect(stored).not.toHaveProperty("localModel");
+		});
 	});
 
 	it("kullanıcı ve Line AI mesajlarında görünür gerçek işlem denetimleri sunar", async () => {
@@ -871,9 +922,6 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		await user.click(within(settings).getByRole("button", { name: /^Gemini/ }));
 		await user.click(within(settings).getByRole("button", { name: /^Derin/ }));
 		await user.click(
-			within(settings).getByRole("button", { name: /^Truth Mode/ }),
-		);
-		await user.click(
 			within(settings)
 				.getAllByRole("button", { name: "Ayarları kapat" })
 				.at(-1)!,
@@ -890,7 +938,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 				expect.objectContaining({
 					provider: "gemini",
 					reasoning: "high",
-					truthMode: false,
+					truthMode: true,
 				}),
 				expect.any(Function),
 			),
@@ -902,82 +950,195 @@ describe("Line AI masaüstü çalışma alanı", () => {
 			chatFontSize: 15,
 			codeFontSize: 13,
 			customInstructions: "",
-			localEndpoint: "http://127.0.0.1:11434/v1",
-			localEngine: "ollama",
-			localModel: "llama3.2",
 			motion: "system",
 			provider: "gemini",
 			reasoning: "high",
 			responseStyle: "balanced",
-			theme: "system",
-			truthMode: false,
+			theme: "dark",
+			truthMode: true,
 			uiFontSize: 14,
 		});
 	});
 
-	it("yerel model motorunu, döngü adresini ve modelini tercihlerde saklar", async () => {
+	it("Engine anahtarını yalnız native kayda gönderir ve giriş alanını temizler", async () => {
 		const user = userEvent.setup();
 		render(<LineAiApp executePrompt={vi.fn()} />);
 
 		await user.click(screen.getByRole("button", { name: "Ayarları aç" }));
 		const settings = screen.getByRole("dialog", { name: "Line AI ayarları" });
-		await user.click(
-			within(settings).getByRole("button", { name: "Yapay zekâ" }),
-		);
-		expect(
-			within(settings).getByText(/yalnızca bu bilgisayardaki HTTP döngü/i),
-		).toBeInTheDocument();
-		expect(
-			within(settings).getByRole("textbox", { name: "Yerel uç nokta" }),
-		).toHaveValue("http://127.0.0.1:11434/v1");
-
-		await user.click(within(settings).getByRole("button", { name: /^LM Studio/ }));
-		await user.clear(
-			within(settings).getByRole("textbox", { name: "Yerel model adı" }),
-		);
-		await user.type(
-			within(settings).getByRole("textbox", { name: "Yerel model adı" }),
-			"qwen2.5-coder:7b",
-		);
-		await user.click(
-			within(settings).getByRole("button", { name: /^Yerel model/ }),
-		);
+		await user.click(within(settings).getByRole("button", { name: "Yapay zekâ" }));
+		const key = within(settings).getByLabelText("Line AI Engine API anahtarı");
+		await user.type(key, `lai_sk_live_${"A".repeat(43)}`);
+		await user.click(within(settings).getByRole("button", { name: "Kaydet" }));
 
 		await waitFor(() =>
-			expect(
-				JSON.parse(localStorage.getItem("line-ai.preferences.v1") ?? "null"),
-			).toMatchObject({
-				localEndpoint: "http://127.0.0.1:1234/v1",
-				localEngine: "lm-studio",
-				localModel: "qwen2.5-coder:7b",
-				provider: "local",
-			}),
+			expect(engine.saveEngineKey).toHaveBeenCalledWith(
+				`lai_sk_live_${"A".repeat(43)}`,
+			),
+		);
+		expect(key).toHaveValue("");
+		expect(localStorage.getItem("line-ai.preferences.v1")).not.toContain(
+			"lai_sk_live_",
 		);
 	});
 
-	it("geçersiz veya eski yerel ayarları motor varsayılanına taşır", async () => {
+	it("bulut hydration beklerken gelen asistan yanıtını silmez", async () => {
+		localStorage.setItem(
+			"line-ai.conversations.v1",
+			JSON.stringify([
+				{
+					id: "conversation-hydration-race",
+					title: "Hydration yarışı",
+					turns: [
+						{
+							from: "user",
+							id: "turn-hydration-start",
+							text: "İlk mesaj",
+							timestamp: "10:00",
+						},
+					],
+					updatedAt: "2026-09-12T10:00:00.000Z",
+				},
+			]),
+		);
+		let finishStatus: ((value: Awaited<ReturnType<typeof cloud.readCloudStatus>>) => void) | undefined;
+		cloud.readCloudStatus.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					finishStatus = resolve;
+				}),
+		);
+		const user = userEvent.setup();
+		let finishPrompt!: (result: ExecutePromptResult) => void;
+		const executePrompt = vi.fn().mockImplementation(
+			() =>
+				new Promise<ExecutePromptResult>((resolve) => {
+					finishPrompt = resolve;
+				}),
+		);
+		render(<LineAiApp executePrompt={executePrompt} />);
+
+		await waitFor(() => expect(cloud.readCloudStatus).toHaveBeenCalled());
+		const input = screen.getByRole("textbox", {
+			name: "Line AI'ya mesaj gönder",
+		});
+		await user.type(input, "Hydration sürerken yanıtla");
+		await user.click(screen.getByRole("button", { name: "Mesajı gönder" }));
+		await waitFor(() => expect(executePrompt).toHaveBeenCalledTimes(1));
+		expect(screen.getByRole("log", { name: "Sohbet mesajları" })).toHaveTextContent(
+			"Hydration sürerken yanıtla",
+		);
+		await act(async () => {
+			finishPrompt({
+				message: "Geç gelen asistan yanıtı",
+				model: "engine-test",
+				provider: "lineai",
+				requestId: "request-hydration-race",
+				sources: [],
+			});
+		});
+		expect(screen.getByRole("log", { name: "Sohbet mesajları" })).toHaveTextContent(
+			"Geç gelen asistan yanıtı",
+		);
+
+		await act(async () => {
+			finishStatus?.({
+				connected: true,
+				endpoint: "https://lineaicloud.vercel.app/api/v1",
+				message: "Bulut bağlantısı hazır.",
+				registered: true,
+			});
+		});
+		await waitFor(() =>
+			expect(
+				screen.getByRole("log", { name: "Sohbet mesajları" }),
+			).toHaveTextContent("Geç gelen asistan yanıtı"),
+		);
+	});
+
+	it("Line AI yanıt notunu yalnız açık izinle native geri bildirim isteğine ekler", async () => {
 		localStorage.setItem(
 			"line-ai.preferences.v1",
-			JSON.stringify({
-				localEndpoint: "https://model.example.test/v1?token=secret",
-				localEngine: "lm-studio",
+			JSON.stringify({ provider: "lineai" }),
+		);
+		const user = userEvent.setup();
+		const executePrompt = vi.fn().mockResolvedValue({
+			message: "Engine yanıtı",
+			model: "engine-text",
+			provider: "lineai",
+			requestId: "request-feedback-1",
+			sources: [],
+		});
+		render(<LineAiApp executePrompt={executePrompt} />);
+
+		const input = screen.getByRole("textbox", {
+			name: "Line AI'ya mesaj gönder",
+		});
+		await user.type(input, "Bu yanıtı değerlendir");
+		await user.click(screen.getByRole("button", { name: "Mesajı gönder" }));
+		const feedback = await screen.findByRole("form", {
+			name: "Line AI yanıt geri bildirimi",
+		});
+		await user.click(
+			within(feedback).getByRole("button", { name: "İyi Line AI yanıtı" }),
+		);
+		expect(
+			within(feedback).getByRole("textbox", { name: "Line AI geri bildirim notu" }),
+		).toBeDisabled();
+		await user.click(
+			within(feedback).getByRole("checkbox", {
+				name: "Notumu Line AI geliştirmesinde kullan",
 			}),
 		);
+		await user.type(
+			within(feedback).getByRole("textbox", { name: "Line AI geri bildirim notu" }),
+			"Daha somut örnek ekleyin.",
+		);
+		await user.click(
+			within(feedback).getByRole("button", { name: "Geri bildirimi gönder" }),
+		);
+
+		await waitFor(() =>
+			expect(engine.submitEngineFeedback).toHaveBeenCalledWith({
+				note: "Daha somut örnek ekleyin.",
+				rating: "up",
+				requestId: "request-feedback-1",
+				trainingOptIn: true,
+			}),
+		);
+  expect(localStorage.getItem("line-ai.conversations.v1") ?? "").not.toContain(
+			"Daha somut örnek ekleyin.",
+		);
+	});
+
+	it("Image Studio gerçek Engine işi, önizleme ve native indirmeyi kullanır", async () => {
 		const user = userEvent.setup();
 		render(<LineAiApp executePrompt={vi.fn()} />);
 
-		await user.click(screen.getByRole("button", { name: "Ayarları aç" }));
-		const settings = screen.getByRole("dialog", { name: "Line AI ayarları" });
-		await user.click(
-			within(settings).getByRole("button", { name: "Yapay zekâ" }),
-		);
+		await user.click(screen.getByRole("button", { name: "Image Studio" }));
+		const studio = screen.getByRole("dialog", { name: "Line AI Image Studio" });
+		const prompt = within(studio).getByRole("textbox", { name: /^Görsel istemi/ });
+		await user.type(prompt, "İstanbul üzerinde film afişi");
+		await user.click(within(studio).getByRole("button", { name: "poster" }));
+		await user.click(within(studio).getByRole("button", { name: "high" }));
+		await user.click(within(studio).getByRole("button", { name: "Görsel üret" }));
 
-		expect(
-			within(settings).getByRole("textbox", { name: "Yerel uç nokta" }),
-		).toHaveValue("http://127.0.0.1:1234/v1");
-		expect(
-			within(settings).getByRole("textbox", { name: "Yerel model adı" }),
-		).toHaveValue("llama3.2");
+		await waitFor(() =>
+			expect(engine.generateEngineImage).toHaveBeenCalledWith({
+				prompt: "İstanbul üzerinde film afişi",
+				aspectRatio: "1:1",
+				quality: "high",
+				style: "poster",
+			}),
+		);
+		await waitFor(() =>
+			expect(within(studio).getByRole("img", { name: "İstanbul üzerinde film afişi" })).toHaveAttribute(
+				"src",
+				"https://assets.example.test/image.webp",
+			),
+		);
+		await user.click(within(studio).getByRole("button", { name: "İndir" }));
+		await waitFor(() => expect(engine.downloadEngineAsset).toHaveBeenCalledWith("asset-1", "line-ai-job-1.png"));
 	});
 
 	it("komut panelini yalnız artı yazıldığında açar ve seçimi gönderime uygular", async () => {

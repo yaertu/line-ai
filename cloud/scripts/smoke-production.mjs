@@ -74,7 +74,7 @@ try {
 	assert(
 		landingHtml.includes("/media/line-ai-v050-yenilikler.mp4") &&
 			landingHtml.includes("/media/line-ai-v050-yenilikler-poster.png") &&
-			landingHtml.includes("releases/download/v0.5.0/Line.AI.exe"),
+			landingHtml.includes("releases/download/v0.6.0/Line.AI.exe"),
 		"Landing v0.5.0 kaynak arayüz kaydını veya sabit indirme bağlantısını kullanmıyor.",
 	);
 
@@ -149,6 +149,11 @@ try {
 	}
 	console.log("landingFeatureSourceUiTours=PASS");
 
+  const engineEvidenceResponse = await requestRaw('/media/line-ai-engine-yonetim.evidence.json');
+  const engineEvidence = await engineEvidenceResponse.json();
+  const engineVideo = await requestAndHash('/media/line-ai-engine-yonetim.mp4');
+  assert(landingHtml.includes('data-tour="engine"') && engineEvidence.source.kind === 'live-production-admin' && engineEvidence.credentialsRecorded === false && engineVideo.response.status === 200 && engineVideo.sha256 === engineEvidence.sha256, 'Canlı Engine yönetim videosu doğrulanamadı.');
+  console.log('landingEngineManagementTour=PASS');
   const health = await request("/api/v1/health");
   assert(health.response.status === 200, "Health endpoint başarısız.");
   assert(health.body?.status === "ok" && health.body?.database === "ready", "Health yanıtı hazır değil.");

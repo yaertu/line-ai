@@ -37,5 +37,13 @@ jobs:
       - name: Frontend doğrulaması
         run: pnpm verify
 
+      - name: Bulut bağımlılıkları
+        run: pnpm --dir cloud install --frozen-lockfile
+
+      - name: Engine API doğrulaması
+        run: |
+          pnpm --dir cloud check
+          pnpm --dir cloud test
+
       - name: Rust testleri
         run: cargo test --manifest-path src-tauri/Cargo.toml

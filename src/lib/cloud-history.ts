@@ -105,6 +105,52 @@ export const mergeConversationHistories = (
 	return sortConversations([...merged.values()]).slice(0, MAX_CONVERSATIONS);
 };
 
+/**
+ * Reconciles an asynchronous cloud hydration with changes made after its local
+ * snapshot. Updates and new conversations win; removals from that snapshot stay
+ * removed instead of being restored by a delayed cloud response.
+ */
+export const mergeHydrationSnapshot = (
+	cloud: ChatConversation[],
+	localSnapshot: ChatConversation[],
+	currentLocal: ChatConversation[],
+): ChatConversation[] => {
+	const initial = new Map(
+		normalizeConversationHistory(localSnapshot).map((conversation) => [
+			conversation.id,
+			conversation,
+		]),
+	);
+	const current = new Map(
+		normalizeConversationHistory(currentLocal).map((conversation) => [
+			conversation.id,
+			conversation,
+		]),
+	);
+	const merged = new Map(
+		mergeConversationHistories(cloud, localSnapshot).map((conversation) => [
+			conversation.id,
+			conversation,
+		]),
+	);
+
+	for (const [id, snapshot] of initial) {
+		const latest = current.get(id);
+		if (!latest) {
+			merged.delete(id);
+			continue;
+		}
+		if (JSON.stringify(latest) !== JSON.stringify(snapshot)) {
+			merged.set(id, latest);
+		}
+	}
+	for (const [id, latest] of current) {
+		if (!initial.has(id)) merged.set(id, latest);
+	}
+
+	return sortConversations([...merged.values()]).slice(0, MAX_CONVERSATIONS);
+};
+
 export const readCloudStatus = () => invoke<CloudStatus>("get_cloud_status");
 
 export const loadCloudHistory = async (): Promise<CloudHistory> => {

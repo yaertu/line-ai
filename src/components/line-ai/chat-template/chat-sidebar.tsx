@@ -5,6 +5,7 @@ import {
 	Clock3,
 	Command,
 	History,
+	ImageIcon,
 	MessageSquareText,
 	MoreHorizontal,
 	PanelLeftClose,
@@ -15,12 +16,12 @@ import {
 	Plus,
 	Search,
 	Settings2,
-	ShieldCheck,
 	Trash2,
 	X,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import LineAiBrandMark from "@/components/line-ai/brand-mark";
 import { cn } from "@/lib/utils";
 import {
 	type ChatConversation,
@@ -38,6 +39,7 @@ export type ChatSidebarProps = {
 	onDelete: (id: string) => void;
 	onArchive: (id: string) => void;
 	onNewChat: () => void;
+	onOpenImageStudio: () => void;
 	onOpenSettings: () => void;
 	onRename: (id: string, title: string) => void;
 	onSelect: (id: string) => void;
@@ -49,23 +51,7 @@ export type ChatSidebarProps = {
 	truthMode: boolean;
 };
 
-const LineAiMark = ({ className }: { className?: string }) => (
-	<svg aria-hidden="true" className={className} fill="none" viewBox="0 0 64 64">
-		<path
-			d="M17 13v30c0 5.5 4.5 10 10 10h20"
-			stroke="currentColor"
-			strokeLinecap="round"
-			strokeWidth="8"
-		/>
-		<path
-			d="m34 21 11 10-11 10"
-			stroke="var(--primary)"
-			strokeLinecap="round"
-			strokeLinejoin="round"
-			strokeWidth="7"
-		/>
-	</svg>
-);
+const LineAiMark = LineAiBrandMark;
 
 const formatHistoryGroup = (value: string) => {
 	const date = new Date(value);
@@ -108,6 +94,7 @@ export const ChatSidebar = ({
 	onDelete,
 	onArchive,
 	onNewChat,
+	onOpenImageStudio,
 	onOpenSettings,
 	onRename,
 	onSelect,
@@ -116,7 +103,6 @@ export const ChatSidebar = ({
 	onWidthChange,
 	provider,
 	width = 272,
-	truthMode,
 }: ChatSidebarProps) => {
 	const [query, setQuery] = useState("");
 	const [contextMenu, setContextMenu] = useState<{
@@ -253,13 +239,6 @@ export const ChatSidebar = ({
 				/>
 				<div className="mt-auto flex flex-col items-center gap-2">
 					{clearButton}
-					<span
-						aria-label={`Truth Mode ${truthMode ? "açık" : "kapalı"}`}
-						className={truthMode ? "text-primary" : "text-muted-foreground"}
-						title={`Truth Mode ${truthMode ? "açık" : "kapalı"}`}
-					>
-						<ShieldCheck aria-hidden="true" size={17} />
-					</span>
 					<RailButton
 						icon={<Settings2 aria-hidden="true" size={17} />}
 						label="Ayarlar"
@@ -349,6 +328,15 @@ export const ChatSidebar = ({
 				</span>
 				<span className="relative">Yeni sohbet</span>
 			</motion.button>
+
+			<button
+				className="flex items-center gap-2 rounded-xl border border-border/70 bg-background/70 px-3 py-2 text-left text-sm transition-colors hover:border-primary/40 hover:bg-muted"
+				onClick={onOpenImageStudio}
+				type="button"
+			>
+				<ImageIcon aria-hidden="true" className="text-primary" size={15} />
+				<span>Image Studio</span>
+			</button>
 
 			<nav
 				aria-label="Sohbet geçmişi"
@@ -456,15 +444,14 @@ export const ChatSidebar = ({
 			{clearButton}
 			<div className="flex items-center gap-2 border-border/60 border-t pt-3">
 				<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-					<ShieldCheck aria-hidden="true" size={16} />
+					<LineAiBrandMark className="size-8" />
 				</span>
 				<span className="min-w-0 flex-1">
 					<span className="block font-medium text-xs">
-						Truth Mode {truthMode ? "açık" : "kapalı"}
+						Çalışma alanım
 					</span>
 					<span className="block truncate text-muted-foreground text-[0.68rem]">
 						{PROVIDERS.find((item) => item.id === provider)?.label ?? provider}{" "}
-						sağlayıcı yönlendirmesi
 					</span>
 				</span>
 				<button

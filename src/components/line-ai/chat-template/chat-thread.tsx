@@ -16,15 +16,15 @@ import {
 	PanelLeftOpen,
 	Paperclip,
 	Quote,
-	ShieldCheck,
 	Sparkles,
+	ThumbsDown,
+	ThumbsUp,
 	Trash2,
 	UploadCloud,
 	X,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import AIContextMeter from "@/components/line-ai/ai-context-meter";
 import AIConversation from "@/components/line-ai/ai-conversation";
 import AIDiff, { type AIDiffLine } from "@/components/line-ai/ai-diff";
 import AIMessage from "@/components/line-ai/ai-message";
@@ -33,11 +33,10 @@ import AIPromptInput, {
 } from "@/components/line-ai/ai-prompt-input";
 import AIResponse from "@/components/line-ai/ai-response";
 import AISources, { type AISource } from "@/components/line-ai/ai-sources";
-import AISuggestions from "@/components/line-ai/ai-suggestions";
+import LineAiBrandMark from "@/components/line-ai/brand-mark";
 import AIToolCall from "@/components/line-ai/ai-tool-call";
 import ChromeMark from "@/components/line-ai/chrome-mark";
 import CodeWorkspace from "@/components/line-ai/code-workspace";
-import SiriOrb from "@/components/line-ai/siri-orb";
 import {
 	executeBrowserTool,
 	parseBrowserIntent,
@@ -55,13 +54,12 @@ import {
 	readDesktopDroppedTextFiles,
 } from "@/lib/desktop-files";
 import { readBrowserFilePreview } from "@/lib/file-content";
+import { submitEngineFeedback } from "@/lib/ai";
 import { cn } from "@/lib/utils";
 import {
 	type ChatTurn,
-	CONTEXT_LIMIT,
 	type ExecutePromptEvent,
 	type ExecutePromptRequest,
-	type LocalModelEngine,
 	PROVIDERS,
 	type PromptAttachment,
 	type PromptExecutor,
@@ -129,7 +127,6 @@ export type ChatThreadProps = {
 	onVoteTurn: (turnId: string, vote: "up" | "down") => void;
 	onProviderChange: (provider: ProviderChoice) => void;
 	onReasoningChange: (reasoning: ReasoningLevel) => void;
-	onTruthModeChange: (enabled: boolean) => void;
 	provider: ProviderChoice;
 	reasoning: ReasoningLevel;
 	title: string;
@@ -137,9 +134,6 @@ export type ChatThreadProps = {
 	turns: ChatTurn[];
 	browserTools: boolean;
 	customInstructions: string;
-	localEndpoint: string;
-	localEngine: LocalModelEngine;
-	localModel: string;
 	responseStyle: ExecutePromptRequest["responseStyle"];
 };
 
@@ -153,7 +147,6 @@ export const ChatThread = ({
 	onVoteTurn,
 	onProviderChange,
 	onReasoningChange,
-	onTruthModeChange,
 	provider,
 	reasoning,
 	title,
@@ -161,9 +154,6 @@ export const ChatThread = ({
 	turns,
 	browserTools,
 	customInstructions,
-	localEndpoint,
-	localEngine,
-	localModel,
 	responseStyle,
 }: ChatThreadProps) => {
 	const [draft, setDraft] = useState("");
@@ -244,13 +234,6 @@ export const ChatThread = ({
 		codeWorkspaceAutoOpenedRef.current = true;
 		onCodeWorkspaceOpen?.();
 	}, [onCodeWorkspaceOpen, streamingArtifact]);
-	const usedTokens = useMemo(
-		() =>
-			Math.ceil(
-				allTurns.reduce((total, turn) => total + turn.text.length, 0) / 4,
-			),
-		[allTurns],
-	);
 
 	const showNotice = useCallback((text: string, tone: NoticeTone = "info") => {
 		setNotice({ id: crypto.randomUUID(), text, tone });
@@ -264,34 +247,6 @@ export const ChatThread = ({
 		);
 		return () => window.clearTimeout(timer);
 	}, [notice]);
-
-	const setTruth = useCallback(
-		(next: boolean) => {
-			onTruthModeChange(next);
-		},
-		[onTruthModeChange],
-	);
-
-	const handleTruthCommand = (value: string) => {
-		const normalized = value.trim().toLocaleLowerCase("tr-TR");
-		if (!normalized.startsWith("/truthmode")) return false;
-		const command = normalized
-			.slice("/truthmode".length)
-			.replace(/^\s*:?\s*/, "");
-		if (["off", "kapat", "kapalı"].includes(command)) {
-			setTruth(false);
-			showNotice("Truth Mode kapatıldı.", "success");
-		} else if (["status", "durum"].includes(command)) {
-			showNotice(`Truth Mode şu anda ${truthMode ? "açık" : "kapalı"}.`);
-		} else {
-			setTruth(true);
-			showNotice(
-				"Truth Mode açık. Belirsizlikler ve doğrulanamayan sonuçlar açıkça belirtilecek.",
-				"success",
-			);
-		}
-		return true;
-	};
 
 	const addFiles = useCallback(
 		async (files: FileList | File[]) => {
@@ -494,7 +449,6 @@ export const ChatThread = ({
 	const send = async (value: string) => {
 		const prompt = value.trim();
 		if (!prompt || isBusy) return;
-		if (handleTruthCommand(prompt)) return;
 		if (prompt.startsWith("+")) {
 			showNotice("Komutu göndermek yerine açılan listeden bir ayar seçin.");
 			return;
@@ -715,9 +669,6 @@ export const ChatThread = ({
 				...browserAttachments,
 			],
 			customInstructions,
-			...(provider === "local"
-				? { localEndpoint, localEngine, localModel }
-				: {}),
 			prompt,
 			provider,
 			reasoning,
@@ -799,6 +750,8 @@ export const ChatThread = ({
 				from: "assistant",
 				id: crypto.randomUUID(),
 				model: result.model,
+				engineRequestId:
+					result.provider === "lineai" ? result.requestId : undefined,
 				provider: result.provider,
 				reasoning,
 				sources: result.sources,
@@ -864,15 +817,8 @@ export const ChatThread = ({
 						<PanelLeftOpen aria-hidden="true" size={17} />
 					</button>
 					<div className="min-w-0 flex-1">
-						<h1 className="truncate font-medium text-sm">{title}</h1>
-						<p className="text-muted-foreground text-[0.68rem]">
-							API bağlantılarınız · anahtarlar yalnız masaüstü işleminde
-						</p>
+						<div className="flex items-center gap-3"><span className="text-lg font-semibold tracking-tight">Line AI</span><span className="h-4 w-px bg-border" /><h1 className="truncate text-sm text-muted-foreground">{title}</h1></div>
 					</div>
-					<span className="hidden items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 text-primary text-xs sm:flex">
-						<ShieldCheck aria-hidden="true" size={13} />
-						Truth Mode {truthMode ? "açık" : "kapalı"}
-					</span>
 				</header>
 
 				<section
@@ -956,21 +902,18 @@ export const ChatThread = ({
 						<div className="mx-auto flex min-h-full w-full max-w-[52rem] flex-col px-4 py-7 sm:px-7 sm:py-9">
 							{allTurns.length === 0 && !isBusy ? (
 								<div className="line-ai-empty-state m-auto flex w-full max-w-2xl flex-col items-center gap-6 py-12 text-center">
-									<SiriOrb size="96px" state="idle" />
+									<LineAiBrandMark className="line-ai-welcome-mark size-16" />
 									<div>
 										<h2 className="font-semibold text-2xl tracking-tight sm:text-3xl">
-											Bugün ne üzerinde çalışıyoruz?
+											Aklında ne var?
 										</h2>
 										<p className="mt-2 text-muted-foreground text-sm">
-											API’nizi ekleyin, isteğinizi yazın; Line AI doğrulanan
-											bağlantının gerçek yanıtını burada gösterir.
+											Birlikte düşünelim, yazalım, kodlayalım.
 										</p>
 									</div>
-									<AISuggestions
-										className="items-center"
-										onSelect={(suggestion) => setDraft(suggestion.label)}
-										suggestions={STARTER_SUGGESTIONS}
-									/>
+									<div className="line-ai-starter-grid">
+ {STARTER_SUGGESTIONS.map((suggestion,index)=>{const Icon=[Sparkles,Code2,Files][index]??Sparkles;return <button type="button" className="line-ai-starter-card" key={suggestion.id} onClick={()=>{setDraft(suggestion.label);focusComposer();}}><Icon size={20} aria-hidden="true" /><strong>{["Bir fikir geliştir","Birlikte kodlayalım","Yazını güçlendir"][index]}</strong><span>{suggestion.label}</span></button>;})}
+ </div>
 								</div>
 							) : (
 								<div
@@ -1035,18 +978,9 @@ export const ChatThread = ({
 										"success",
 									);
 								}}
-								onTruth={(next) => {
-									setTruth(next);
-									setDraft("");
-									showNotice(
-										`Truth Mode ${next ? "açıldı" : "kapatıldı"}.`,
-										"success",
-									);
-								}}
 								provider={provider}
 								query={draft.startsWith("+") ? draft.slice(1) : null}
 								reasoning={reasoning}
-								truthMode={truthMode}
 							/>
 							<AIPromptInput
 								ariaLabel="Line AI'ya mesaj gönder"
@@ -1076,32 +1010,10 @@ export const ChatThread = ({
 									onSelect={onReasoningChange}
 									value={reasoning}
 								/>
-								<button
-									aria-label={`Truth Mode ${truthMode ? "açık" : "kapalı"}`}
-									aria-pressed={truthMode}
-									className={cn(
-										"flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs transition-colors",
-										truthMode
-											? "bg-primary/10 text-primary"
-											: "text-muted-foreground hover:bg-muted",
-									)}
-									onClick={() => setTruth(!truthMode)}
-									title="/truthmode"
-									type="button"
-								>
-									<ShieldCheck aria-hidden="true" size={13} />
-									<span className="hidden lg:inline">Truth</span>
-								</button>
-								<AIContextMeter
-									className="hidden sm:inline-block"
-									limit={CONTEXT_LIMIT}
-									used={usedTokens}
-								/>
 							</AIPromptInput>
 						</div>
 						<p className="mt-1.5 text-center text-muted-foreground text-[0.66rem]">
-							Enter gönderir · Shift+Enter yeni satır · /truthmode durumu
-							yönetir
+							Enter gönderir · Shift+Enter yeni satır
 						</p>
 					</div>
 				</footer>
@@ -1240,6 +1152,145 @@ export const ChatThread = ({
 	);
 };
 
+const EngineFeedback = ({
+	onSaved,
+	requestId,
+}: {
+	onSaved: (rating: "up" | "down") => void;
+	requestId: string;
+}) => {
+	const [rating, setRating] = useState<"up" | "down" | null>(null);
+	const [note, setNote] = useState("");
+	const [trainingOptIn, setTrainingOptIn] = useState(false);
+	const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">(
+		"idle",
+	);
+	const [error, setError] = useState("");
+
+	const chooseRating = (next: "up" | "down") => {
+		setRating(next);
+		setStatus("idle");
+		setError("");
+	};
+
+	const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+		event.preventDefault();
+		if (!rating || status === "saving") return;
+		setStatus("saving");
+		setError("");
+		try {
+			const result = await submitEngineFeedback({
+				...(trainingOptIn && note.trim() ? { note: note.trim() } : {}),
+				rating,
+				requestId,
+				trainingOptIn,
+			});
+			if (!result.saved) {
+				throw new Error("Geri bildirim kaydedilemedi.");
+			}
+			setStatus("saved");
+			onSaved(rating);
+		} catch (submissionError) {
+			setError(
+				submissionError instanceof Error
+					? submissionError.message
+					: "Geri bildirim gönderilemedi.",
+			);
+			setStatus("error");
+		}
+	};
+
+	if (status === "saved") {
+		return (
+			<p className="flex items-center gap-1.5 text-[0.72rem] text-emerald-700 dark:text-emerald-400">
+				<Check aria-hidden="true" size={13} /> Geri bildiriminiz kaydedildi.
+			</p>
+		);
+	}
+
+	return (
+		<form
+			aria-label="Line AI yanıt geri bildirimi"
+			className="mt-1 flex max-w-xl flex-col gap-2 rounded-xl border border-border/70 bg-muted/25 p-2.5 text-xs"
+			onSubmit={submit}
+		>
+			<div className="flex items-center gap-1.5">
+				<span className="mr-1 text-muted-foreground">Bu yanıt yardımcı oldu mu?</span>
+				<button
+					aria-label="İyi Line AI yanıtı"
+					aria-pressed={rating === "up"}
+					className={cn(
+						"rounded-md p-1.5 transition-colors",
+						rating === "up"
+							? "bg-emerald-600 text-white"
+							: "text-muted-foreground hover:bg-muted hover:text-foreground",
+					)}
+					onClick={() => chooseRating("up")}
+					type="button"
+				>
+					<ThumbsUp aria-hidden="true" size={14} />
+				</button>
+				<button
+					aria-label="Geliştirilebilir Line AI yanıtı"
+					aria-pressed={rating === "down"}
+					className={cn(
+						"rounded-md p-1.5 transition-colors",
+						rating === "down"
+							? "bg-amber-600 text-white"
+							: "text-muted-foreground hover:bg-muted hover:text-foreground",
+					)}
+					onClick={() => chooseRating("down")}
+					type="button"
+				>
+					<ThumbsDown aria-hidden="true" size={14} />
+				</button>
+			</div>
+			{rating ? (
+				<>
+					<label className="flex items-center gap-2 text-foreground">
+						<input
+							checked={trainingOptIn}
+							onChange={(event) => {
+								const optedIn = event.target.checked;
+								setTrainingOptIn(optedIn);
+								if (!optedIn) setNote("");
+							}}
+							type="checkbox"
+						/>
+						Notumu Line AI geliştirmesinde kullan
+					</label>
+					<textarea
+						aria-label="Line AI geri bildirim notu"
+						className="min-h-16 w-full resize-y rounded-lg border border-border bg-background px-2.5 py-2 outline-none transition-colors focus:border-foreground/40 disabled:cursor-not-allowed disabled:opacity-50"
+						disabled={!trainingOptIn}
+						maxLength={2000}
+						onChange={(event) => setNote(event.target.value)}
+						placeholder="İsteğe bağlı not"
+						value={note}
+					/>
+					<div className="flex items-center justify-between gap-3">
+						<p className="text-[0.7rem] text-muted-foreground">
+							Not yalnız bu kutu işaretliyse gönderilir.
+						</p>
+						<button
+							className="rounded-lg bg-foreground px-2.5 py-1.5 font-medium text-background transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-55"
+							disabled={status === "saving"}
+							type="submit"
+						>
+							{status === "saving" ? "Gönderiliyor…" : "Geri bildirimi gönder"}
+						</button>
+					</div>
+				</>
+			) : null}
+			{status === "error" ? (
+				<p className="flex items-center gap-1.5 text-destructive" role="alert">
+					<CircleAlert aria-hidden="true" size={13} /> {error}
+				</p>
+			) : null}
+		</form>
+	);
+};
+
 const ChatTurnView = ({
 	onEdit,
 	onOpenArtifact,
@@ -1318,10 +1369,10 @@ const ChatTurnView = ({
 	const providerLabel =
 		turn.provider === "openai"
 			? "OpenAI"
-			: turn.provider === "gemini"
-				? "Gemini"
-				: turn.provider === "local"
-					? "Yerel model"
+		: turn.provider === "gemini"
+			? "Gemini"
+			: turn.provider === "lineai"
+				? "Line AI Engine"
 					: "Sağlayıcı";
 
 	return (
@@ -1331,7 +1382,11 @@ const ChatTurnView = ({
 				copyText={turn.text}
 				from="assistant"
 				onRetry={() => onRetry(turn.id)}
-				onVote={(vote) => onVote(turn.id, vote)}
+				onVote={
+					turn.provider === "lineai" && turn.engineRequestId
+						? undefined
+						: (vote) => onVote(turn.id, vote)
+				}
 				selectedVote={turn.feedback ?? null}
 				timestamp={turn.timestamp}
 			>
@@ -1408,6 +1463,12 @@ const ChatTurnView = ({
 								? ` · ${(turn.durationMs / 1000).toFixed(1)} sn`
 								: ""}
 						</p>
+					) : null}
+					{turn.provider === "lineai" && turn.engineRequestId ? (
+						<EngineFeedback
+							onSaved={(rating) => onVote(turn.id, rating)}
+							requestId={turn.engineRequestId}
+						/>
 					) : null}
 				</div>
 			</AIMessage>
@@ -1630,21 +1691,17 @@ const ComposerCommandMenu = ({
 	onClearFiles,
 	onProvider,
 	onReasoning,
-	onTruth,
 	provider,
 	query,
 	reasoning,
-	truthMode,
 }: {
 	filesAttached: boolean;
 	onClearFiles: () => void;
 	onProvider: (provider: ProviderChoice) => void;
 	onReasoning: (reasoning: ReasoningLevel) => void;
-	onTruth: (enabled: boolean) => void;
 	provider: ProviderChoice;
 	query: string | null;
 	reasoning: ReasoningLevel;
-	truthMode: boolean;
 }) => {
 	if (query === null) return null;
 	const items: CommandItem[] = [
@@ -1672,13 +1729,6 @@ const ComposerCommandMenu = ({
 			selected: reasoning === item.id,
 			run: () => onReasoning(item.id),
 		})),
-		{
-			icon: <ShieldCheck size={15} />,
-			id: "truth-mode",
-			label: `Truth Mode: ${truthMode ? "Kapat" : "Aç"}`,
-			note: "Doğrulanamayan sonuçları ve belirsizlikleri açıkça belirt",
-			run: () => onTruth(!truthMode),
-		},
 		...(filesAttached
 			? [
 					{

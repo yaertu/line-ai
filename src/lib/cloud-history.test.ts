@@ -8,6 +8,7 @@ vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 import {
 	loadCloudHistory,
 	mergeConversationHistories,
+	mergeHydrationSnapshot,
 	normalizeConversationHistory,
 	saveCloudConversation,
 } from "./cloud-history";
@@ -73,6 +74,32 @@ describe("Line AI Cloud sohbet geçmişi", () => {
 			{ id: "legacy", text: "cihaz" },
 			{ id: "same", text: "cihaz yeni" },
 		]);
+	});
+
+	it("hydration beklerken eklenen yanıtı korur ve silinen eski sohbeti geri getirmez", () => {
+		const snapshot = [
+			conversation("active", "2026-08-30T10:00:00.000Z", "ilk istek"),
+			conversation("removed", "2026-08-30T10:00:00.000Z", "silinen"),
+		];
+		const current = [
+			{
+				...snapshot[0],
+				turns: [
+					...snapshot[0].turns,
+					{
+						from: "assistant" as const,
+						id: "turn-active-answer",
+						text: "geç gelen yanıt",
+						timestamp: "10:01",
+					},
+				],
+				updatedAt: "2026-08-30T10:01:00.000Z",
+			},
+		];
+
+		const result = mergeHydrationSnapshot(snapshot, snapshot, current);
+		expect(result.find((item) => item.id === "active")?.turns).toHaveLength(2);
+		expect(result.some((item) => item.id === "removed")).toBe(false);
 	});
 
 	it("Tauri komut sözleşmesinde yalnız doğrulanmış sohbetleri kullanır", async () => {

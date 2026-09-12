@@ -2117,7 +2117,7 @@ dependencies = [
 
 [[package]]
 name = "line-ai"
-version = "0.5.0"
+version = "0.6.0"
 dependencies = [
  "futures-util",
  "keyring",
@@ -2129,6 +2129,7 @@ dependencies = [
  "tauri-build",
  "tokio",
  "tokio-tungstenite",
+ "uuid",
 ]
 
 [[package]]

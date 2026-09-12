@@ -2,12 +2,13 @@
 
 mod browser;
 mod cloud;
+mod engine;
 mod providers;
 mod workspace;
 
 use futures_util::StreamExt;
-use providers::{compatible, LocalProviderConfig, ProviderKind as Provider};
-use reqwest::{header::ACCEPT, redirect::Policy, Client, StatusCode};
+use providers::ProviderKind as Provider;
+use reqwest::{header::ACCEPT, Client, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
@@ -55,12 +56,6 @@ struct ExecuteAiPromptRequest {
     attachments: Option<Vec<PromptAttachment>>,
     #[serde(default)]
     custom_instructions: Option<String>,
-    #[serde(default)]
-    local_endpoint: Option<String>,
-    #[serde(default)]
-    local_engine: Option<String>,
-    #[serde(default)]
-    local_model: Option<String>,
     prompt: String,
     provider: String,
     reasoning: String,
@@ -112,6 +107,8 @@ struct ExecuteAiPromptResult {
     message: String,
     model: String,
     provider: String,
+    #[serde(rename = "requestId", skip_serializing_if = "Option::is_none")]
+    request_id: Option<String>,
     sources: Vec<WebSource>,
 }
 
@@ -197,9 +194,13 @@ fn provider_attempt_label(
     format!("{provider} bağlantısı deneniyor · {attempt}/{total_attempts} · {model}")
 }
 
+fn auto_prefers_engine(provider: Provider, engine_key_configured: bool) -> bool {
+    provider == Provider::Auto && engine_key_configured
+}
+
 #[tauri::command]
 async fn execute_ai_prompt(
-    request: ExecuteAiPromptRequest,
+    mut request: ExecuteAiPromptRequest,
     on_event: tauri::ipc::Channel<ExecuteAiPromptEvent>,
 ) -> Result<ExecuteAiPromptResult, String> {
     #[cfg(debug_assertions)]
@@ -208,11 +209,19 @@ async fn execute_ai_prompt(
         request.provider,
         request.prompt.chars().count()
     );
+    // Truthfulness safeguards are part of the hosted product contract and are
+    // deliberately not a user-toggleable provider parameter.
+    request.truth_mode = true;
     validate_request(&request)?;
 
     let provider = Provider::parse(&request.provider)?;
     let reasoning = Reasoning::parse(&request.reasoning)?;
     let current_prompt = compose_prompt(&request.prompt, request.attachments.as_deref());
+    // An Engine key is an explicit local opt-in. Auto must use it directly and
+    // surface an Engine failure, never silently fall through to another cloud provider.
+    if auto_prefers_engine(provider, engine::is_engine_key_configured().await?) {
+        return run_line_ai(&request, &current_prompt, &on_event).await;
+    }
     let client = Client::builder()
         // WebView2 hosts on Windows can inherit proxy stacks where long-lived
         // HTTP/2 SSE bodies never yield their first frame. Both providers support
@@ -230,7 +239,7 @@ async fn execute_ai_prompt(
             Provider::Gemini => {
                 run_gemini(&client, &request, &current_prompt, reasoning, &on_event).await
             }
-            Provider::Local => run_local(&request, &current_prompt, &on_event).await,
+            Provider::LineAi => run_line_ai(&request, &current_prompt, &on_event).await,
             Provider::Auto => Err("Geçersiz sağlayıcı yönlendirmesi.".to_owned()),
         };
     }
@@ -1044,114 +1053,49 @@ async fn run_openai(
         message: message.trim().to_owned(),
         model,
         provider: "openai".to_owned(),
+        request_id: None,
         sources,
     })
 }
 
-async fn run_local(
+async fn run_line_ai(
     request: &ExecuteAiPromptRequest,
     current_prompt: &str,
     on_event: &tauri::ipc::Channel<ExecuteAiPromptEvent>,
 ) -> Result<ExecuteAiPromptResult, String> {
-    let config = LocalProviderConfig::parse(
-        request.local_endpoint.as_deref(),
-        request.local_model.as_deref(),
-        request.local_engine.as_deref(),
-    )?;
-    // Local model traffic must never inherit a system proxy or follow a redirect.
-    // Together with the validated loopback URL this prevents a local-model choice
-    // from becoming an unreviewed remote request.
-    let client = Client::builder()
-        .http1_only()
-        .no_proxy()
-        .redirect(Policy::none())
-        .timeout(Duration::from_secs(120))
-        .build()
-        .map_err(|_| "Yerel model için güvenli ağ istemcisi başlatılamadı.".to_owned())?;
-    let model = config.model.clone();
-    let engine = config.engine.label();
-    let mut messages = vec![json!({
-        "role": "system",
-        "content": build_system_instruction(
-            request.truth_mode,
-            request.custom_instructions.as_deref(),
-            request.response_style.as_deref(),
-        ),
-    })];
-    messages.extend(openai_messages(&request.transcript, current_prompt));
-    let body = json!({
-        "model": model,
-        "messages": messages,
-        "stream": true,
-    });
-
     emit_event(
         on_event,
         ExecuteAiPromptEvent::Status {
-            label: provider_attempt_label("Yerel model", &model, 1, 1),
+            label: "Line AI Engine yanıtı hazırlanıyor".to_owned(),
         },
     );
-    let response = client
-        .post(config.chat_completions_url())
-        .header(ACCEPT, "text/event-stream")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|_| format!("{engine} yerel sunucusuna bağlanılamadı."))?;
-    let status = response.status();
-    if !status.is_success() {
-        let text = response.text().await.unwrap_or_default();
-        return Err(provider_error("Yerel model", status, &text, &[]));
-    }
-    emit_event(
-        on_event,
-        ExecuteAiPromptEvent::Status {
-            label: format!("{engine} yanıtı hazırlanıyor · {model}"),
-        },
-    );
-
-    let mut message = String::new();
-    let mut stream_failure = None;
-    for_each_sse_value(response, "Yerel model", |event| {
-        if let Some(error) = compatible::error_message(&event) {
-            stream_failure = Some(error);
-            return;
-        }
-        if let Some(delta) = compatible::text_delta(&event) {
-            message.push_str(&delta);
-            emit_event(on_event, ExecuteAiPromptEvent::TextDelta { text: delta });
-            return;
-        }
-        if message.trim().is_empty() {
-            if let Some(completed) = compatible::completed_text(&event) {
-                message = completed.clone();
-                emit_event(
-                    on_event,
-                    ExecuteAiPromptEvent::TextDelta { text: completed },
-                );
-            }
-        }
+    let response = engine::generate_text(engine::EngineTextRequest {
+        prompt: current_prompt.to_owned(),
+        transcript: request
+            .transcript
+            .iter()
+            .map(|turn| engine::EngineTranscriptTurn {
+                role: turn.role.clone(),
+                content: turn.content.clone(),
+            })
+            .collect(),
+        custom_instructions: request.custom_instructions.clone(),
+        response_style: request.response_style.clone(),
+        reasoning: request.reasoning.clone(),
+        truth_mode: request.truth_mode,
     })
     .await?;
-
-    if let Some(failure) = stream_failure {
-        let safe_failure = failure.chars().take(500).collect::<String>();
-        return Err(format!("Yerel model akışı başarısız oldu: {safe_failure}"));
-    }
-    if message.trim().is_empty() {
-        return Err("Yerel model boş veya desteklenmeyen bir yanıt döndürdü.".to_owned());
-    }
-    if !response_is_sufficient(current_prompt, &message) {
-        return Err(
-            "Yerel model tam dosya isteğini eksik veya bozuk tamamladı; eksik yanıt gösterilmedi."
-                .to_owned(),
-        );
-    }
-
+    emit_event(
+        on_event,
+        ExecuteAiPromptEvent::TextDelta {
+            text: response.message.clone(),
+        },
+    );
     Ok(ExecuteAiPromptResult {
-        message: message.trim().to_owned(),
-        model,
-        provider: "local".to_owned(),
+        message: response.message,
+        model: response.model,
+        provider: "lineai".to_owned(),
+        request_id: Some(response.request_id),
         sources: Vec::new(),
     })
 }
@@ -1328,6 +1272,7 @@ async fn run_gemini(
                     message: message.trim().to_owned(),
                     model: model.to_owned(),
                     provider: "gemini".to_owned(),
+                    request_id: None,
                     sources,
                 });
             }
@@ -1871,6 +1816,15 @@ pub fn run() {
             workspace::inspect_workspace_checkpoint,
             workspace::read_git_status,
             workspace::restore_workspace_checkpoint,
+            engine::delete_engine_image,
+            engine::delete_engine_key,
+            engine::download_engine_asset,
+            engine::generate_engine_image,
+            engine::get_engine_asset,
+            engine::get_engine_image,
+            engine::get_engine_status,
+            engine::save_engine_key,
+            engine::submit_engine_feedback,
             execute_ai_prompt,
             get_provider_status,
             read_dropped_text_files
@@ -1885,10 +1839,10 @@ pub fn run() {}
 #[cfg(test)]
 mod tests {
     use super::{
-        build_system_instruction, extract_gemini_text, extract_openai_text, for_each_sse_value,
-        provider_attempt_label, read_dropped_text_files_impl, read_nonempty_env, redact_secrets,
-        response_is_sufficient, should_use_web_search, Client, Duration, Reasoning,
-        DEFAULT_GEMINI_MODEL, GEMINI_ENDPOINT_ROOT,
+        auto_prefers_engine, build_system_instruction, extract_gemini_text, extract_openai_text,
+        for_each_sse_value, provider_attempt_label, read_dropped_text_files_impl,
+        read_nonempty_env, redact_secrets, response_is_sufficient, should_use_web_search, Client,
+        Duration, Provider, Reasoning, DEFAULT_GEMINI_MODEL, GEMINI_ENDPOINT_ROOT,
     };
     use serde_json::json;
     use std::{
@@ -1909,6 +1863,15 @@ mod tests {
             provider_attempt_label("Gemini", "gemini-3.5-flash", 2, 8),
             "Gemini bağlantısı deneniyor · 2/8 · gemini-3.5-flash"
         );
+    }
+
+    #[test]
+    fn auto_prefers_engine_only_when_a_credential_manager_key_exists() {
+        assert!(auto_prefers_engine(Provider::Auto, true));
+        assert!(!auto_prefers_engine(Provider::Auto, false));
+        assert!(!auto_prefers_engine(Provider::OpenAi, true));
+        assert!(!auto_prefers_engine(Provider::Gemini, true));
+        assert!(!auto_prefers_engine(Provider::LineAi, false));
     }
 
     #[test]

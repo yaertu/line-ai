@@ -1,0 +1,8 @@
+.env*
+node_modules
+scripts
+supabase
+**/*.test.ts
+vitest.config.ts
+*.tmp
+*.log

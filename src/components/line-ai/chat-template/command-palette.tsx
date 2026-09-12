@@ -10,7 +10,6 @@ import {
   Moon,
   Search,
   Settings2,
-  ShieldCheck,
   Sun,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
@@ -57,7 +56,7 @@ const nextTheme = (theme: ThemeChoice): ThemeChoice => {
 const providerLabels: Record<ProviderChoice, string> = {
   auto: "Otomatik",
   gemini: "Gemini",
-  local: "Yerel model",
+  lineai: "Line AI Engine",
   openai: "OpenAI",
 };
 
@@ -116,17 +115,7 @@ export const CommandPalette = ({
         keywords: "tema gece gündüz koyu açık sistem görünüm",
         label: "Temayı değiştir",
       },
-      {
-        action: closeAfter(() => onPreferencesChange({ ...preferences, truthMode: !preferences.truthMode })),
-        category: "Yapay zekâ",
-        description: preferences.truthMode ? "Açık; kapatmak için seç" : "Kapalı; açmak için seç",
-        icon: <ShieldCheck aria-hidden="true" size={17} />,
-        id: "truth-mode",
-        keywords: "truth doğruluk gerçeklik",
-        label: "Truth Mode",
-        selected: preferences.truthMode,
-      },
-      ...(["auto", "openai", "gemini", "local"] as ProviderChoice[]).map((provider) => ({
+      ...(["auto", "openai", "gemini", "lineai"] as ProviderChoice[]).map((provider) => ({
         action: closeAfter(() => onPreferencesChange({ ...preferences, provider })),
         category: "Yapay zekâ" as const,
         description: provider === "auto" ? "Uygun sağlayıcıyı otomatik seç" : `${providerLabels[provider]} sağlayıcısını kullan`,

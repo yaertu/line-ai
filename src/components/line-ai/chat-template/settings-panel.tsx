@@ -13,7 +13,6 @@ import {
 	Moon,
 	Palette,
 	RefreshCw,
-	Server,
 	ShieldCheck,
 	Sparkles,
 	Sun,
@@ -24,8 +23,8 @@ import {
 	X,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useState } from "react";
-import { readDesktopProviderStatus } from "@/lib/ai";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { deleteEngineKey, readDesktopProviderStatus, readEngineStatus, saveEngineKey } from "@/lib/ai";
 import {
 	type BrowserStatus,
 	readBrowserStatus,
@@ -37,11 +36,8 @@ import { cn } from "@/lib/utils";
 import ChromeMark from "../chrome-mark";
 import {
 	type AppPreferences,
+	type EngineStatus,
 	type ChatConversation,
-	isLocalLoopbackEndpoint,
-	localEndpointForEngine,
-	LOCAL_MODEL_ENGINES,
-	type LocalModelEngine,
 	type MotionChoice,
 	PROVIDERS,
 	type ProviderChoice,
@@ -153,12 +149,6 @@ const RELEASE_HIGHLIGHTS: ReadonlyArray<ReleaseHighlight> = [
 		icon: BrainCircuit,
 		title: "Yerel çalışma alanı altyapısı",
 	},
-	{
-		description:
-			"Ollama, LM Studio ve OpenAI uyumlu yerel modeller; yalnız bu bilgisayardaki HTTP loopback uç noktalarıyla kullanılabilir.",
-		icon: Server,
-		title: "Yerel model bağlantısı",
-	},
 ];
 
 const updatePreference = <K extends keyof AppPreferences>(
@@ -189,6 +179,10 @@ const SettingsPanel = ({
 	const [statusState, setStatusState] = useState<"loading" | "ready" | "error">(
 		"loading",
 	);
+	const [engineStatus, setEngineStatus] = useState<EngineStatus | null>(null);
+	const [engineMessage, setEngineMessage] = useState("Engine durumu okunuyor…");
+	const [engineBusy, setEngineBusy] = useState(false);
+	const engineKeyRef = useRef<HTMLInputElement>(null);
 	const [browserStatus, setBrowserStatus] = useState<BrowserStatus | null>(
 		null,
 	);
@@ -211,6 +205,37 @@ const SettingsPanel = ({
 		} catch {
 			setStatusState("error");
 		}
+	};
+
+	const refreshEngine = async () => {
+		setEngineBusy(true);
+		try {
+			const status = await readEngineStatus();
+			setEngineStatus(status);
+			setEngineMessage(status.message);
+		} catch (error) {
+			setEngineMessage(error instanceof Error ? error.message : "Engine durumu okunamadı.");
+		} finally { setEngineBusy(false); }
+	};
+
+	const saveKey = async () => {
+		const key = engineKeyRef.current?.value ?? "";
+		setEngineBusy(true);
+		try {
+			await saveEngineKey(key);
+			if (engineKeyRef.current) engineKeyRef.current.value = "";
+			await refreshEngine();
+			setEngineMessage("Engine anahtarı Credential Manager'a kaydedildi.");
+		} catch (error) {
+			setEngineMessage(error instanceof Error ? error.message : "Engine anahtarı kaydedilemedi.");
+			setEngineBusy(false);
+		}
+	};
+
+	const removeKey = async () => {
+		setEngineBusy(true);
+		try { await deleteEngineKey(); await refreshEngine(); setEngineMessage("Engine anahtarı silindi."); }
+		catch (error) { setEngineMessage(error instanceof Error ? error.message : "Engine anahtarı silinemedi."); setEngineBusy(false); }
 	};
 
 	const refreshBrowser = useCallback(async () => {
@@ -286,6 +311,11 @@ const SettingsPanel = ({
 		return () => {
 			cancelled = true;
 		};
+	}, []);
+
+	useEffect(() => {
+		const timer = window.setTimeout(() => { void refreshEngine(); }, 0);
+		return () => window.clearTimeout(timer);
 	}, []);
 
 	useEffect(() => {
@@ -439,12 +469,6 @@ const SettingsPanel = ({
 							{section === "general" ? (
 								<div className="grid gap-4 md:grid-cols-2">
 									<SummaryCard
-										icon={<ShieldCheck size={18} />}
-										label="Truth Mode"
-										value={preferences.truthMode ? "Açık" : "Kapalı"}
-										note="Belirsizlikler açıkça belirtilir."
-									/>
-									<SummaryCard
 										icon={<BrainCircuit size={18} />}
 										label="Akıl yürütme"
 										value={reasoningLabel(preferences.reasoning)}
@@ -593,94 +617,20 @@ const SettingsPanel = ({
 										/>
 									</SettingsGroup>
 									<SettingsGroup
-										description="Yanıt, bilmediği veya doğrulayamadığı noktaları saklamaz; başarı durumları uydurulmaz."
-										title="Doğruluk modu"
+										description="Anahtar yalnız Windows Credential Manager'da tutulur. Tercihlere, sohbet geçmişine veya telemetriye yazılmaz."
+										title="Line AI Engine"
 									>
-										<ToggleRow
-											checked={preferences.truthMode}
-											label="Truth Mode"
-											note="Tüm yeni sohbetlerde varsayılan olarak uygula"
-											onChange={(value) =>
-												onChange(
-													updatePreference(preferences, "truthMode", value),
-												)
-											}
-										/>
-									</SettingsGroup>
-									<SettingsGroup
-										description="Yerel motor bağlantısı yalnızca bu bilgisayardaki HTTP döngü (loopback) adresleri içindir. Bağlantı noktası zorunludur; uzak ağ, HTTPS, sorgu, parça veya kimlik bilgisi kullanmayın."
-										title="Yerel model"
-									>
-										<ChoiceGrid
-											onSelect={(value) => {
-												const localEngine = value as LocalModelEngine;
-												onChange({
-													...preferences,
-													localEngine,
-													localEndpoint: localEndpointForEngine(localEngine),
-												});
-											}}
-											options={LOCAL_MODEL_ENGINES.map((item) => ({
-												id: item.id,
-												label: item.label,
-												note: item.note,
-											}))}
-											value={preferences.localEngine}
-										/>
-										<div className="mt-3 grid gap-3 sm:grid-cols-2">
-											<label className="grid gap-1.5 text-sm">
-												<span className="font-medium">Yerel uç nokta</span>
-												<input
-													aria-label="Yerel uç nokta"
-													className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none transition-colors focus:border-primary"
-													onChange={(event) =>
-														onChange(
-															updatePreference(
-																preferences,
-																"localEndpoint",
-																event.target.value,
-															),
-														)
-													}
-													onBlur={(event) => {
-														const endpoint = event.target.value.trim();
-														onChange(
-															updatePreference(
-																preferences,
-																"localEndpoint",
-																isLocalLoopbackEndpoint(endpoint)
-																	? endpoint
-																	: localEndpointForEngine(preferences.localEngine),
-															),
-														);
-													}}
-													spellCheck={false}
-													type="url"
-													value={preferences.localEndpoint}
-												/>
+										<div className="flex flex-wrap items-end gap-2">
+											<label className="min-w-[14rem] flex-1 text-sm">
+												<span className="mb-1.5 block font-medium">Canlı API anahtarı</span>
+												<input aria-label="Line AI Engine API anahtarı" autoComplete="off" className="h-10 w-full rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none transition-colors focus:border-primary" placeholder="lai_sk_live_…" ref={engineKeyRef} spellCheck={false} type="password" />
 											</label>
-											<label className="grid gap-1.5 text-sm">
-												<span className="font-medium">Model</span>
-												<input
-													aria-label="Yerel model adı"
-													className="h-10 rounded-lg border border-border bg-background px-3 font-mono text-sm outline-none transition-colors focus:border-primary"
-													maxLength={200}
-													onChange={(event) =>
-														onChange(
-															updatePreference(
-																preferences,
-																"localModel",
-																event.target.value,
-															),
-														)
-													}
-													placeholder="Örn. llama3.2"
-													spellCheck={false}
-													type="text"
-													value={preferences.localModel}
-												/>
-											</label>
+											<button className="h-10 rounded-lg bg-primary px-3 font-medium text-primary-foreground text-sm disabled:opacity-50" disabled={engineBusy} onClick={() => void saveKey()} type="button">Kaydet</button>
+											<button className="h-10 rounded-lg border border-border px-3 text-sm hover:bg-muted disabled:opacity-50" disabled={engineBusy || !engineStatus?.configured} onClick={() => void removeKey()} type="button">Anahtarı sil</button>
+											<button aria-label="Engine durumunu yenile" className="h-10 rounded-lg border border-border px-3 text-sm hover:bg-muted disabled:opacity-50" disabled={engineBusy} onClick={() => void refreshEngine()} type="button"><RefreshCw className={engineBusy ? "animate-spin" : ""} size={15} /></button>
 										</div>
+										<p aria-live="polite" className="mt-3 rounded-xl bg-muted/60 px-3 py-2 text-muted-foreground text-xs">{engineMessage}</p>
+										{engineStatus?.capabilities ? <p className="mt-2 text-xs text-muted-foreground">{engineStatus.capabilities.project.name} · Metin {engineStatus.capabilities.text ? "hazır" : "kapalı"} · Görsel {engineStatus.capabilities.images ? "hazır" : "kapalı"} · Bugün {Math.max(0, engineStatus.capabilities.quota.dailyUnits - engineStatus.capabilities.quota.usedDaily)} birim</p> : null}
 									</SettingsGroup>
 									<SettingsGroup
 										description="Yalnız ortam değişkeninin varlığı okunur. Anahtar değeri arayüze veya yerel depoya alınmaz."
@@ -1161,8 +1111,8 @@ const SettingsPanel = ({
 							{section === "about" ? (
 								<div className="space-y-4">
 									<SettingsGroup
-										description="Denetlenebilir Windows yapay zekâ çalışma alanı · final sürüm"
-										title="Line AI v0.5.0"
+										description="Denetlenebilir Windows yapay zekâ çalışma alanı · güncel sürüm"
+										title="Line AI v0.6.0"
 									>
 										<p className="text-muted-foreground text-sm leading-relaxed">
 											Line AI; sohbet, dosya bağlamı ve Chrome araçlarının yanına
@@ -1171,7 +1121,18 @@ const SettingsPanel = ({
 										</p>
 									</SettingsGroup>
 									<SettingsGroup
-										description="Bu final sürümde eklenen gerçek altyapılar."
+										description="Masaüstü istemcisi için yönetilen metin, kota ve güvenli anahtar bağlantısı."
+										title="Line AI Engine"
+									>
+										<p className="text-muted-foreground text-sm leading-relaxed">
+											Engine anahtarı Windows Credential Manager’da tutulur. Yanıt geri bildirimi
+											isteğe bağlıdır; not yalnız açık izin verildiğinde gönderilir. Image Studio
+											arayüzü, sağlayıcı kredisi yeniden etkinleştirilene kadar canlı görsel
+											üretimi kapalı olduğunu doğrudan gösterir.
+										</p>
+									</SettingsGroup>
+									<SettingsGroup
+										description="v0.5.0 çekirdek gösteriminde eklenen çalışma alanı altyapıları."
 										title="Yenilikler · v0.5.0"
 									>
 										<ul

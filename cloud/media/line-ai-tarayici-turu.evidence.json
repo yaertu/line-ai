@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11T18:32:06.891Z",
+  "generatedAt": "2026-09-12T02:32:09.577Z",
   "source": {
     "kind": "vite-source-ui-playwright",
-    "url": "http://127.0.0.1:1430",
+    "url": "http://127.0.0.1:1431",
     "viewport": "1440x900",
     "surface": "Ayarlar > Tarayıcı"
   },
@@ -28,10 +28,10 @@
   },
   "poster": {
     "fileName": "line-ai-tarayici-turu-poster.png",
-    "sha256": "9df17154ebff212a2fad723b86ec6d1d92504a221ce5e67b1bee044e36fb8a04"
+    "sha256": "95ed9d9ff3f44e95eca0701fba446650c28a510423e3691fb1fce556415b642d"
   },
   "video": {
     "fileName": "line-ai-tarayici-turu.mp4",
-    "sha256": "15003809af834d763cb94622be10e78983997332fec6d439cdb02b3eb05d60bd"
+    "sha256": "fe8349af96a594913102ae393a67052d48bc6bd505ff2897e7c52df1e0bfb324"
   }
 }

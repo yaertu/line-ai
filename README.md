@@ -17,7 +17,21 @@
   <img alt="Lisans: MIT" src="https://img.shields.io/badge/Lisans-MIT-2EA44F">
 </p>
 
-Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0; gerçek işlem izlerini, kanıtları ve yerel çalışma alanı işlemlerini belgeleyen çekirdeği final kaynak sürümüne ekler. Bu sürümde Trace, Checkpoint, Verification, Workflow ve hafıza çekirdeği ile Rust terminal/Git runtime'ı kaynakta ve testlerde vardır; bunları kullanan Mission Control, replay, Jury ve yerel model arayüzleri henüz uygulamaya bağlanmış değildir.
+Line AI v0.6.0, Windows çalışma alanını kendi bulut API’si ve yönetim paneliyle birleştirir. Sohbet ve kodlama sunucudaki modellerle çalışır; Ollama veya yerel GPU gerekmez. Line AI Engine; kimlik, kota, maliyet kontrolü ve sürümlü davranış katmanımızdır, sıfırdan eğitilmiş bir temel model değildir.
+
+### v0.6.0 — Line AI Engine
+
+Grafit ve nane yeşili teması, yeni logo, sade sohbet alanı ve başlangıç kartlarıyla arayüz yenilendi. Yerel model çalıştırma, Ollama/LM Studio ayarları ve Truth Mode anahtarları uygulamadan kaldırıldı. Yeni kurulumlar doğrudan Line AI Engine kullanır.
+
+- **Bulut sohbet ve kodlama:** Windows kimlik kasasında tutulan Engine anahtarı, görev ve akıl yürütme düzeyine göre talimatlar, sunucuda doğruluk kuralları.
+- **Yönetim paneli:** [Canlı panel](https://lineaicloud.vercel.app/admin), proje/anahtar oluşturma ve iptali, kapsamlar, son kullanma tarihi, token/görsel kotaları, istek ve tahmini maliyet kayıtları.
+- **Maliyet kontrolü:** Atomik kota rezervasyonu, aynı işlem için tek üretim, reddedilen istekte iade, belirsiz sağlayıcı sonuçlarında korunan rezervasyon.
+- **Görsel Stüdyosu:** Açıklama, oran/kalite/stil seçenekleri; özel dosya alanı, süreli bağlantı, indirme ve silme entegrasyonu. **Canlı görsel üretimi sağlayıcı kredisi yenilenene kadar kapalıdır.** Sınırsız ücretsiz bulut üretimi taahhüt edilmez.
+- **Ölçülen gelişim:** İzin verilmiş yeni geri bildirimle günlük öneri, ayrı bütçede altı vakalık gerçek model değerlendirmesi, sürümleme ve geri alma. Otomatik yayın tüm testlerin geçmesini ve temel sürümden daha iyi sonucu gerektirir. Bu sınırlı test seti genel zekâ üstünlüğü veya model ağırlıklarının eğitildiği anlamına gelmez.
+
+[Engine kurulum ve API belgesi](./cloud/README.md)
+
+Önceki v0.5.0 sürümünün Trace, Checkpoint, Verification, Workflow ve hafıza çekirdeği ile Rust terminal/Git runtime’ı korunur. Mission Control, replay ve Jury kullanıcı arayüzleri henüz bağlı değildir.
 
 <p align="center">
   <a href="https://lineaicloud.vercel.app"><strong>Line AI tanıtım sitesini aç</strong></a>
@@ -25,9 +39,13 @@ Line AI, Windows için yerel bir yapay zekâ çalışma alanıdır. v0.5.0; ger�
 
 ## Uygulamadan görüntüler
 
-![Line AI v0.5.0 yenilikler](./docs/gorseller/line-ai-tanitim.gif)
+![Line AI Engine yönetimi](./cloud/media/line-ai-engine-yonetim-poster.png)
 
-> Kayıt, güncel kaynak arayüzündeki **Ayarlar → Hakkında → Yenilikler · v0.5.0** yüzeyini gösterir. Mission Control, replay, Jury ve yerel model çalıştırma ekranlarının henüz bağlanmadığı bu kayıtta ayrıca belirtilir.
+[Canlı yönetim panelinin videosunu izle](https://lineaicloud.vercel.app/media/line-ai-engine-yonetim.mp4) · [v0.6.0 indir](https://github.com/yaertu/line-ai/releases/tag/v0.6.0)
+
+![Line AI v0.6.0 yeni çalışma alanı](./docs/gorseller/line-ai-tanitim.gif)
+
+> Güncel v0.6.0 başlangıç ekranı, kaynak arayüzden kaydedildi. Bu kısa tur model yanıtı üretmez; sohbet ve Engine girişini gösterir.
 
 | ☀️ Açık tema | 🌙 Koyu tema |
 | --- | --- |

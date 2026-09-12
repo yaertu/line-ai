@@ -11,6 +11,7 @@ Amaç, mevcut sohbet eşitleme API'sini gerçek bir ürün API'sine dönüştür
 - Windows uygulamasında güvenli Line AI sağlayıcısı ve modern üretim arayüzü,
 - yalnız yöneticinin erişebildiği arka plan yönetim paneli,
 - izinli geri bildirim, sürümlü davranış kuralları ve değerlendirme döngüsü,
+- sohbet, kodlama, dosya ve görsel isteklerini uygun bağlama yönlendiren görev zekâsı,
 - kamu sitesinde doğru, görsel açıdan güçlü ve abartısız ürün anlatımı.
 
 ## Açık gerçeklik sınırı
@@ -149,6 +150,10 @@ Private `line-ai-assets` bucket'ı migration ile oluşturulur. Dosyalar proje ve
 5. **İnsan onayı:** Fine-tuning, veri dışa aktarma veya yeni model sürümüne geçiş ancak açık yönetici kararıyla başlar.
 
 Bu yapı, Line AI'ın davranışını kullanıcıya ait kontrol, kanıt ve geri bildirimle geliştirir. Tamamen Line AI tarafından işletilen ağırlıklar için gelecek fazda GPU altyapısı, lisanslı açık ağırlıklı model, güvenlik değerlendirmesi, veri saklama politikası ve model kartı gerekir.
+
+### Sürekli gelişim kuralı
+
+Line AI; sohbet, kodlama, dosya analizi ve görsel isteklerini görev türüne göre sürümlü politika profillerine yönlendirir. Geri bildirim ve evaluation sonuçları yeni aday politika sürümü üretir; canlı varsayılan davranışa doğrudan yazılmaz. Aday sürüm önce ölçülür, yönetici tarafından yayınlanır ve geri alınabilir. Böylece sistem her kullanım alanında daha iyi bağlam ve cevap kalitesi kazanırken tek bir kötü istek, prompt injection veya hatalı sinyal davranışı kontrolsüz biçimde değiştiremez.
 
 ## Masaüstü uygulaması
 

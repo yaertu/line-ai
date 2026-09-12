@@ -7,6 +7,7 @@ import {
 	type CloudConnectionState,
 	clearCloudHistory,
 	loadCloudHistory,
+	mergeHydrationSnapshot,
 	mergeConversationHistories,
 	readCloudStatus,
 	removeCloudConversation,
@@ -19,14 +20,12 @@ import {
 	type ChatTurn,
 	CONVERSATIONS,
 	DEFAULT_PREFERENCES,
-	isLocalLoopbackEndpoint,
-	localEndpointForEngine,
-	type LocalModelEngine,
 	type PromptExecutor,
 } from "./chat-data";
 import ChatSidebar, { DialogButton, DialogShell } from "./chat-sidebar";
 import ChatThread from "./chat-thread";
 import CommandPalette from "./command-palette";
+import ImageStudio from "./image-studio";
 import SettingsPanel from "./settings-panel";
 
 const CHAT_STORE_KEY = "line-ai.conversations.v1";
@@ -126,13 +125,8 @@ const loadPreferences = (): AppPreferences => {
 				? { ...DEFAULT_PREFERENCES, theme: previewTheme }
 				: DEFAULT_PREFERENCES;
 		}
-		const localEngine = ["ollama", "lm-studio", "openai-compatible"].includes(
-			parsed.localEngine ?? "",
-		)
-			? (parsed.localEngine as LocalModelEngine)
-			: DEFAULT_PREFERENCES.localEngine;
 		return {
-			provider: ["auto", "openai", "gemini", "local"].includes(parsed.provider ?? "")
+			provider: ["auto", "openai", "gemini", "lineai"].includes(parsed.provider ?? "")
 				? (parsed.provider as AppPreferences["provider"])
 				: DEFAULT_PREFERENCES.provider,
 			reasoning: ["low", "medium", "high"].includes(parsed.reasoning ?? "")
@@ -141,10 +135,7 @@ const loadPreferences = (): AppPreferences => {
 			theme: ["system", "light", "dark"].includes(parsed.theme ?? "")
 				? (parsed.theme as AppPreferences["theme"])
 				: DEFAULT_PREFERENCES.theme,
-			truthMode:
-				typeof parsed.truthMode === "boolean"
-					? parsed.truthMode
-					: DEFAULT_PREFERENCES.truthMode,
+			truthMode: true,
 			browserTools:
 				typeof parsed.browserTools === "boolean"
 					? parsed.browserTools
@@ -165,14 +156,6 @@ const loadPreferences = (): AppPreferences => {
 				typeof parsed.customInstructions === "string"
 					? parsed.customInstructions.slice(0, 12_000)
 					: DEFAULT_PREFERENCES.customInstructions,
-			localEngine,
-			localEndpoint: isLocalLoopbackEndpoint(parsed.localEndpoint)
-				? parsed.localEndpoint.trim()
-				: localEndpointForEngine(localEngine),
-			localModel:
-				typeof parsed.localModel === "string"
-					? parsed.localModel.trim().slice(0, 200)
-					: DEFAULT_PREFERENCES.localModel,
 			motion: ["system", "reduce"].includes(parsed.motion ?? "")
 				? (parsed.motion as AppPreferences["motion"])
 				: DEFAULT_PREFERENCES.motion,
@@ -195,7 +178,7 @@ const loadPreferences = (): AppPreferences => {
 
 const titleFromTurn = (turn: ChatTurn) => {
 	const compact = turn.text.replace(/\s+/g, " ").trim();
-	if (turn.from === "assistant") return "Truth Mode";
+	if (turn.from === "assistant") return "Line AI sohbeti";
 	return compact.length > 48 ? `${compact.slice(0, 48).trimEnd()}…` : compact;
 };
 
@@ -229,6 +212,7 @@ const ChatTemplate = ({
 	const [clearState, setClearState] = useState<"idle" | "pending" | "done" | "error">(() => hasPendingClear() ? "pending" : "idle");
 	const clearTriggerRef = useRef<HTMLButtonElement | null>(null);
 	const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+	const [isImageStudioOpen, setIsImageStudioOpen] = useState(false);
 	const [sidebarWidth, setSidebarWidth] = useState(loadSidebarWidth);
 	const [deletedConversation, setDeletedConversation] = useState<{
 		conversation: ChatConversation;
@@ -335,6 +319,7 @@ const ChatTemplate = ({
 				remote.conversations,
 				conversationItemsRef.current,
 			);
+			const localSnapshot = conversationItemsRef.current;
 			const remoteMap = new Map(
 				remote.conversations.map((conversation) => [
 					conversation.id,
@@ -355,6 +340,11 @@ const ChatTemplate = ({
 				await runCloudSync();
 				return;
 			}
+			const reconciled = mergeHydrationSnapshot(
+				remote.conversations,
+				localSnapshot,
+				conversationItemsRef.current,
+			);
 			lastSyncedRef.current = new Map(
 				merged.map((conversation) => [
 					conversation.id,
@@ -362,7 +352,7 @@ const ChatTemplate = ({
 				]),
 			);
 			cloudHydratedRef.current = true;
-			setConversationItems(merged);
+			setConversationItems(reconciled);
 			localStorage.removeItem(CHAT_STORE_KEY);
 			setCloudState("connected");
 			setCloudMessage(
@@ -759,6 +749,7 @@ const ChatTemplate = ({
 				onDelete={deleteConversation}
 				onNewChat={newChat}
 				onOpenSettings={() => setIsSettingsOpen(true)}
+				onOpenImageStudio={() => setIsImageStudioOpen(true)}
 				onRename={renameConversation}
 				onSelect={open}
 				onTogglePin={togglePinnedConversation}
@@ -805,6 +796,7 @@ const ChatTemplate = ({
 								onDelete={deleteConversation}
 								onNewChat={newChat}
 								onOpenSettings={() => setIsSettingsOpen(true)}
+								onOpenImageStudio={() => setIsImageStudioOpen(true)}
 								onRename={renameConversation}
 								onSelect={open}
 								onTogglePin={togglePinnedConversation}
@@ -843,9 +835,6 @@ const ChatTemplate = ({
 				customInstructions={preferences.customInstructions}
 				executePrompt={executePrompt}
 				key={`${activeId}-${newChatVersion}`}
-				localEndpoint={preferences.localEndpoint}
-				localEngine={preferences.localEngine}
-				localModel={preferences.localModel}
 				onAppendTurn={appendTurn}
 				onCodeWorkspaceOpen={() => setIsSidebarOpen(false)}
 				onDeleteTurn={deleteTurn}
@@ -855,9 +844,6 @@ const ChatTemplate = ({
 				}
 				onReasoningChange={(reasoning) =>
 					setPreferences((current) => ({ ...current, reasoning }))
-				}
-				onTruthModeChange={(truthMode) =>
-					setPreferences((current) => ({ ...current, truthMode }))
 				}
 				onVoteTurn={voteTurn}
 				provider={preferences.provider}
@@ -890,6 +876,10 @@ const ChatTemplate = ({
 					onRestoreArchived={restoreArchivedConversation}
 					preferences={preferences}
 				/>
+			) : null}
+
+			{isImageStudioOpen ? (
+				<ImageStudio onClose={() => setIsImageStudioOpen(false)} />
 			) : null}
 
 			<AnimatePresence>

@@ -9,6 +9,24 @@ const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9
 
 export const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
+// Only repeat reads. Replaying an unconfirmed database write could duplicate it.
+export const databaseFetch: typeof fetch = async (input, init) => {
+  const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
+  const read = method === "GET" || method === "HEAD";
+  for (let attempt = 0; ; attempt++) {
+    const timeout = AbortSignal.timeout(12000);
+    const signal = init?.signal ? AbortSignal.any([init.signal, timeout]) : timeout;
+    try {
+      const response = await fetch(input, { ...init, signal });
+      if (!read || attempt > 0 || ![502, 503, 504].includes(response.status)) return response;
+      await response.body?.cancel();
+    } catch (error) {
+      if (!read || attempt > 0 || init?.signal?.aborted) throw error;
+    }
+    await new Promise(resolve => setTimeout(resolve, 200));
+  }
+};
+
 export const hashPrivateValue = (value: string) => {
   const pepper = process.env.LINE_AI_IP_PEPPER;
   if (!pepper || pepper.length < 32) {
@@ -25,6 +43,7 @@ export const getDatabase = () => {
   }
   return createClient(url, secret, {
     auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false },
+    global: { fetch: databaseFetch },
   });
 };
 

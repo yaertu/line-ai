@@ -9,6 +9,10 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ["cloud/*.js"],
+    languageOptions: { ecmaVersion: 2023, globals: globals.browser },
+  },
+  {
     files: ["cloud/**/*.mjs"],
     languageOptions: { ecmaVersion: 2023, globals: globals.node },
   },

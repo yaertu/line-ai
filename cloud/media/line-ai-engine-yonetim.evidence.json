@@ -1,0 +1,17 @@
+{
+  "capturedAt": "2026-09-12T02:21:24.079Z",
+  "source": {
+    "kind": "live-production-admin",
+    "url": "https://lineaicloud.vercel.app/admin"
+  },
+  "credentialsRecorded": false,
+  "shows": [
+    "usage",
+    "project quotas",
+    "evaluated policies"
+  ],
+  "doesNotShow": [
+    "successful image generation"
+  ],
+  "sha256": "a24f96845f917946d1c234875be04db1f251cb7d4c8d49da25fdb0caa5558bdc"
+}

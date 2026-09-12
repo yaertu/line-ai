@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-11T18:31:30.355Z",
+  "generatedAt": "2026-09-12T02:31:59.470Z",
   "source": {
     "kind": "vite-source-ui-playwright",
-    "url": "http://127.0.0.1:1430",
+    "url": "http://127.0.0.1:1431",
     "viewport": "1440x900",
     "surface": "Ayarlar > Görünüm"
   },
@@ -28,10 +28,10 @@
   },
   "poster": {
     "fileName": "line-ai-gorunum-turu-poster.png",
-    "sha256": "9f1eb2fc670fb091cd78d02ae70d356a3cadf1fae6c5a09bce168f1c13d329e2"
+    "sha256": "d04358ad70f6778a17ac2ffbf92284bc881642e9cd84ff0f926dace2c6590de0"
   },
   "video": {
     "fileName": "line-ai-gorunum-turu.mp4",
-    "sha256": "947bd2432f0b59ae9d007632590e2e3a3f7b33959c466ed1f066f73925ef6e3a"
+    "sha256": "058d8738ac53e26f632e3ca989aba9ce20ca02c2d9057ae304a433f6010a59d2"
   }
 }

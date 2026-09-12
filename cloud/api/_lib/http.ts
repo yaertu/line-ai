@@ -25,7 +25,7 @@ export const sendError = (response: VercelResponse, error: unknown) => {
     return;
   }
 
-  console.error("Line AI Cloud request failed", error instanceof Error ? error.message : "unknown_error");
+  console.error("Line AI Cloud request failed", error instanceof Error ? error.name : "unknown_error");
   sendJson(response, 500, {
     error: { code: "internal_error", message: "Bulut isteği tamamlanamadı." },
   });
@@ -45,7 +45,16 @@ export const allowMethods = (
 };
 
 export const readObjectBody = (request: VercelRequest): Record<string, unknown> => {
-  const body = typeof request.body === "string" ? JSON.parse(request.body) as unknown : request.body;
+  let body: unknown;
+  try {
+    if (typeof request.body === "string" && Buffer.byteLength(request.body) > 600000) {
+      throw new ApiError(413, "body_too_large", "İstek gövdesi çok büyük.");
+    }
+    body = typeof request.body === "string" ? JSON.parse(request.body) as unknown : request.body;
+  } catch (error) {
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(400, "invalid_body", "Geçerli JSON bekleniyor.");
+  }
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new ApiError(400, "invalid_body", "JSON nesnesi bekleniyor.");
   }
