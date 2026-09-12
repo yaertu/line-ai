@@ -45,6 +45,7 @@ vi.mock("@/lib/ai", () => engine);
 describe("Line AI masaüstü çalışma alanı", () => {
 	beforeEach(() => {
 		localStorage.clear();
+		delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
 		vi.clearAllMocks();
 		cloud.loadCloudHistory.mockResolvedValue({
 			conversations: [],
@@ -67,9 +68,12 @@ describe("Line AI masaüstü çalışma alanı", () => {
 				enabled: true,
 				images: true,
 				text: true,
+				key: { state: "active", scopes: ["text", "images", "feedback"], expiresAt: "2026-12-01T00:00:00.000Z" },
+				periods: { dailyResetsAt: "2026-09-13T00:00:00.000Z", monthlyResetsAt: "2026-10-01T00:00:00.000Z" },
 				policyVersion: "1.0.0",
 				project: { id: "project-1", name: "Demo Proje" },
-				quota: { dailyUnits: 50, monthlyUnits: 500, usedDaily: 3, usedMonthly: 30 },
+				quota: { dailyUnits: 50, monthlyUnits: 500, usedDaily: 3, usedMonthly: 30, remainingDailyUnits: 47, remainingMonthlyUnits: 470, dailyCostMicros: 500000, monthlyCostMicros: 5000000, usedDailyCostMicros: 1200, usedMonthlyCostMicros: 8900, remainingDailyCostMicros: 498800, remainingMonthlyCostMicros: 4991100 },
+				usage: { requestCountThisMonth: 17 },
 			},
 		});
 		engine.saveEngineKey.mockResolvedValue(undefined);
@@ -108,6 +112,21 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		expect(
 			screen.queryByText(/simulated|smoothui demo|acme deploy/i),
 		).not.toBeInTheDocument();
+	});
+
+	it("üst çubukta canlı Engine sağlığını ve kalan günlük kotayı gösterir", async () => {
+		Object.defineProperty(window, "__TAURI_INTERNALS__", {
+			configurable: true,
+			value: {},
+		});
+		render(<LineAiApp executePrompt={vi.fn()} />);
+
+		const status = await screen.findByRole("status", {
+			name: "Line AI Engine durumu",
+		});
+		expect(status).toHaveTextContent("Engine hazır");
+		expect(status).toHaveTextContent("47 birim");
+		expect(engine.readEngineStatus).toHaveBeenCalledTimes(1);
 	});
 
 	it("sohbet aramasını yeni sohbet eyleminden önce ve üst alanda sunar", () => {
@@ -161,16 +180,16 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		);
 
 		expect(
-			within(settings).getByRole("heading", { name: "Line AI v0.6.1" }),
+			within(settings).getByRole("heading", { name: "Line AI v0.7.0" }),
 		).toBeInTheDocument();
 		expect(
 			within(settings).getByRole("heading", {
-				name: "Yenilikler · v0.6.1",
+				name: "Yenilikler · v0.7.0",
 			}),
 		).toBeInTheDocument();
-		expect(within(settings).getByText("Tek Line AI Engine")).toBeInTheDocument();
+		expect(within(settings).getByText("Ultra Premium çalışma alanı")).toBeInTheDocument();
 		expect(
-			within(settings).getByText("Modern sohbet çalışma alanı"),
+			within(settings).getByText("Canlı Engine sağlığı"),
 		).toBeInTheDocument();
 		expect(
 			within(settings).getByText(/bağlanma çalışması sürüyor/i),
@@ -801,7 +820,7 @@ describe("Line AI masaüstü çalışma alanı", () => {
 				screen.getByRole("dialog", { name: "Sohbet silinsin mi?" }),
 			).getByRole("button", { name: "Sohbeti sil" }),
 		);
-		expect(screen.getByRole("status")).toHaveTextContent("Sohbet silindi");
+		expect(screen.getByText("Sohbet silindi").closest('[role="status"]')).toBeInTheDocument();
 
 		await user.click(screen.getByRole("button", { name: "Geri al" }));
 		expect(
@@ -978,6 +997,19 @@ describe("Line AI masaüstü çalışma alanı", () => {
 		expect(localStorage.getItem("line-ai.preferences.v1")).not.toContain(
 			"lai_sk_live_",
 		);
+	});
+
+	it("Engine panelinde güvenli anahtar sağlığını, istek sayısını ve maliyet bütçesini gösterir", async () => {
+		const user = userEvent.setup();
+		render(<LineAiApp executePrompt={vi.fn()} />);
+
+		await user.click(screen.getByRole("button", { name: "Ayarları aç" }));
+		const settings = screen.getByRole("dialog", { name: "Line AI ayarları" });
+		await user.click(within(settings).getByRole("button", { name: "Yapay zekâ" }));
+
+		await waitFor(() => expect(within(settings).getByText(/Aylık 17 istek/)).toBeVisible());
+		expect(within(settings).getByText(/Anahtar aktif/)).toBeVisible();
+		expect(within(settings).getByText(/4,99 maliyet kredisi/)).toBeVisible();
 	});
 
 	it("bulut hydration beklerken gelen asistan yanıtını silmez", async () => {

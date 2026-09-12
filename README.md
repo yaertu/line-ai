@@ -11,8 +11,12 @@
 <p align="center">
   <a href="https://lineaicloud.vercel.app"><strong>Tanıtım sitesi</strong></a> ·
   <a href="https://lineaicloud.vercel.app/admin"><strong>Engine yönetimi</strong></a> ·
-  <a href="https://github.com/yaertu/line-ai/releases/tag/v0.6.1"><strong>v0.6.1</strong></a>
+  <a href="https://github.com/yaertu/line-ai/releases/tag/v0.7.0"><strong>v0.7.0</strong></a>
 </p>
+
+## v0.7.0
+
+Ultra Premium masaüstü düzeni; yüzen çalışma yüzeyleri, gerçek Engine sağlık rozeti ve daha okunabilir sohbet/kod alanlarıyla birlikte gelir. Engine capabilities sözleşmesi artık güvenli anahtar yaşam döngüsünü, dönem sıfırlamalarını, kalan kota ve maliyet kredisini ve aylık istek sayısını bildirir.
 
 ## v0.6.1
 

@@ -18,11 +18,19 @@ export default async function handler(req:VercelRequest,res:VercelResponse) {
   const who=await requireEngine(req,scope);
   if(route==='capabilities') {
    const [totals,policy]=await Promise.all([usage(who.project.id),activePolicy()]);
+   const now=new Date();
+   const dailyResetsAt=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()+1)).toISOString();
+   const monthlyResetsAt=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,1)).toISOString();
+   const remaining=(limit:unknown,used:unknown)=>Math.max(0,Number(limit)-Number(used));
    sendJson(res,200,{enabled:engineEnabled(),text:textReady()&&who.key.scopes.includes('text'),images:imagesReady()&&who.project.images_enabled&&who.key.scopes.includes('images'),
     project:{id:who.project.id,name:who.project.name},policyVersion:policy.version,
+    key:{state:'active',scopes:who.key.scopes,expiresAt:who.key.expires_at??null},
     quota:{dailyUnits:who.project.daily_units,monthlyUnits:who.project.monthly_units,usedDaily:totals.daily,usedMonthly:totals.monthly,
      dailyImages:who.project.daily_images,monthlyImages:who.project.monthly_images,usedDailyImages:totals.dailyImages,usedMonthlyImages:totals.monthlyImages,
-     dailyCostMicros:who.project.daily_cost_micros,monthlyCostMicros:who.project.monthly_cost_micros,usedDailyCostMicros:totals.dailyCostMicros,usedMonthlyCostMicros:totals.monthlyCostMicros},
+     dailyCostMicros:who.project.daily_cost_micros,monthlyCostMicros:who.project.monthly_cost_micros,usedDailyCostMicros:totals.dailyCostMicros,usedMonthlyCostMicros:totals.monthlyCostMicros,
+     remainingDailyUnits:remaining(who.project.daily_units,totals.daily),remainingMonthlyUnits:remaining(who.project.monthly_units,totals.monthly),
+     remainingDailyCostMicros:remaining(who.project.daily_cost_micros,totals.dailyCostMicros),remainingMonthlyCostMicros:remaining(who.project.monthly_cost_micros,totals.monthlyCostMicros)},
+    periods:{dailyResetsAt,monthlyResetsAt},usage:{requestCountThisMonth:totals.requests},
     imageUnavailableReason:imagesReady()?null:'Line AI görsel çalışma zamanı etkinleştirilene kadar üretim kapalı.',
     models:{text:TEXT_MODEL,image:IMAGE_MODEL},privacy:{promptsStored:false,replayHours:24,feedbackOptIn:true}});return;
   }

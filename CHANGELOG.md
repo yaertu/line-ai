@@ -2,6 +2,22 @@
 
 Bu projedeki kullanıcıya görünen değişiklikler Türkçe olarak kaydedilir. Sürümleme [SemVer](https://semver.org/lang/tr/) yaklaşımını izler.
 
+## [0.7.0] - 2026-09-12
+
+### Eklendi
+
+- Üst çubuğa gerçek masaüstü anahtarını denetleyen Line AI Engine sağlık ve kalan günlük kota göstergesi eklendi.
+- `GET /api/v1/capabilities` yanıtına güvenli anahtar durumu, yetki kapsamları, sona erme zamanı, günlük/aylık sıfırlanma zamanı, kalan birim ve maliyet bütçesi ile aylık istek sayısı eklendi.
+
+### Değiştirildi
+
+- Masaüstü arayüzü Ultra Premium düzene geçirildi: yüzen kenar çubuğu ve üst çubuk, daha derin grafit yüzeyler, odaklı mint sinyali, geliştirilmiş mesaj kutusu ve bağlamsal kod çalışma alanı.
+- Ayarlar → Yapay zekâ alanı anahtar sağlığını, istek sayısını ve kalan maliyet kredisini ayrı kartlarda gösterir.
+
+### Güvenlik
+
+- Capabilities yanıtı anahtarın kendisini ve veritabanı anahtar kimliğini içermez; yalnız güvenli yaşam döngüsü ve kapsam bilgilerini döndürür.
+
 ## [0.6.1] - 2026-09-12
 
 ### Değiştirildi

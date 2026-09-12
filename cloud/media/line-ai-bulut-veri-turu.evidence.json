@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-12T10:27:04.149Z",
+  "generatedAt": "2026-09-12T11:11:06.177Z",
   "source": {
     "kind": "vite-source-ui-playwright",
     "url": "http://127.0.0.1:1430",
@@ -28,10 +28,10 @@
   },
   "poster": {
     "fileName": "line-ai-bulut-veri-turu-poster.png",
-    "sha256": "c40955147cff42f79ebf7285cf7f9c88a2fe4f9f89eef474915ff333981c3957"
+    "sha256": "6d347fc1c9b268f75e00c80700b168b430ba3d7d499b990f2f99dc2fb312f695"
   },
   "video": {
     "fileName": "line-ai-bulut-veri-turu.mp4",
-    "sha256": "207502aa02acfff9a5b26cb40ab49abc96242b89b6a8b64a445afec193169a99"
+    "sha256": "d78e6aa640127ae9646dd2614d3f3417f89736abdd4c248d616242410e40fe5f"
   }
 }

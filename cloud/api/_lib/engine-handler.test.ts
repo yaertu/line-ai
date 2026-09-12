@@ -14,7 +14,7 @@ const req=(route:string,body:unknown={})=>({method:route==='capabilities'?'GET':
 beforeEach(()=>{
 	vi.stubEnv('LINE_AI_ENGINE_ENABLED','true');vi.stubEnv('LINE_AI_TEXT_RUNTIME_URL','https://runtime.lineai.test/v1/text');vi.stubEnv('LINE_AI_TEXT_RUNTIME_KEY','runtime-test');vi.stubEnv('LINE_AI_IMAGE_RUNTIME_URL','https://runtime.lineai.test/v1/images');vi.stubEnv('LINE_AI_IMAGE_RUNTIME_KEY','runtime-test');
  f.finish.mockReset().mockResolvedValue(undefined);f.reserve.mockReset().mockResolvedValue({existing:false,request:{id:'request-1'}});
- f.requireEngine.mockReset().mockResolvedValue({key:{id:'key-1',scopes:['text','images']},project:{id:'project-1',name:'Test',images_enabled:true,daily_units:100000,monthly_units:1000000},db:{}});
+ f.requireEngine.mockReset().mockResolvedValue({key:{id:'key-1',scopes:['text','images'],expires_at:'2026-12-01T00:00:00.000Z'},project:{id:'project-1',name:'Test',images_enabled:true,daily_units:100000,monthly_units:1000000,daily_images:10,monthly_images:100,daily_cost_micros:500000,monthly_cost_micros:5000000},db:{}});
  f.policy.mockResolvedValue({version:'test-1',instructions:'Doğru cevap ver.'});
  f.usage.mockResolvedValue({daily:0,monthly:0});
 });
@@ -25,6 +25,16 @@ describe('Engine request accounting and desktop contract',()=>{
 		expect(r.body.status).toBe(200);
 		expect(r.body.json.models).toEqual({text:'line-ai-neural-v1',image:'line-ai-vision-v1'});
 		expect(JSON.stringify(r.body.json)).not.toMatch(/gemini|openai|provider/i);
+	});
+	it('reports safe key health, reset times and remaining budget',async()=>{
+		f.usage.mockResolvedValue({daily:1250,monthly:9200,dailyImages:2,monthlyImages:11,dailyCostMicros:1200,monthlyCostMicros:8900,requests:17});
+		const r=response();await handler(req('capabilities'),r.res);
+		expect(r.body.status).toBe(200);
+		expect(r.body.json.key).toEqual({state:'active',scopes:['text','images'],expiresAt:'2026-12-01T00:00:00.000Z'});
+		expect(r.body.json.usage).toEqual({requestCountThisMonth:17});
+		expect(r.body.json.quota).toEqual(expect.objectContaining({remainingDailyUnits:98750,remainingMonthlyUnits:990800,remainingDailyCostMicros:498800,remainingMonthlyCostMicros:4991100}));
+		expect(r.body.json.periods).toEqual({dailyResetsAt:expect.any(String),monthlyResetsAt:expect.any(String)});
+		expect(JSON.stringify(r.body.json)).not.toContain('key-1');
 	});
 	it('accepts native nullable preferences and emits numeric estimated units without provider usage',async()=>{
 		vi.stubGlobal('fetch',vi.fn().mockResolvedValue(new Response(JSON.stringify({message:'Merhaba',usage:{input:null,output:null}}))));

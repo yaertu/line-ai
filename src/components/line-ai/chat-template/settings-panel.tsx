@@ -123,21 +123,21 @@ const SECTIONS = SECTION_GROUPS.flatMap((group) => group.items);
 const RELEASE_HIGHLIGHTS: ReadonlyArray<ReleaseHighlight> = [
 	{
 		description:
-			"Sohbet, kodlama ve görsel işleri tek özel bulut API sözleşmesinden geçer; uygulama yalnız Line AI Engine kullanır.",
+			"Yüzen kenar çubuğu, odaklı sohbet sahnesi, canlı Engine rozeti ve bağlamsal çalışma alanı aynı premium düzen içinde birleşti.",
 		icon: ShieldCheck,
-		title: "Tek Line AI Engine",
+		title: "Ultra Premium çalışma alanı",
 	},
 	{
 		description:
-			"Geçmiş, dosya ekleri, kod önizleme ve DIFF, görsel üretimi, yeniden deneme ve geri bildirim aynı akışta toplandı.",
+			"Üst çubuk Engine bağlantısını ve kalan günlük birimi gerçek masaüstü anahtarıyla denetleyerek gösterir.",
 		icon: ArchiveRestore,
-		title: "Modern sohbet çalışma alanı",
+		title: "Canlı Engine sağlığı",
 	},
 	{
 		description:
-			"Graphite ve mint tema, yeni konuşma işareti ve tüm Windows ikon boyutları birlikte yenilendi.",
+			"API anahtar kapsamı, sona erme, dönem sıfırlama zamanı, kalan kota, maliyet kredisi ve aylık istek sayısını güvenli biçimde sunar.",
 		icon: BrainCircuit,
-		title: "Yeni marka ve ikon",
+		title: "Gelişmiş kullanım API’si",
 	},
 ];
 
@@ -146,6 +146,14 @@ const updatePreference = <K extends keyof AppPreferences>(
 	key: K,
 	value: AppPreferences[K],
 ) => ({ ...preferences, [key]: value });
+
+const formatCostCredits = (micros: number | undefined) =>
+	micros === undefined
+		? "—"
+		: (micros / 1_000_000).toLocaleString("tr-TR", {
+				maximumFractionDigits: 2,
+				minimumFractionDigits: 2,
+			});
 
 const SettingsPanel = ({
 	cloudMessage,
@@ -564,7 +572,13 @@ const SettingsPanel = ({
 											<button aria-label="Engine durumunu yenile" className="h-10 rounded-lg border border-border px-3 text-sm hover:bg-muted disabled:opacity-50" disabled={engineBusy} onClick={() => void refreshEngine()} type="button"><RefreshCw className={engineBusy ? "animate-spin" : ""} size={15} /></button>
 										</div>
 										<p aria-live="polite" className="mt-3 rounded-xl bg-muted/60 px-3 py-2 text-muted-foreground text-xs">{engineMessage}</p>
-										{engineStatus?.capabilities ? <p className="mt-2 text-xs text-muted-foreground">{engineStatus.capabilities.project.name} · Metin {engineStatus.capabilities.text ? "hazır" : "kapalı"} · Görsel {engineStatus.capabilities.images ? "hazır" : "kapalı"} · Bugün {Math.max(0, engineStatus.capabilities.quota.dailyUnits - engineStatus.capabilities.quota.usedDaily)} birim</p> : null}
+						{engineStatus?.capabilities ? (
+							<div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-3">
+								<p className="rounded-xl border border-border/70 bg-background/55 px-3 py-2"><strong className="block text-foreground">Anahtar aktif</strong>{engineStatus.capabilities.key?.scopes.join(" · ") ?? "Engine erişimi"}</p>
+								<p className="rounded-xl border border-border/70 bg-background/55 px-3 py-2"><strong className="block text-foreground">Aylık {engineStatus.capabilities.usage?.requestCountThisMonth ?? 0} istek</strong>{engineStatus.capabilities.project.name} · Politika {engineStatus.capabilities.policyVersion}</p>
+								<p className="rounded-xl border border-border/70 bg-background/55 px-3 py-2"><strong className="block text-foreground">{formatCostCredits(engineStatus.capabilities.quota.remainingMonthlyCostMicros)} maliyet kredisi</strong>Bugün {engineStatus.capabilities.quota.remainingDailyUnits ?? Math.max(0, engineStatus.capabilities.quota.dailyUnits - engineStatus.capabilities.quota.usedDaily)} birim kaldı</p>
+							</div>
+						) : null}
 									</SettingsGroup>
 								</div>
 							) : null}
@@ -1024,7 +1038,7 @@ const SettingsPanel = ({
 								<div className="space-y-4">
 									<SettingsGroup
 										description="Denetlenebilir Windows yapay zekâ çalışma alanı · güncel sürüm"
-									title="Line AI v0.6.1"
+									title="Line AI v0.7.0"
 									>
 										<p className="text-muted-foreground text-sm leading-relaxed">
 											Line AI; sohbet, kodlama, dosya bağlamı, Chrome araçları ve
@@ -1043,10 +1057,10 @@ const SettingsPanel = ({
 									</SettingsGroup>
 									<SettingsGroup
 									description="Bu sürümde kullanıcıya doğrudan ulaşan ana geliştirmeler."
-									title="Yenilikler · v0.6.1"
+									title="Yenilikler · v0.7.0"
 									>
 										<ul
-										aria-label="v0.6.1 yenilikleri"
+										aria-label="v0.7.0 yenilikleri"
 											className="space-y-3"
 										>
 											{RELEASE_HIGHLIGHTS.map((highlight) => {

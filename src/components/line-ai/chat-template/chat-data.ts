@@ -37,7 +37,23 @@ export type EngineCapabilities = {
 	images: boolean;
 	imageUnavailableReason?: string | null;
 	project: { id: string; name: string };
-	quota: { dailyUnits: number; monthlyUnits: number; usedDaily: number; usedMonthly: number };
+	key?: { state: "active"; scopes: string[]; expiresAt: string | null };
+	periods?: { dailyResetsAt: string; monthlyResetsAt: string };
+	quota: {
+		dailyUnits: number;
+		monthlyUnits: number;
+		usedDaily: number;
+		usedMonthly: number;
+		remainingDailyUnits?: number;
+		remainingMonthlyUnits?: number;
+		dailyCostMicros?: number;
+		monthlyCostMicros?: number;
+		usedDailyCostMicros?: number;
+		usedMonthlyCostMicros?: number;
+		remainingDailyCostMicros?: number;
+		remainingMonthlyCostMicros?: number;
+	};
+	usage?: { requestCountThisMonth: number };
 	policyVersion: string;
 };
 

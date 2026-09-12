@@ -1,4 +1,4 @@
-# Line AI Engine v0.6.1
+# Line AI Engine v0.7.0
 
 Base URL: `https://lineaicloud.vercel.app/api/v1`
 

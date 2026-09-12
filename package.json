@@ -1,6 +1,6 @@
 {
   "name": "line-ai",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,7 +12,7 @@
     "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
 		"docs:screenshots": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/gorselleri-guncelle.ps1",
 		"docs:showcase": "node scripts/capture-showcase.mjs",
-		"docs:v061-showcase": "node scripts/capture-v061-highlights.mjs",
+		"docs:v070-showcase": "node scripts/capture-v070-highlights.mjs",
 		"docs:real-coding": "node scripts/capture-real-coding.mjs",
 		"docs:feature-tours": "node scripts/capture-feature-tours.mjs",
 		"release:desktop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release-desktop.ps1",

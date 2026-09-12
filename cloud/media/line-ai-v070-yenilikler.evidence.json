@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-09-12T11:09:40.309Z",
+  "source": {
+    "kind": "vite-source-ui-playwright",
+    "url": "http://127.0.0.1:1430",
+    "viewport": "1440x900",
+    "surface": "Ayarlar > Hakkında > Yenilikler · v0.7.0"
+  },
+  "claims": {
+    "shown": [
+      "tek Line AI Engine ve bulut API özeti",
+      "sohbet, dosya, kod Artifact ve görsel çalışma alanı",
+      "Ultra Premium grafit ve mint arayüz ile yeni Line AI simgesi",
+      "canlı anahtar sağlığı, kalan kota ve maliyet denetimi"
+    ],
+    "notShownAsProductUi": [
+      "yönetici giriş bilgileri veya Engine anahtarı",
+      "kullanıcının sohbet geçmişi",
+      "kapalı görsel çalışma zamanında üretilmiş örnek",
+      "temel model ağırlıklarının bize ait olduğu iddiası"
+    ]
+  },
+  "video": {
+    "fileName": "line-ai-v070-yenilikler.mp4",
+    "sha256": "679177d3c0de1a70931c1d288dc18a8bf17f0a206a8865ea56a3df388f3b7d75"
+  }
+}

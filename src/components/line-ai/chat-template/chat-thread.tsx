@@ -11,6 +11,7 @@ import {
 	Files,
 	FolderTree,
 	Gauge,
+	Wifi,
 	Globe2,
 	PanelLeftOpen,
 	Paperclip,
@@ -53,12 +54,13 @@ import {
 	readDesktopDroppedTextFiles,
 } from "@/lib/desktop-files";
 import { readBrowserFilePreview } from "@/lib/file-content";
-import { submitEngineFeedback } from "@/lib/ai";
+import { readEngineStatus, submitEngineFeedback } from "@/lib/ai";
 import { cn } from "@/lib/utils";
 import {
 	type ChatTurn,
 	type ExecutePromptEvent,
 	type ExecutePromptRequest,
+	type EngineStatus,
 	type PromptAttachment,
 	type PromptExecutor,
 	type ReasoningLevel,
@@ -80,6 +82,59 @@ type LiveProgress = {
 	phase: LivePhase;
 	sources: WebSource[];
 	streamedText: string;
+};
+
+const EngineStatusPill = () => {
+	const isDesktop = "__TAURI_INTERNALS__" in window;
+	const [status, setStatus] = useState<EngineStatus | null>(null);
+	const [failed, setFailed] = useState(false);
+
+	useEffect(() => {
+		if (!isDesktop) return;
+		let active = true;
+		void Promise.resolve()
+			.then(() => readEngineStatus())
+			.then((next) => {
+				if (active) setStatus(next);
+			})
+			.catch(() => {
+				if (active) setFailed(true);
+			});
+		return () => {
+			active = false;
+		};
+	}, [isDesktop]);
+
+	const capabilities = status?.capabilities;
+	const ready = Boolean(status?.configured && capabilities?.enabled && capabilities.text);
+	const remaining = capabilities
+		? capabilities.quota.remainingDailyUnits ??
+			Math.max(0, capabilities.quota.dailyUnits - capabilities.quota.usedDaily)
+		: null;
+	const label = ready
+		? "Engine hazır"
+		: !isDesktop
+			? "Engine masaüstünde"
+			: failed
+				? "Engine ulaşılamıyor"
+				: "Engine denetleniyor";
+
+	return (
+		<div
+			aria-label="Line AI Engine durumu"
+			className={cn("line-ai-engine-pill", ready && "is-ready", failed && "is-offline")}
+			role="status"
+			title={status?.message ?? label}
+		>
+			<span className="line-ai-engine-orb" />
+			<span className="hidden lg:inline">{label}</span>
+			{remaining !== null ? (
+				<span className="line-ai-engine-quota"><Gauge aria-hidden="true" size={12} />{remaining.toLocaleString("tr-TR")} birim</span>
+			) : (
+				<Wifi aria-hidden="true" size={13} />
+			)}
+		</div>
+	);
 };
 
 const initialLiveProgress = (): LiveProgress => ({
@@ -810,8 +865,9 @@ export const ChatThread = ({
 						<PanelLeftOpen aria-hidden="true" size={17} />
 					</button>
 					<div className="min-w-0 flex-1">
-						<div className="flex items-center gap-3"><span className="text-lg font-semibold tracking-tight">Line AI</span><span className="h-4 w-px bg-border" /><h1 className="truncate text-sm text-muted-foreground">{title}</h1></div>
+						<div className="flex items-center gap-3"><span className="line-ai-wordmark text-lg font-semibold tracking-tight">Line AI</span><span className="h-4 w-px bg-border" /><h1 className="truncate text-sm text-muted-foreground">{title}</h1></div>
 					</div>
+					<EngineStatusPill />
 				</header>
 
 				<section
