@@ -61,6 +61,18 @@ pnpm -C cloud test:engine:database
 pnpm -C cloud smoke:production
 ```
 
+### v0.7.0 capabilities sözleşmesi
+
+`GET /api/v1/capabilities`, masaüstü anahtarını açıklamadan şu işletim bilgilerini verir:
+
+- Anahtarın aktif durumu, yetki kapsamları ve varsa sona erme zamanı.
+- Günlük ve aylık dönemlerin bir sonraki sıfırlanma zamanı.
+- Kullanılmış ve kalan token birimleri ile görsel sınırları.
+- Kullanılmış ve kalan maliyet kredisi.
+- İçinde bulunulan ayın toplam istek sayısı.
+
+Bu alanlar üst çubuktaki Engine rozeti ve Ayarlar → Yapay zekâ kartlarında gösterilir. İstemci hiçbir zaman anahtar özeti, runtime anahtarı veya temel sağlayıcı adını almaz.
+
 ## 5. Masaüstü uygulamasını geliştirirken
 
 ```powershell
